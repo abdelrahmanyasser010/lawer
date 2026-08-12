@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import {
   createSampleFieldValues,
+  type AtomicConditionDefinition,
+  type ConditionDefinition,
   type ContractFieldValue,
   type ContractTemplateDefinition,
   type ContractVariantDefinition,
@@ -86,6 +88,23 @@ const conditionOperators = [
   ["includes", "يحتوي على"],
 ] as const;
 
+const conditionOperatorKeys = new Set<string>(conditionOperators.map(([key]) => key));
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isConditionDefinition(value: unknown): value is ConditionDefinition {
+  if (!isPlainRecord(value)) return false;
+  if ("fieldKey" in value) {
+    return typeof value.fieldKey === "string" && typeof value.operator === "string" && conditionOperatorKeys.has(value.operator);
+  }
+  if ("all" in value) return Array.isArray(value.all) && value.all.every(isConditionDefinition);
+  if ("any" in value) return Array.isArray(value.any) && value.any.every(isConditionDefinition);
+  if ("not" in value) return isConditionDefinition(value.not);
+  return false;
+}
+
 function splitCsv(value: FormDataEntryValue | null): string[] {
   return String(value ?? "")
     .split(/[،,\n]/)
@@ -125,9 +144,18 @@ function parseOptions(raw: FormDataEntryValue | null) {
     });
 }
 
-function buildCondition(form: FormData) {
+function buildCondition(form: FormData): ConditionDefinition | undefined {
   const fieldKey = optionalText(form.get("conditionFieldKey"));
-  if (!fieldKey) return undefined;
+  if (!fieldKey) {
+    const existingComposite = optionalText(form.get("existingCompositeCondition"));
+    if (!existingComposite) return undefined;
+    try {
+      const parsed: unknown = JSON.parse(existingComposite);
+      return isConditionDefinition(parsed) ? parsed : undefined;
+    } catch {
+      return undefined;
+    }
+  }
   const operator = String(form.get("conditionOperator") || "equals") as "equals" | "not_equals" | "truthy" | "falsy" | "includes";
   const rawValue = optionalText(form.get("conditionValue"));
   return {
@@ -648,14 +676,27 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
   );
 }
 
+function isAtomicCondition(value: ConditionDefinition | undefined): value is AtomicConditionDefinition {
+  return Boolean(value && "fieldKey" in value);
+}
+
 function ConditionFields({ value, fieldKeys }: { value?: WizardFieldDefinition["visibleWhen"]; fieldKeys: string[] }) {
+  const atomicCondition = isAtomicCondition(value) ? value : undefined;
+  const hasCompositeCondition = Boolean(value && !atomicCondition);
+
   return (
     <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
       <div className="text-xs font-black text-violet-900">شرط الظهور — اختياري</div>
+      {hasCompositeCondition && (
+        <p className="mt-2 rounded-lg border border-violet-200 bg-white p-2 text-[11px] font-bold leading-5 text-violet-700">
+          هذا الشرط مركب ومحرك القوالب سيحتفظ به كما هو حتى يتم استبداله بشرط بسيط من الحقول التالية.
+        </p>
+      )}
+      {hasCompositeCondition && <input type="hidden" name="existingCompositeCondition" value={JSON.stringify(value)} />}
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <label className="text-[11px] font-bold text-violet-900">الحقل الذي يعتمد عليه<input list="template-field-keys" name="conditionFieldKey" defaultValue={value?.fieldKey} className="mt-1 w-full rounded-lg border border-violet-200 bg-white p-2 font-mono font-normal" /><datalist id="template-field-keys">{fieldKeys.map((key) => <option key={key} value={key} />)}</datalist></label>
-        <label className="text-[11px] font-bold text-violet-900">المقارنة<select name="conditionOperator" defaultValue={value?.operator ?? "equals"} className="mt-1 w-full rounded-lg border border-violet-200 bg-white p-2 font-normal">{conditionOperators.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-        <label className="text-[11px] font-bold text-violet-900">القيمة<input name="conditionValue" defaultValue={value?.value === undefined ? "" : String(value.value)} className="mt-1 w-full rounded-lg border border-violet-200 bg-white p-2 font-normal" /></label>
+        <label className="text-[11px] font-bold text-violet-900">الحقل الذي يعتمد عليه<input list="template-field-keys" name="conditionFieldKey" defaultValue={atomicCondition?.fieldKey} className="mt-1 w-full rounded-lg border border-violet-200 bg-white p-2 font-mono font-normal" /><datalist id="template-field-keys">{fieldKeys.map((key) => <option key={key} value={key} />)}</datalist></label>
+        <label className="text-[11px] font-bold text-violet-900">المقارنة<select name="conditionOperator" defaultValue={atomicCondition?.operator ?? "equals"} className="mt-1 w-full rounded-lg border border-violet-200 bg-white p-2 font-normal">{conditionOperators.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+        <label className="text-[11px] font-bold text-violet-900">القيمة<input name="conditionValue" defaultValue={atomicCondition?.value === undefined ? "" : String(atomicCondition.value)} className="mt-1 w-full rounded-lg border border-violet-200 bg-white p-2 font-normal" /></label>
       </div>
     </div>
   );

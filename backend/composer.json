@@ -55,11 +55,11 @@
       "@verify:static"
     ],
     "verify:static": [
-      "python3 tools/verify_route_compatibility.py",
+      "@php tools/run_python.php tools/verify_route_compatibility.py",
       "node tools/verify_frontend_api_contract.mjs",
-      "python3 tools/verify_response_contracts_v20.py",
-      "python3 tools/verify_sql_placeholders.py",
-      "python3 tools/verify_laravel_final_v20.py"
+      "@php tools/run_python.php tools/verify_response_contracts_v20.py",
+      "@php tools/run_python.php tools/verify_sql_placeholders.py",
+      "@php tools/run_python.php tools/verify_laravel_final_v20.py"
     ]
   },
   "config": {

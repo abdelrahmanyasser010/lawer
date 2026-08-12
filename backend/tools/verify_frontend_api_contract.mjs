@@ -3,11 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import childProcess from 'node:child_process';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 const require=createRequire(import.meta.url);
-let ts;
-try { ts=require('typescript'); }
-catch { ts=require('/opt/nvm/versions/node/v22.16.0/lib/node_modules/typescript'); }
-const ROOT=path.resolve(path.dirname(new URL(import.meta.url).pathname),'../..');
+const ts=require('typescript');
+const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const LARAVEL=path.join(ROOT,'backend');
 const roots=[path.join(ROOT,'frontend','src'),path.join(ROOT,'dashboard','src')];
 const callNames=new Set(['apiRequest','dashboardRequest']);

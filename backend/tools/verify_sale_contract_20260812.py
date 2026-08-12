@@ -323,7 +323,7 @@ if mig.is_file():
     check('sale_migration_immutable_guard','already exists with a different immutable definition' in m)
     check('sale_migration_no_rollback','rollback is intentionally disabled' in m)
 try:
-    out=subprocess.check_output(['node','-e',"const d=require('./packages/template-engine/dist').apartmentSaleTemplateDefinition;process.stdout.write(JSON.stringify(d))"],cwd=ROOT,text=True)
+    out=subprocess.check_output(['node','-e',"const d=require('./packages/template-engine/dist').apartmentSaleTemplateDefinition;process.stdout.write(JSON.stringify(d))"],cwd=ROOT,text=True,encoding='utf-8')
     check('canonical_equals_compiled_engine',json.loads(out)==d)
 except Exception as exc:
     check('canonical_equals_compiled_engine',False,str(exc))

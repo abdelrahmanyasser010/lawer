@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @layer base {
@@ -13,6 +12,7 @@
     --muted: #64748b;
     --brand-navy: #00102e;
     --brand-gold: #986410;
+    --font-cairo: "Cairo";
   }
 
   * {
@@ -62,7 +62,7 @@
 body {
   background: #f8fafc;
   color: var(--foreground);
-  font-family: var(--font-cairo), system-ui, -apple-system, sans-serif;
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
@@ -93,4 +93,3 @@ input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
-

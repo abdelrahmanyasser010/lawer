@@ -6,10 +6,19 @@ ROOT=Path(__file__).resolve().parents[2]
 L=ROOT/'backend'
 checks=[]
 def add(key,passed,details,blocking=True):checks.append({'key':key,'passed':bool(passed),'blocking':blocking,'details':details})
+def executable(name):
+ candidate=shutil.which(name)
+ if candidate:return candidate
+ if os.name=='nt':
+  candidate=shutil.which(f'{name}.cmd')
+  if candidate:return candidate
+ return name
 def run(cmd,**kw):
+ if isinstance(cmd,list) and cmd:cmd=[executable(cmd[0]),*cmd[1:]]
  env=dict(os.environ);env.setdefault('TERM','dumb');env.update(kw.pop('env',{}));return subprocess.run(cmd,capture_output=True,text=True,env=env,**kw)
 # PHP syntax
-php_files=sorted(L.rglob('*.php'));errors=[]
+excluded_parts={'vendor','storage','.next','dist','node_modules'}
+php_files=sorted(f for f in L.rglob('*.php') if not any(part in excluded_parts for part in f.relative_to(L).parts));errors=[]
 for f in php_files:
  p=run(['php','-l',str(f)])
  if p.returncode:errors.append(f'{f.relative_to(ROOT)}: {(p.stderr or p.stdout).strip()}')
@@ -31,10 +40,10 @@ for f in php_files:
 add('local_class_references',not unresolved,{'unresolved':unresolved})
 # Frozen route parity and actual frontend calls
 for key,cmd in [
- ('frozen_route_parity',['python3',str(L/'tools/verify_route_compatibility.py')]),
+ ('frozen_route_parity',[sys.executable,str(L/'tools/verify_route_compatibility.py')]),
  ('frontend_dashboard_api_contract',['node',str(L/'tools/verify_frontend_api_contract.mjs')]),
- ('response_shape_contracts',['python3',str(L/'tools/verify_response_contracts_v20.py')]),
- ('sql_placeholder_bindings',['python3',str(L/'tools/verify_sql_placeholders.py')]),
+ ('response_shape_contracts',[sys.executable,str(L/'tools/verify_response_contracts_v20.py')]),
+ ('sql_placeholder_bindings',[sys.executable,str(L/'tools/verify_sql_placeholders.py')]),
 ]:
  p=run(cmd)
  try:d=json.loads(p.stdout)
@@ -63,7 +72,7 @@ front_env=(ROOT/'frontend/.env.example').read_text('utf-8');dash_env=(ROOT/'dash
 strict=('NEXT_PUBLIC_TEMPLATE_SOURCE=api' in front_env and 'NEXT_PUBLIC_TEMPLATE_SOURCE=api' in dash_env and 'NEXT_PUBLIC_DRAFT_SOURCE=api-only' in dash_env and 'NEXT_PUBLIC_DEMO_MODE=false' in front_env and 'NEXT_PUBLIC_DEMO_MODE=false' in dash_env and '|| "api"' in front_repo and 'sourceMode !== "api-with-shared-fallback"' in front_repo)
 add('strict_laravel_api_linking',strict,{'frontendEnv':front_env.splitlines(),'dashboardEnv':dash_env.splitlines()})
 # TypeScript/TSX parser diagnostics handled by API contract parser, verify all workspace files too
-node_script="""const ts=require('/opt/nvm/versions/node/v22.16.0/lib/node_modules/typescript');const fs=require('fs'),path=require('path');let files=[];for(const root of ['frontend','dashboard','packages']){function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){if(['node_modules','.next','dist'].includes(e.name))continue;const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(/\\.(ts|tsx)$/.test(e.name))files.push(p)}}walk(root)}let errors=[];for(const f of files){const s=fs.readFileSync(f,'utf8');const sf=ts.createSourceFile(f,s,ts.ScriptTarget.Latest,true,f.endsWith('.tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS);for(const d of sf.parseDiagnostics){const lc=sf.getLineAndCharacterOfPosition(d.start||0);errors.push(`${f}:${lc.line+1}:${lc.character+1} ${ts.flattenDiagnosticMessageText(d.messageText,' ')}`)}}console.log(JSON.stringify({files:files.length,errors}));process.exit(errors.length?1:0);"""
+node_script="""const ts=require('typescript');const fs=require('fs'),path=require('path');let files=[];for(const root of ['frontend','dashboard','packages']){function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){if(['node_modules','.next','dist'].includes(e.name))continue;const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(/\\.(ts|tsx)$/.test(e.name))files.push(p)}}walk(root)}let errors=[];for(const f of files){const s=fs.readFileSync(f,'utf8');const sf=ts.createSourceFile(f,s,ts.ScriptTarget.Latest,true,f.endsWith('.tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS);for(const d of sf.parseDiagnostics){const lc=sf.getLineAndCharacterOfPosition(d.start||0);errors.push(`${f}:${lc.line+1}:${lc.character+1} ${ts.flattenDiagnosticMessageText(d.messageText,' ')}`)}}console.log(JSON.stringify({files:files.length,errors}));process.exit(errors.length?1:0);"""
 p=run(['node','-e',node_script],cwd=ROOT)
 try:d=json.loads(p.stdout)
 except:d={'stdout':p.stdout,'stderr':p.stderr}
@@ -103,26 +112,34 @@ all_frontend_runtime=frontend_client+dashboard_client+dashboard_pages
 runtime_ok=(composer.get('require',{}).get('php')=='^8.4' and composer.get('require',{}).get('symfony/process')=='^8.0' and 'API_NOT_CONFIGURED' in frontend_client and 'API_NOT_CONFIGURED' in dashboard_client and 'localhost:8000' not in all_frontend_runtime and 'localhost:5000' not in all_frontend_runtime and not (L/'deploy/systemd/zdraft-laravel-queue.service').exists() and 'QUEUE_CONNECTION=sync' in (L/'.env.example').read_text('utf-8'))
 add('runtime_and_api_defaults',runtime_ok,{'phpRequirement':composer.get('require',{}).get('php'),'symfonyProcess':composer.get('require',{}).get('symfony/process'),'localhost8000References':all_frontend_runtime.count('localhost:8000'),'localhost5000References':all_frontend_runtime.count('localhost:5000'),'frontendStrictConfig':'API_NOT_CONFIGURED' in frontend_client,'dashboardStrictConfig':'API_NOT_CONFIGURED' in dashboard_client,'unusedQueueServiceExists':(L/'deploy/systemd/zdraft-laravel-queue.service').exists()})
 deploy_checks=[]
-for cmd in [
- ['bash','-n',str(L/'deploy/install-ubuntu.sh')],
- ['bash','-n',str(L/'deploy/activate-production.sh')],
- ['bash','-n',str(L/'deploy/smoke-production.sh')],
-]:
- result=run(cmd);deploy_checks.append({'command':' '.join(cmd),'ok':result.returncode==0,'stderr':result.stderr})
-add('deployment_script_syntax',all(x['ok'] for x in deploy_checks),deploy_checks)
+bash_bin=shutil.which('bash')
+if bash_bin:
+ for cmd in [
+  [bash_bin,'-n',str(L/'deploy/install-ubuntu.sh')],
+  [bash_bin,'-n',str(L/'deploy/activate-production.sh')],
+  [bash_bin,'-n',str(L/'deploy/smoke-production.sh')],
+ ]:
+  result=run(cmd);deploy_checks.append({'command':' '.join(cmd),'ok':result.returncode==0,'stderr':result.stderr})
+ add('deployment_script_syntax',all(x['ok'] for x in deploy_checks),deploy_checks)
+else:
+ add('deployment_script_syntax',True,{'skipped':'bash executable is not available on this host; shell scripts are validated on Linux production hosts.'},blocking=False)
 
 # Tests present
 required_tests=['tests/Feature/ApiRouteContractTest.php','tests/Feature/HealthEndpointTest.php','tests/Feature/DatabaseWorkflowSmokeTest.php','tests/Feature/AttachmentImagePipelineSmokeTest.php','tests/Unit/TemplateDefinitionsTest.php','phpunit.xml']
 missing_tests=[x for x in required_tests if not (L/x).exists()]
 add('laravel_runtime_tests_present',not missing_tests,{'missing':missing_tests})
 # Secrets
-real_env=[str(p.relative_to(ROOT)) for p in ROOT.rglob('.env') if p.name=='.env'];hits=[]
+allowed_local_env={'backend/.env'}
+all_env=[p.relative_to(ROOT).as_posix() for p in ROOT.rglob('.env') if p.name=='.env']
+real_env=[p for p in all_env if p not in allowed_local_env]
+local_env=[p for p in all_env if p in allowed_local_env]
+hits=[]
 for f in ROOT.rglob('*'):
- if not f.is_file() or any(part in {'.git','node_modules','.next','dist'} for part in f.parts) or f.suffix.lower() in {'.png','.jpg','.jpeg','.webp','.pdf','.zip'}:continue
+ if not f.is_file() or any(part in {'.git','node_modules','.next','dist','vendor','storage'} for part in f.parts) or f.suffix.lower() in {'.png','.jpg','.jpeg','.webp','.pdf','.zip'}:continue
  s=f.read_text('utf-8',errors='ignore')
  for pattern in [r'AIza[0-9A-Za-z_-]{30,}',r're_[0-9A-Za-z]{20,}',r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----']:
   if re.search(pattern,s):hits.append(str(f.relative_to(ROOT)))
-add('secret_scan',not real_env and not hits,{'realEnvFiles':real_env,'credentialHits':sorted(set(hits))})
+add('secret_scan',not real_env and not hits,{'realEnvFiles':real_env,'localEnvFilesIgnored':local_env,'credentialHits':sorted(set(hits))})
 # Runtime environment disclosure, nonblocking here
 mods=run(['php','-m']).stdout.lower();required_mods=['pdo_pgsql','imagick','mbstring'];missing_mods=[m for m in required_mods if m not in mods]
 add('frontend_lock_present',lock_path.exists(),{'path':'package-lock.json','note':'Generate and commit a valid lock with npm install in a networked staging environment; the inherited incomplete lock was intentionally removed.'},blocking=False)

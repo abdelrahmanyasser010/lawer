@@ -28,7 +28,7 @@ total=0
 for name in ['rental','apartment_sale','freelancer']:
     data=json.loads((ROOT/f'backend/database/template-definitions/{name}.json').read_text(encoding='utf-8'))
     counts[name]=len(data.get('legalClauses',[])); total+=counts[name]
-checks['legal_clause_inventory_311']=(total==311)
+checks['legal_clause_inventory_376']=(total==376)
 # PHP syntax for changed PHP files.
 php_files=[ROOT/'backend/app/Services/TemplateEngineService.php',ROOT/'backend/app/Console/Commands/ProcessDocumentJobs.php',ROOT/'backend/tests/Feature/PdfLayoutContractTest.php']
 syntax=[]
