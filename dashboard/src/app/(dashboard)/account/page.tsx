@@ -16,7 +16,7 @@ type SessionRow = {
   current?: boolean;
 };
 
-function deviceLabel(session.userAgent ?? undefined) {
+function  deviceLabel(userAgent?: string | null) { {
   const ua = userAgent || "";
   const device = /Android|iPhone|iPad/i.test(ua) ? "هاتف / جهاز لوحي" : "كمبيوتر";
   const browser = /Firefox/i.test(ua) ? "Firefox" : /Edg/i.test(ua) ? "Edge" : /Chrome/i.test(ua) ? "Chrome" : /Safari/i.test(ua) ? "Safari" : "متصفح";
