@@ -35,7 +35,15 @@ final class NotificationOutboxSchedulingTest extends TestCase
     {
         $root = dirname(__DIR__, 3);
         $deploy = file_get_contents($root.'/backend/deploy/scripts/deploy-vps.sh');
+        $unit = file_get_contents($root.'/backend/deploy/systemd/zdraft-laravel-scheduler.service');
 
+        $this->assertStringContainsString('BACKEND_DIR=${BACKEND_DIR:-/home/abdo2/htdocs/api.zdraft.tech}', $deploy);
+        $this->assertStringContainsString('APP_USER=${APP_USER:-abdo2}', $deploy);
+        $this->assertStringContainsString('APP_GROUP=${APP_GROUP:-${APP_USER}}', $deploy);
+        $this->assertStringContainsString('User=abdo2', $unit);
+        $this->assertStringContainsString('Group=abdo2', $unit);
+        $this->assertStringContainsString('WorkingDirectory=/home/abdo2/htdocs/api.zdraft.tech', $unit);
+        $this->assertStringContainsString('ExecStart=/usr/bin/php artisan schedule:work', $unit);
         $this->assertStringContainsString('ensure_laravel_scheduler', $deploy);
         $this->assertStringContainsString('artisan list --raw | grep -F "zdraft:process-outbox"', $deploy);
         $this->assertStringContainsString('artisan schedule:list | grep -F "zdraft:process-outbox"', $deploy);
@@ -43,7 +51,28 @@ final class NotificationOutboxSchedulingTest extends TestCase
         $this->assertStringContainsString('User=${APP_USER}', $deploy);
         $this->assertStringContainsString('Group=${APP_GROUP}', $deploy);
         $this->assertStringContainsString('systemctl enable --now zdraft-laravel-scheduler.service', $deploy);
+        $this->assertStringContainsString('systemctl restart zdraft-laravel-scheduler.service', $deploy);
         $this->assertStringContainsString('systemctl is-active --quiet zdraft-laravel-scheduler.service', $deploy);
         $this->assertStringNotContainsString('systemctl restart zdraft-laravel-scheduler.service || true', $deploy);
+    }
+
+    public function test_vps_deploy_is_backend_only_for_real_production_layout(): void
+    {
+        $root = dirname(__DIR__, 3);
+        $deploy = file_get_contents($root.'/backend/deploy/scripts/deploy-vps.sh');
+
+        $this->assertStringContainsString('composer install --no-dev', $deploy);
+        $this->assertStringContainsString('artisan migrate --force', $deploy);
+        $this->assertStringNotContainsString('/var/www/zdraft', $deploy);
+        $this->assertStringNotContainsString('ROOT_DIR=', $deploy);
+        $this->assertStringNotContainsString('FRONTEND_DIR=', $deploy);
+        $this->assertStringNotContainsString('DASHBOARD_DIR=', $deploy);
+        $this->assertStringNotContainsString('artisan migrate --seed --force', $deploy);
+        $this->assertStringNotContainsString('npm install', $deploy);
+        $this->assertStringNotContainsString('npm run build:engine', $deploy);
+        $this->assertStringNotContainsString('npm --workspace frontend run build', $deploy);
+        $this->assertStringNotContainsString('npm --workspace zdraft-dashboard run build', $deploy);
+        $this->assertStringNotContainsString('systemctl restart zdraft-frontend.service', $deploy);
+        $this->assertStringNotContainsString('systemctl restart zdraft-dashboard.service', $deploy);
     }
 }

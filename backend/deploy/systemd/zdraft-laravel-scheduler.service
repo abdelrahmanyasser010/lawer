@@ -4,9 +4,9 @@ After=network.target postgresql.service
 
 [Service]
 Type=simple
-User=www-data
-Group=www-data
-WorkingDirectory=/var/www/zdraft/backend
+User=abdo2
+Group=abdo2
+WorkingDirectory=/home/abdo2/htdocs/api.zdraft.tech
 ExecStart=/usr/bin/php artisan schedule:work
 Restart=always
 RestartSec=5
