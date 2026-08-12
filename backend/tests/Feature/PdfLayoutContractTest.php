@@ -1,0 +1,31 @@
+<?php
+namespace Tests\Feature;
+
+use Tests\TestCase;
+
+final class PdfLayoutContractTest extends TestCase
+{
+    public function test_final_pdf_layout_has_running_identity_page_count_and_compact_legal_structure(): void
+    {
+        $blade=file_get_contents(resource_path('views/pdf/contract.blade.php'));
+        $this->assertIsString($blade);
+        $this->assertStringContainsString('counter(pages)', $blade);
+        $this->assertStringContainsString('string(docSerial)', $blade);
+        $this->assertStringContainsString('string(docTitle)', $blade);
+        $this->assertStringContainsString('البصمة (إن وجدت)', $blade);
+        $this->assertStringContainsString('الطرف الأول', $blade);
+        $this->assertStringContainsString('الطرف الثاني', $blade);
+        $this->assertStringNotContainsString('منصة Z draft للعقود والاستشارات الذكية', $blade);
+        $this->assertStringNotContainsString('background:#f1f1f1', $blade);
+    }
+
+    public function test_pdf_source_normalizer_removes_source_form_chrome_before_snapshot_hashing(): void
+    {
+        $service=file_get_contents(app_path('Services/TemplateEngineService.php'));
+        $this->assertIsString($service);
+        $this->assertStringContainsString('normalizeLegalSourceText', $service);
+        $this->assertStringContainsString('Z\\s*DRAFT', $service);
+        $this->assertStringContainsString('trimTrailingSignatureForm', $service);
+        $this->assertStringContainsString('البيان المعتمد في صدر العقد', $service);
+    }
+}

@@ -22,10 +22,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.session' => SessionAuth::class,
             'permission' => RequirePermission::class,
         ]);
-        $middleware->encryptCookies(except: [
-            env('ZDRAFT_SESSION_COOKIE', 'zdraft_session'),
-            env('ZDRAFT_CSRF_COOKIE', 'zdraft_csrf'),
-        ]);
         $middleware->validateCsrfTokens(except: ['api/*']);
         $middleware->trustProxies(at: '*');
     })

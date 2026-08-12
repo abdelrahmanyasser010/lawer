@@ -26,11 +26,11 @@ const sections = [
   },
   {
     icon: Scale,
-    title: "الفرق بين الإنشاء الذاتي وخدمة المحامي",
+    title: "الفرق بين إنشاء العقد والاستشارة القانونية",
     items: [
       "العقد الذاتي يُنشأ من إجاباتك على القالب، ولا يُعد تلقائيًا استشارة قانونية مخصصة لحالتك.",
-      "خدمة المحامي تُطلب بصورة مستقلة، ويحدد المكتب وسيلة التواصل والموعد ونطاق العمل بعد مراجعة الطلب.",
-      "التواصل مع المحامي يتم في المكتب أو عبر Zoom أو WhatsApp؛ لا توجد محادثات داخل المنصة.",
+      "الاستشارة القانونية تُطلب بصورة مستقلة عن إنشاء العقد، ويحدد المكتب وسيلة التواصل والموعد النهائي بعد مراجعة الطلب.",
+      "التواصل في الاستشارة يتم عبر Zoom أو WhatsApp بحسب القنوات المتاحة؛ لا توجد محادثات داخل المنصة.",
     ],
   },
   {
@@ -39,7 +39,7 @@ const sections = [
     items: [
       "التحقق من البريد يثبت القدرة على الوصول إلى البريد فقط، ولا يثبت الهوية القانونية ولا يُعد توقيعًا إلكترونيًا.",
       "المنصة تحفظ نسخ الطلبات والعقود والملفات المرتبطة بها بحسب صلاحيات الحساب وسياسة الاحتفاظ بالبيانات.",
-      "عند مراجعة عقد مرفوع، يحتفظ النظام بالملف الأصلي وبكل تقرير أو نسخة معدلة يتيحها المكتب بدل استبدال الملفات السابقة.",
+      "عند إرفاق عقد أو مستند ضمن الاستشارة، يحتفظ النظام بالمرفقات وأي ملفات أو نتائج يتيحها المكتب ضمن سجل الطلب.",
     ],
   },
 ];
@@ -72,7 +72,7 @@ export default function DeclarationPage() {
         </div>
 
         <section className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-6">
-          <div className="flex items-start gap-3"><AlertTriangle className="mt-1 h-5 w-5 shrink-0 text-amber-700" /><div><h2 className="font-black text-amber-950">قبل المتابعة</h2><p className="mt-2 text-xs leading-7 text-amber-900">مهلة تعديل العقد الذاتي الحالية هي {catalog.policies.selfServiceEditHours} ساعة بعد اعتماد الدفع. السعر وسياسة الاسترداد وأي تكلفة إضافية لخدمة المحامي يجب أن تظهر لك قبل تأكيد الطلب. لا تعتبر المعاينة أو زر تأكيد الاستلام توقيعًا إلكترونيًا.</p></div></div>
+          <div className="flex items-start gap-3"><AlertTriangle className="mt-1 h-5 w-5 shrink-0 text-amber-700" /><div><h2 className="font-black text-amber-950">قبل المتابعة</h2><p className="mt-2 text-xs leading-7 text-amber-900">مهلة تعديل العقد الذاتي الحالية هي {catalog.policies.selfServiceEditHours} ساعة بعد اعتماد الدفع. السعر وسياسة الاسترداد الخاصة بالاستشارة يجب أن تظهر لك قبل تأكيد الطلب. لا تعتبر المعاينة أو زر تأكيد الاستلام توقيعًا إلكترونيًا.</p></div></div>
         </section>
 
         <div className="mt-8 text-center"><button type="button" onClick={() => window.history.back()} className="rounded-xl bg-[#00102e] px-8 py-3 text-sm font-black text-white">العودة</button></div>

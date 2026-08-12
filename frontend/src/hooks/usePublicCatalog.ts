@@ -7,21 +7,28 @@ import type { PublicCatalog } from "@/types/customer";
 const fallback: PublicCatalog = {
   templates: [],
   services: {
-    contractReviewDepositEgp: 100,
-    consultationDepositEgp: 100,
-    contractDraftingDepositEgp: 100,
+    contractReviewDepositEgp: 0,
+    consultationDepositEgp: 0,
+    consultationFeeEgp: 0,
+    contractDraftingDepositEgp: 0,
   },
   office: {
     displayName: "Z draft",
     address: "",
-    whatsappNumber: process.env.NEXT_PUBLIC_OFFICE_WHATSAPP_NUMBER || "",
+    whatsappNumber: "",
+    consultationWhatsappNumber: "",
+    supportWhatsappNumber: "",
+    supportPhone: "",
+    supportEmail: "",
   },
   payment: {
-    vodafoneCashNumber: process.env.NEXT_PUBLIC_VODAFONE_CASH_NUMBER || "",
+    // Payment destination must come from the backend catalog so the dashboard
+    // remains the single source of truth. Never hard-code a wallet in the client.
+    vodafoneCashNumber: "",
   },
   policies: {
     selfServiceEditHours: 24,
-    communicationChannels: ["office", "zoom", "whatsapp"],
+    communicationChannels: ["zoom", "whatsapp"],
     chatEnabled: false,
   },
 };
@@ -29,15 +36,20 @@ const fallback: PublicCatalog = {
 export function usePublicCatalog() {
   const [catalog, setCatalog] = useState<PublicCatalog>(fallback);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let active = true;
     frontendApi.catalog()
-      .then((value) => { if (active) setCatalog(value); })
-      .catch(() => undefined)
+      .then((value) => {
+        if (!active) return;
+        setCatalog(value);
+        setLoadError(false);
+      })
+      .catch(() => { if (active) setLoadError(true); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
 
-  return { catalog, loading };
+  return { catalog, loading, loadError };
 }

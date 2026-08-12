@@ -18,8 +18,8 @@ function publicFlag(value: string | undefined, fallback: boolean): boolean {
 export const dashboardFeatures: Record<DashboardFeature, boolean> = {
   teamManagement: publicFlag(process.env.NEXT_PUBLIC_ENABLE_TEAM_MANAGEMENT, false),
   assignment: publicFlag(process.env.NEXT_PUBLIC_ENABLE_ASSIGNMENT, false),
-  officeContractCreation: publicFlag(process.env.NEXT_PUBLIC_ENABLE_OFFICE_CONTRACT_CREATION, false),
-  contractEditing: publicFlag(process.env.NEXT_PUBLIC_ENABLE_CONTRACT_EDITING, false),
+  officeContractCreation: publicFlag(process.env.NEXT_PUBLIC_ENABLE_OFFICE_CONTRACT_CREATION, true),
+  contractEditing: publicFlag(process.env.NEXT_PUBLIC_ENABLE_CONTRACT_EDITING, true),
   templateManagement: publicFlag(process.env.NEXT_PUBLIC_ENABLE_TEMPLATE_MANAGEMENT, false),
 };
 

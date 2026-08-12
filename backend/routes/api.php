@@ -4,6 +4,7 @@ use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ContractController;
+use App\Http\Controllers\ConsultationScheduleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeatureDisabledController;
 use App\Http\Controllers\NotificationController;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/health',[SystemController::class,'health']);
 Route::get('/ready',[SystemController::class,'ready']);
+Route::options('/{any}', fn()=>response('',204))->where('any','.*');
 
 $register = static function (string $prefix = 'v1'): void {
     Route::prefix($prefix)->group(function (): void {
@@ -37,6 +39,7 @@ $register = static function (string $prefix = 'v1'): void {
         Route::get('catalog',CatalogController::class);
         Route::get('templates',[TemplateController::class,'index']);
         Route::get('templates/{slug}/definition',[TemplateController::class,'definition']);
+        Route::get('consultation-availability',[ConsultationScheduleController::class,'availability']);
 
         Route::prefix('contracts')->group(function (): void {
             Route::get('shared/{token}',[ContractController::class,'sharedInfo']);
@@ -96,6 +99,7 @@ $register = static function (string $prefix = 'v1'): void {
         Route::prefix('admin')->middleware('auth.session')->group(function (): void {
             Route::prefix('contracts')->middleware('permission:contracts.view_all,contracts.view_assigned')->group(function (): void {
                 Route::get('',[ContractController::class,'adminIndex']);
+                Route::get('summary',[ContractController::class,'adminSummary']);
                 Route::post('{id}/assign',[ContractController::class,'assign'])->whereNumber('id')->middleware('permission:contracts.assign');
                 Route::post('{id}/status',[ContractController::class,'status'])->whereNumber('id')->middleware('permission:contracts.manage_status');
                 Route::post('{id}/payment-waiver',[ContractController::class,'paymentWaiver'])->whereNumber('id')->middleware('permission:contracts.waive_payment');
@@ -108,6 +112,7 @@ $register = static function (string $prefix = 'v1'): void {
                 Route::get('',[ServiceRequestController::class,'adminIndex']);
                 Route::post('{id}/assign',[ServiceRequestController::class,'assign'])->whereNumber('id')->middleware('permission:requests.assign');
                 Route::post('{id}/status',[ServiceRequestController::class,'status'])->whereNumber('id')->middleware('permission:requests.manage');
+                Route::get('{id}/availability',[ServiceRequestController::class,'adminAvailability'])->whereNumber('id')->middleware('permission:consultations.manage');
                 Route::post('{id}/meeting',[ServiceRequestController::class,'meeting'])->whereNumber('id')->middleware('permission:consultations.manage');
                 Route::post('{id}/client-update',[ServiceRequestController::class,'clientUpdate'])->whereNumber('id')->middleware('permission:requests.manage');
                 Route::post('{id}/deliverables',[ServiceRequestController::class,'deliverable'])->whereNumber('id')->middleware('permission:requests.manage');
@@ -117,6 +122,8 @@ $register = static function (string $prefix = 'v1'): void {
                 Route::get('',[PaymentController::class,'adminIndex']);
                 Route::post('{id}/approve',[PaymentController::class,'approve'])->whereNumber('id');
                 Route::post('{id}/reject',[PaymentController::class,'reject'])->whereNumber('id');
+                Route::post('{id}/clarification',[PaymentController::class,'requestClarification'])->whereNumber('id');
+                Route::post('manual',[PaymentController::class,'recordManual']);
             });
             Route::prefix('users')->middleware('permission:clients.view')->group(function (): void {
                 Route::get('',[UserController::class,'adminIndex']);
@@ -124,10 +131,16 @@ $register = static function (string $prefix = 'v1'): void {
                 Route::patch('{id}/status',[UserController::class,'adminStatus'])->whereNumber('id')->middleware('permission:clients.manage');
             });
             Route::get('audit',[AuditController::class,'index'])->middleware('permission:audit.view');
+            Route::get('audit/verify',[AuditController::class,'verify'])->middleware('permission:audit.view');
             Route::prefix('settings')->middleware('permission:settings.manage')->group(function (): void {
                 Route::get('',[SettingsController::class,'index']);
                 Route::patch('',[SettingsController::class,'update']);
-                Route::post('test-email',[SettingsController::class,'testEmail']);
+            });
+            Route::prefix('consultation-schedule')->middleware('permission:settings.manage')->group(function (): void {
+                Route::get('',[ConsultationScheduleController::class,'adminIndex']);
+                Route::put('',[ConsultationScheduleController::class,'updateWindows']);
+                Route::post('exceptions',[ConsultationScheduleController::class,'addException']);
+                Route::delete('exceptions/{id}',[ConsultationScheduleController::class,'deleteException'])->whereNumber('id');
             });
             Route::prefix('reports')->middleware('permission:reports.view')->group(function (): void {
                 Route::get('overview',[ReportController::class,'overview']);
@@ -144,8 +157,8 @@ $register = static function (string $prefix = 'v1'): void {
                 Route::patch('{id}/status',FeatureDisabledController::class)->whereNumber('id');
             });
             Route::prefix('templates')->group(function (): void {
-                Route::get('',FeatureDisabledController::class);
-                Route::patch('{templateId}',FeatureDisabledController::class)->whereNumber('templateId');
+                Route::get('',[TemplateController::class,'adminIndex'])->middleware('permission:templates.view,pricing.manage');
+                Route::patch('{templateId}',[TemplateController::class,'adminUpdate'])->whereNumber('templateId')->middleware('permission:pricing.manage');
                 Route::post('',FeatureDisabledController::class);
                 Route::get('versions/{versionId}',FeatureDisabledController::class)->whereNumber('versionId');
                 Route::post('{templateId}/versions',FeatureDisabledController::class)->whereNumber('templateId');
@@ -176,10 +189,3 @@ $register = static function (string $prefix = 'v1'): void {
 };
 
 $register('v1');
-
-Route::any('/{any}', function (\Illuminate\Http\Request $request) {
-    if ($request->isMethod('OPTIONS')) {
-        return response('', 204);
-    }
-    abort(404);
-})->where('any', '.*');

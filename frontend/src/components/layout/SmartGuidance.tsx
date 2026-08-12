@@ -51,7 +51,7 @@ export default function SmartGuidance({ mode, onActionClick }: SmartGuidanceProp
               </p>
               <div className="pt-2">
                 <a
-                  href="#templates"
+                  href="/create-contract?mode=self_service"
                   onClick={() => setDismissed(true)}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#986410] px-4 py-2 text-xs font-black text-[#00102e] hover:bg-amber-400 transition-all cursor-pointer shadow-sm"
                 >

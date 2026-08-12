@@ -1,3 +1,4 @@
+import { evaluateCondition } from "./resolver";
 import type {
   ContractDraftData,
   RepeaterRowValue,
@@ -86,7 +87,8 @@ function validateRepeaterField(
 
   return rows.flatMap((row, rowIndex) =>
     (field.columns ?? [])
-      .filter((column) => column.required && isEmpty(row[column.key]))
+      .filter((column) => !column.visibleWhen || evaluateCondition(column.visibleWhen, row))
+      .filter((column) => (column.required || Boolean(column.requiredWhen && evaluateCondition(column.requiredWhen, row))) && isEmpty(row[column.key]))
       .map((column) => ({
         stepKey,
         fieldKey: `${field.key}.${rowIndex}.${column.key}`,
@@ -99,7 +101,7 @@ export function validateDynamicDefinition(
   definition: ResolvedWizardDefinition,
   draft: ContractDraftData,
 ): DraftValidationIssue[] {
-  return definition.steps.flatMap((step) =>
+  const issues = definition.steps.flatMap((step) =>
     step.fields.flatMap((field) => {
       const value = field.type === "attachment"
         ? (draft.attachmentRefs[field.key] ?? draft.fieldValues[field.key])
@@ -109,4 +111,19 @@ export function validateDynamicDefinition(
         : validateScalarField(step.key, field, value);
     }),
   );
+
+  if (definition.template.slug === "apartment_sale" && draft.fieldValues.sale_payment_plan !== "installments" && draft.selectedOptionalClauseKeys.includes("sale_installment_schedule")) {
+    issues.push({ stepKey: "sale_payment", fieldKey: "sale_payment_plan", labelAr: "ملحق جدول الأقساط يُستخدم فقط عند اختيار السداد بالتقسيط" });
+  }
+
+  if (definition.template.slug === "apartment_sale" && draft.fieldValues.sale_payment_plan === "installments") {
+    const total = Number(draft.fieldValues.sale_total_price ?? 0);
+    const down = Number(draft.fieldValues.sale_down_payment ?? 0);
+    const remaining = Number(draft.fieldValues.sale_remaining_amount ?? 0);
+    if (total > 0 && Number.isFinite(total) && Math.abs(total - (down + remaining)) > 0.01) {
+      issues.push({ stepKey: "sale_payment", fieldKey: "sale_total_price", labelAr: "إجمالي الثمن يجب أن يساوي الدفعة المقدمة + باقي الثمن" });
+    }
+  }
+
+  return issues;
 }

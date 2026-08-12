@@ -81,22 +81,9 @@ RUN_DATABASE_TESTS=true php artisan test --filter DatabaseWorkflowSmokeTest
 - يجب أن تكون `NEXT_PUBLIC_DEMO_MODE=false`.
 - يجب أن تكون `NEXT_PUBLIC_TEMPLATE_SOURCE=api`.
 - يجب أن تكون `NEXT_PUBLIC_DRAFT_SOURCE=api-only` في لوحة التحكم.
+- لا يوجد fallback إلى `localhost` في Production؛ غياب `NEXT_PUBLIC_API_URL` يعطي خطأ إعداد صريح.
+- لو Vercel والـAPI على Origins مختلفة، V27 يدعم CSRF token عبر استجابة المصادقة، ومع ذلك يفضل دومينات مخصصة تحت نفس النطاق قبل Go-live.
 - شغّل Laravel Scheduler عبر systemd المرفق؛ وهو المسؤول عن البريد وPDF والقفل والتنظيف والنسخ الاحتياطي.
 - لا تستخدم قاعدة الإنتاج لتجارب الاختبارات.
 
 راجع `backend/README.md` و`LARAVEL_PRODUCTION_SETUP_AR.md`.
-
-## VPS Production
-
-قبل فتح المنصة لعملاء حقيقيين شغّل فحص الجاهزية:
-
-```bash
-cd backend
-php artisan zdraft:doctor --json
-```
-
-النشر الكامل على VPS موثق في:
-
-```text
-docs/VPS_PRODUCTION_DEPLOYMENT_AR.md
-```

@@ -4,7 +4,7 @@ import json,re,subprocess,sys
 from pathlib import Path
 
 LARAVEL=Path(__file__).resolve().parents[1]
-MANIFEST=LARAVEL/'tests'/'Fixtures'/'legacy_api_contract_v18.json'
+MANIFEST=LARAVEL/'tests'/'Fixtures'/'api_contract_v29.json'
 
 def norm_path(path:str)->str:
     path=re.sub(r':([A-Za-z_][A-Za-z0-9_]*)',r'{\1}',path)
@@ -19,7 +19,7 @@ actual={(row['method'].upper(),norm_path(row['path'])) for row in actual_raw if 
 missing=sorted(expected-actual)
 extra=sorted(actual-expected)
 result={
-    'frozen_legacy_contract_count':len(expected),
+    'frozen_current_contract_count':len(expected),
     'laravel_v1_count':len(actual),
     'matched_count':len(expected & actual),
     'missing_in_laravel':[{'method':m,'path':p} for m,p in missing],

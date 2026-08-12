@@ -8,8 +8,7 @@
     "packages/*"
   ],
   "overrides": {
-    "postcss": "8.5.25",
-    "sharp": "0.35.3"
+    "postcss": "8.5.25"
   },
   "scripts": {
     "build:engine": "npm --workspace @zdraft/template-engine run build",
@@ -26,9 +25,7 @@
     "worker:finalize": "php backend/artisan zdraft:finalize-expired-contracts --limit=50",
     "backend:test": "php backend/artisan test",
     "backend:routes": "php backend/artisan route:list --path=api/v1",
-    "verify:laravel": "php backend/tools/run_python.php backend/tools/verify_laravel_final_v20.py",
-    "backend:doctor": "php backend/artisan zdraft:doctor --json",
-    "doctor": "npm run build && npm run backend:doctor",
+    "verify:laravel": "python3 backend/tools/verify_laravel_final_v20.py",
     "test": "npm run test:engine && npm run verify:laravel"
   }
 }

@@ -1,12 +1,13 @@
 <?php
 namespace App\Services;
+use App\Support\AuthAudience;
 use App\Support\Security;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Cookie;
 final class SessionService
 {
-    /** @return array{0:Cookie,1:Cookie} */
+    /** @return array{0:Cookie,1:Cookie,2:string} */
     public function create(int $userId, Request $request): array
     {
         $sessionToken = Security::randomToken(48);
@@ -18,8 +19,9 @@ final class SessionService
         );
         $minutes = $ttlHours * 60;
         return [
-            Security::cookie(config('zdraft.session_cookie'), $sessionToken, $minutes, true),
-            Security::cookie(config('zdraft.csrf_cookie'), $csrfToken, $minutes, false),
+            Security::cookie(AuthAudience::sessionCookie($request), $sessionToken, $minutes, true),
+            Security::cookie(AuthAudience::csrfCookie($request), $csrfToken, $minutes, false),
+            $csrfToken,
         ];
     }
 }

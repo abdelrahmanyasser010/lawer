@@ -4,13 +4,13 @@
 
 ## المتطلبات
 
-- PHP 8.4 أو أحدث
+- PHP 8.4+
 - Composer 2
-- PostgreSQL 15 أو أحدث
+- PostgreSQL 15+
 - `pdo_pgsql`, `mbstring`, `openssl`, `fileinfo`, `imagick`, `xml`, `curl`, `zip`, `intl`, `bcmath`
 - WeasyPrint
 - Nginx + PHP-FPM
-- Gmail App Password أو مزود SMTP
+- Gmail App Password أو SMTP متوافق
 
 ## تشغيل محلي
 
@@ -22,19 +22,10 @@ php artisan migrate --seed
 php artisan serve --host=0.0.0.0 --port=8000
 ```
 
-لتشغيل الأعمال الخلفية محليًا:
+وفي نافذة أخرى:
 
 ```bash
 php artisan schedule:work
-```
-
-إعداد الواجهات:
-
-```env
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
-NEXT_PUBLIC_DEMO_MODE=false
-NEXT_PUBLIC_TEMPLATE_SOURCE=api
-NEXT_PUBLIC_DRAFT_SOURCE=api-only
 ```
 
 ## الاختبارات
@@ -48,31 +39,25 @@ python3 tools/verify_sql_placeholders.py
 python3 tools/verify_laravel_final_v20.py
 ```
 
-اختبار PostgreSQL المتكامل لا يعمل افتراضيًا حتى لا يحذف بيانات بالخطأ. استخدم قاعدة اختبار منفصلة:
+اختبارات قاعدة البيانات والصور يجب تشغيلها على PostgreSQL اختبار منفصلة فقط:
 
 ```bash
-RUN_DATABASE_TESTS=true php artisan test --filter DatabaseWorkflowSmokeTest
-RUN_DATABASE_TESTS=true php artisan test --filter AttachmentImagePipelineSmokeTest
+DB_DATABASE=zdraft_test php artisan migrate --seed --force
+DB_DATABASE=zdraft_test RUN_DATABASE_TESTS=true php artisan test
 ```
 
-## وضع السوبر أدمن الواحد
+## Production
 
-إدارة الفريق والإسناد وإنشاء/تحرير العقود من المكتب ومحرر القوالب محفوظة خلف `FEATURE_*` ومغلقة افتراضيًا.
-
-## ملفات قديمة
-
-لا يوجد مجلد Express/Node في هذه النسخة. ملفات `database/legacy-sql` هي تاريخ Schema فقط وتظل مطلوبة لتشغيل Migrations على قواعد جديدة أو قديمة.
-
-## تثبيت الواجهات
-
-ملف `package-lock.json` القديم لم يكن صالحًا وحُذف. على Staging متصل بسجل npm طبيعي نفذ `npm install` من جذر المشروع، راجع الملف الناتج وثبّته، ثم استخدم `npm ci` في النشرات التالية.
-
-## فحص الإنتاج
-
-بعد ضبط `.env` وتشغيل migrations والـseed:
+السكربتات الجاهزة:
 
 ```bash
-php artisan zdraft:doctor --json
+sudo APP_DIR=/var/www/zdraft/backend bash deploy/install-ubuntu.sh
+sudo API_DOMAIN=api.example.com APP_DIR=/var/www/zdraft/backend bash deploy/activate-production.sh
+BASE_URL=https://api.example.com bash deploy/smoke-production.sh
 ```
 
-يجب أن تكون `ready=true` و`blockers=0` قبل فتح المنصة لعملاء حقيقيين.
+V27 يعيد `csrfToken` مع تسجيل الدخول/التسجيل و`/auth/me` لدعم الواجهة على Origin مختلف، مع بقاء CSRF cookie للتحقق المزدوج. اضبط `FRONTEND_URL` و`DASHBOARD_URL` بدقة، ويمكن إضافة Origins مؤقتة في `CORS_EXTRA_ORIGINS`.
+
+`Laravel Scheduler` هو المسؤول عن البريد وPDF والقفل التلقائي والتنظيف والـBackup. ميزات الفريق والإسناد وإنشاء/تحرير العقود من المكتب ومحرر القوالب محفوظة خلف `FEATURE_*` ومقفولة افتراضيًا لوضع السوبر أدمن الواحد.
+
+راجع `../LARAVEL_PRODUCTION_SETUP_AR.md` قبل Go-live.

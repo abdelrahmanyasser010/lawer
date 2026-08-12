@@ -1,0 +1,478 @@
+{
+  "version": "V29",
+  "notes": "Dashboard + customer workflow hardening: consultation availability, manual payments, clarification, admin template route, audit verification, contract summary; test-email UI/API removed by product decision.",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit/verify"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/consultation-schedule"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/consultation-schedule"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/consultation-schedule/exceptions"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/consultation-schedule/exceptions/{id}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/contracts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/contracts/summary"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/contracts/{id}/assign"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/contracts/{id}/issue"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/contracts/{id}/lock"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/contracts/{id}/payment-waiver"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/contracts/{id}/status"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/contracts/{id}/versions"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/contracts/{id}/versions/{versionId}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/payments"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/payments/manual"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/payments/{id}/approve"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/payments/{id}/clarification"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/payments/{id}/reject"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/reports/customer-export"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/reports/overview"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/service-requests"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/service-requests/{id}/assign"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/service-requests/{id}/availability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/service-requests/{id}/client-update"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/service-requests/{id}/deliverables"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/service-requests/{id}/link-contract"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/service-requests/{id}/meeting"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/service-requests/{id}/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/settings"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/settings"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/team"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/team/assignable-lawyers"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/team/invite"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/team/roles"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/team/{id}/roles"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/team/{id}/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/templates"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/templates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/templates/versions/{versionId}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/templates/versions/{versionId}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/templates/versions/{versionId}/clauses"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/templates/versions/{versionId}/clauses/{clauseKey}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/templates/versions/{versionId}/clauses/{clauseKey}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/templates/versions/{versionId}/fields"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/templates/versions/{versionId}/fields/{fieldKey}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/templates/versions/{versionId}/fields/{fieldKey}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/templates/versions/{versionId}/optional-clauses"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/templates/versions/{versionId}/optional-clauses/{optionalKey}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/templates/versions/{versionId}/optional-clauses/{optionalKey}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/templates/versions/{versionId}/preview"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/templates/versions/{versionId}/publish"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/templates/versions/{versionId}/return-draft"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/templates/versions/{versionId}/submit-review"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/templates/versions/{versionId}/validation"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/templates/versions/{versionId}/variants"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/templates/versions/{versionId}/variants/{variantKey}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/templates/versions/{versionId}/variants/{variantKey}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/templates/versions/{versionId}/variants/{variantKey}/steps"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/templates/versions/{versionId}/variants/{variantKey}/steps/{stepKey}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/templates/versions/{versionId}/variants/{variantKey}/steps/{stepKey}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/templates/{templateId}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/templates/{templateId}/versions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{id}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/users/{id}/status"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/attachments"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/attachments/{id}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/attachments/{id}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/attachments/{id}/download"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/attachments/{id}/link"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/attachments/{id}/thumbnail"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/email-verification/request"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/email-verification/verify"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/me"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/password/change"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/password/forgot"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/password/reset"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/register"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/sessions"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/auth/sessions/{id}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/catalog"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/consultation-availability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/contracts/draft"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/contracts/my"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/contracts/shared/{token}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/contracts/shared/{token}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/contracts/shared/{token}/access"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/contracts/{id}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/contracts/{id}/documents"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/contracts/{id}/documents/{documentId}/download"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/contracts/{id}/draft"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/contracts/{id}/finalize"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/contracts/{id}/pdf"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/contracts/{id}/revision-request"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/contracts/{id}/shares"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/contracts/{id}/shares/{shareId}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/contracts/{id}/submit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard/summary"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard/work-queue"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notifications/read-all"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notifications/{id}/read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/payments/my"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payments/receipts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/service-requests"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/service-requests/my"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/service-requests/{id}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/service-requests/{id}/attachments"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/service-requests/{id}/confirm-receipt"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/service-requests/{id}/revision-request"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/templates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/templates/{slug}/definition"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/profile"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/users/profile"
+    }
+  ]
+}

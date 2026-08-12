@@ -44,10 +44,10 @@ final class SecurityHeaders
 
     private static function originAllowed(string $origin): bool
     {
-        $allowed = array_values(array_filter([
+        $allowed = array_values(array_filter(array_merge([
             config('zdraft.frontend_url'),
             config('zdraft.dashboard_url'),
-        ]));
-        return in_array($origin, $allowed, true);
+        ], (array) config('zdraft.cors_extra_origins', []))));
+        return in_array(rtrim($origin, '/'), array_map(static fn ($value) => rtrim((string) $value, '/'), $allowed), true);
     }
 }

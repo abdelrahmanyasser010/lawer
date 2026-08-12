@@ -68,11 +68,25 @@ function validateCondition(
   path: string,
 ): void {
   if (!condition) return;
+  if ("all" in condition) {
+    if (condition.all.length === 0) issue(issues, "error", "EMPTY_COMPOSITE_CONDITION", "شرط all يجب أن يحتوي شرطًا واحدًا على الأقل", path);
+    condition.all.forEach((item, index) => validateCondition(item, knownFields, issues, `${path}.all[${index}]`));
+    return;
+  }
+  if ("any" in condition) {
+    if (condition.any.length === 0) issue(issues, "error", "EMPTY_COMPOSITE_CONDITION", "شرط any يجب أن يحتوي شرطًا واحدًا على الأقل", path);
+    condition.any.forEach((item, index) => validateCondition(item, knownFields, issues, `${path}.any[${index}]`));
+    return;
+  }
+  if ("not" in condition) {
+    validateCondition(condition.not, knownFields, issues, `${path}.not`);
+    return;
+  }
   if (!knownFields.has(condition.fieldKey)) {
-    issue(issues, "error", "UNKNOWN_CONDITION_FIELD", `شرط الظهور يعتمد على حقل غير موجود: ${condition.fieldKey}`, path);
+    issue(issues, "error", "UNKNOWN_CONDITION_FIELD", `الشرط يعتمد على حقل غير موجود: ${condition.fieldKey}`, path);
   }
   if (["equals", "not_equals", "includes"].includes(condition.operator) && condition.value === undefined) {
-    issue(issues, "error", "CONDITION_VALUE_REQUIRED", "شرط الظهور يحتاج قيمة للمقارنة", path);
+    issue(issues, "error", "CONDITION_VALUE_REQUIRED", "الشرط يحتاج قيمة للمقارنة", path);
   }
 }
 
@@ -110,6 +124,7 @@ function validateField(
     });
   }
   validateCondition(field.visibleWhen, knownFields, issues, `${path}.visibleWhen`);
+  validateCondition(field.requiredWhen, knownFields, issues, `${path}.requiredWhen`);
 }
 
 function fieldKeysForVariant(variant: ContractVariantDefinition): Set<string> {
@@ -183,6 +198,17 @@ export function inspectTemplateDefinition(definition: ContractTemplateDefinition
       const optional = optionalByKey.get(optionalKey);
       if (!optional) issue(issues, "error", "OPTIONAL_CLAUSE_UNKNOWN", `الإضافة الاختيارية غير موجودة: ${optionalKey}`, `${variantPath}.allowedOptionalClauseKeys[${index}]`);
       else if (!optional.applicableVariantKeys.includes(variant.key)) issue(issues, "error", "OPTIONAL_VARIANT_MISMATCH", `الإضافة ${optionalKey} غير مفعلة لهذا النوع`, `${variantPath}.allowedOptionalClauseKeys[${index}]`);
+    });
+
+    (variant.requiredAnnexKeys ?? []).forEach((annexKey, index) => {
+      if (!variant.allowedOptionalClauseKeys.includes(annexKey)) {
+        issue(issues, "error", "REQUIRED_ANNEX_NOT_ALLOWED", `الملحق الأساسي غير موجود ضمن ملاحق النوع: ${annexKey}`, `${variantPath}.requiredAnnexKeys[${index}]`);
+        return;
+      }
+      const annex = optionalByKey.get(annexKey);
+      if (!annex || annex.outputMode !== "separate_annex") {
+        issue(issues, "error", "REQUIRED_ANNEX_INVALID", `الملحق الأساسي يجب أن يكون ملحقًا مستقلاً صالحًا: ${annexKey}`, `${variantPath}.requiredAnnexKeys[${index}]`);
+      }
     });
   });
 

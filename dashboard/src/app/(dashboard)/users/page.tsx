@@ -1,90 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { Eye, RefreshCw, Search, UserX } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { Download, Eye, RefreshCw, Search, Check, X } from "lucide-react";
 import { dashboardRequest } from "@/lib/apiClient";
 import { hasBackendPermission } from "@/lib/adminAccess";
 import { PageError, PageLoading, StatusBadge } from "@/components/admin/PageFeedback";
+import { AdminDialog } from "@/components/admin/AdminDialog";
+import CustomerContactActions from "@/components/admin/CustomerContactActions";
+import { downloadXlsx } from "@/lib/simpleXlsx";
 
-type Client = {
-  id: number;
-  publicId: string;
-  name: string;
-  email: string;
-  phone?: string;
-  whatsappNumber?: string;
-  accountType: string;
-  companyName?: string | null;
-  status: string;
-  emailVerified: boolean;
-  createdAt: string;
-  contractsCount: number;
-  requestsCount: number;
-};
+type Client={id:number;publicId:string;name:string;email:string;phone?:string;whatsappNumber?:string;whatsappServiceConsentAt?:string|null;accountType:string;companyName?:string|null;status:string;emailVerified:boolean;createdAt:string;contractsCount:number;requestsCount:number};
+type SuspendAction={client:Client;reason:string}|null;
+type ExportPeriod="month"|"quarter"|"year";
+type CustomerExport={period:ExportPeriod;range:{start:string;end:string};rows:Array<{publicId:string;name:string;email:string;phone?:string;whatsappNumber?:string;whatsappServiceConsentAt?:string|null;accountType:string;companyName?:string|null;status:string;contractsCount:number;requestsCount:number;approvedPaymentsEgp:number}>};
+const exportPeriodLabels:Record<ExportPeriod,string>={month:"الشهر الحالي",quarter:"الربع الحالي",year:"السنة الحالية"};
+const accountLabels:Record<string,string>={individual:"فردي",business:"شركة",company:"شركة"};
+const clientStatusLabels:Record<string,string>={active:"نشط",suspended:"موقوف"};
 
-export default function UsersPage() {
-  const [items, setItems] = useState<Client[]>([]);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState<number | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  const canManage = hasBackendPermission("clients.manage");
-
-  const load = useCallback(async () => {
-    setError("");
-    const query = new URLSearchParams();
-    if (search) query.set("search", search);
-    if (status) query.set("status", status);
-    try {
-      setItems(await dashboardRequest<Client[]>(`/api/v1/admin/users?${query}`));
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر تحميل العملاء");
-    } finally {
-      setLoaded(true);
-    }
-  }, [search, status]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => void load(), 250);
-    return () => window.clearTimeout(timer);
-  }, [load]);
-
-  async function toggle(client: Client) {
-    setBusy(client.id);
-    try {
-      await dashboardRequest(`/api/v1/admin/users/${client.id}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: client.status === "suspended" ? "active" : "suspended" }),
-      });
-      await load();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر تحديث الحساب");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  if (!loaded) return <div className="p-8"><PageLoading /></div>;
-  if (error && !items.length) return <div className="p-8"><PageError message={error} onRetry={load} /></div>;
-
+export default function UsersPage(){
+  const [items,setItems]=useState<Client[]>([]),[search,setSearch]=useState(""),[status,setStatus]=useState(""),[error,setError]=useState(""),[notice,setNotice]=useState(""),[busy,setBusy]=useState<number|null>(null),[loaded,setLoaded]=useState(false),[suspend,setSuspend]=useState<SuspendAction>(null),[exportPeriod,setExportPeriod]=useState<ExportPeriod>("month"),[exporting,setExporting]=useState(false);
+  const canManage=hasBackendPermission("clients.manage");
+  const load=useCallback(async()=>{setError("");const query=new URLSearchParams();if(search)query.set("search",search);if(status)query.set("status",status);try{setItems(await dashboardRequest<Client[]>(`/api/v1/admin/users?${query}`));}catch(caught){setError(caught instanceof Error?caught.message:"تعذر تحميل العملاء");}finally{setLoaded(true);}},[search,status]);
+  useEffect(()=>{const timer=window.setTimeout(()=>void load(),250);return()=>window.clearTimeout(timer);},[load]);
+  async function exportCustomers(){setExporting(true);setError("");try{const result=await dashboardRequest<CustomerExport>(`/api/v1/admin/reports/customer-export?period=${exportPeriod}`);downloadXlsx(`zdraft-customers-${exportPeriod}-${new Date().toISOString().slice(0,10)}.xlsx`,[{name:"العملاء والنشاط",widths:[18,28,32,18,18,16,26,14,14,14,20],freezeHeader:true,autoFilter:true,rows:[["Z-ID","الاسم","البريد","الهاتف","واتساب","نوع الحساب","الشركة","الحالة","العقود","الطلبات","المدفوعات المعتمدة ج.م"],...result.rows.map(row=>[row.publicId,row.name,row.email,row.phone||"",row.whatsappNumber||"",accountLabels[row.accountType]||row.accountType,row.companyName||"",clientStatusLabels[row.status]||row.status,row.contractsCount,row.requestsCount,Number(row.approvedPaymentsEgp||0)])]}]);setNotice(`تم تجهيز ملف العملاء ونشاطهم خلال ${exportPeriodLabels[exportPeriod]}.`);}catch(caught){setError(caught instanceof Error?caught.message:"تعذر تصدير العملاء");}finally{setExporting(false);}}
+  async function reactivate(client:Client){setBusy(client.id);setError("");try{await dashboardRequest(`/api/v1/admin/users/${client.id}/status`,{method:"PATCH",body:JSON.stringify({status:"active"})});setNotice("تمت إعادة تفعيل حساب العميل.");await load();}catch(caught){setError(caught instanceof Error?caught.message:"تعذر تحديث الحساب");}finally{setBusy(null);}}
+  async function confirmSuspend(event:FormEvent<HTMLFormElement>){event.preventDefault();if(!suspend)return;const reason=suspend.reason.trim();if(!reason){setError("سبب تعليق الحساب مطلوب");return;}setBusy(suspend.client.id);setError("");try{await dashboardRequest(`/api/v1/admin/users/${suspend.client.id}/status`,{method:"PATCH",body:JSON.stringify({status:"suspended",reason})});setNotice("تم تعليق الحساب وإلغاء جلساته النشطة.");setSuspend(null);await load();}catch(caught){setError(caught instanceof Error?caught.message:"تعذر تعليق الحساب");}finally{setBusy(null);}}
+  if(!loaded)return <div className="p-8"><PageLoading/></div>;if(error&&!items.length)return <div className="p-8"><PageError message={error} onRetry={load}/></div>;
   return <div className="mx-auto max-w-7xl space-y-6 p-6 sm:p-8">
-    <header className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center">
-      <div><h1 className="text-3xl font-black text-[#00102e]">العملاء</h1><p className="text-sm text-slate-500">ملف موحد لكل عميل يشمل العقود والطلبات والمدفوعات والنشاط.</p></div>
-      <button onClick={() => void load()} className="self-start rounded-xl border border-slate-200 bg-white p-2.5"><RefreshCw className="h-4 w-4" /></button>
-    </header>
-
-    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row">
-      <label className="relative flex-1"><Search className="absolute right-3 top-3 h-4 w-4 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="بحث بالاسم أو البريد أو الهاتف" className="w-full rounded-xl border border-slate-200 py-2.5 pr-10 pl-3 text-sm" /></label>
-      <select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black"><option value="">كل الحالات</option><option value="active">نشط</option><option value="suspended">موقوف</option></select>
-    </div>
-
-    {error && <div className="rounded-xl bg-red-50 p-3 text-xs font-bold text-red-700">{error}</div>}
-
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      <div className="overflow-x-auto"><table className="w-full min-w-[980px] text-right text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="p-4">العميل</th><th className="p-4">التواصل</th><th className="p-4">نوع الحساب</th><th className="p-4">النشاط</th><th className="p-4">التحقق</th><th className="p-4">الحالة</th><th className="p-4">الإجراءات</th></tr></thead><tbody className="divide-y divide-slate-100">{items.map((client) => <tr key={client.id}><td className="p-4"><div className="font-black text-[#00102e]">{client.name}</div><div className="font-mono text-[10px] text-slate-400">{client.publicId}</div></td><td className="p-4"><div>{client.email}</div><div className="text-[10px] text-slate-400">{client.phone || client.whatsappNumber || "—"}</div></td><td className="p-4">{client.accountType}{client.companyName && <div className="text-[10px] text-slate-400">{client.companyName}</div>}</td><td className="p-4"><b>{client.contractsCount}</b> عقد · <b>{client.requestsCount}</b> طلب</td><td className="p-4">{client.emailVerified ? <span className="font-black text-emerald-700">البريد مؤكد</span> : <span className="font-black text-amber-700">غير مؤكد</span>}</td><td className="p-4"><StatusBadge value={client.status} /></td><td className="p-4"><div className="flex gap-2"><Link href={`/users/${client.id}`} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 font-black text-[#00102e]"><Eye className="h-3.5 w-3.5" />فتح الملف</Link>{canManage && <button disabled={busy === client.id} onClick={() => void toggle(client)} className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 font-black ${client.status === "suspended" ? "bg-emerald-700 text-white" : "bg-red-50 text-red-700"}`}><UserX className="h-3.5 w-3.5" />{client.status === "suspended" ? "تفعيل" : "تعليق"}</button>}</div></td></tr>)}</tbody></table></div>
-      {items.length === 0 && <div className="p-12 text-center text-sm font-bold text-slate-500">لا توجد نتائج.</div>}
-    </div>
+    <header className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-center"><div><h1 className="text-3xl font-black text-[#00102e]">العملاء</h1><p className="text-sm text-slate-500">ملف موحد لكل عميل مع التواصل والعقود والطلبات والمدفوعات وحالة الحساب.</p></div><div className="flex flex-wrap gap-2"><select value={exportPeriod} onChange={e=>setExportPeriod(e.target.value as ExportPeriod)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black">{Object.entries(exportPeriodLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><button disabled={exporting} onClick={()=>void exportCustomers()} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2 text-xs font-black text-white disabled:opacity-50"><Download className="h-4 w-4 text-[#986410]"/>{exporting?"جاري التصدير...":"تصدير العملاء Excel"}</button><button onClick={()=>void load()} className="rounded-xl border border-slate-200 bg-white p-2.5" aria-label="تحديث"><RefreshCw className="h-4 w-4"/></button></div></header>
+    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row"><label className="relative flex-1"><Search className="absolute right-3 top-3 h-4 w-4 text-slate-400"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="بحث بالاسم أو البريد أو الهاتف" className="w-full rounded-xl border border-slate-200 py-2.5 pr-10 pl-3 text-sm"/></label><select value={status} onChange={e=>setStatus(e.target.value)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black"><option value="">كل الحالات</option><option value="active">نشط</option><option value="suspended">موقوف</option></select></div>
+    {error&&<div className="rounded-xl bg-red-50 p-3 text-xs font-bold text-red-700">{error}</div>}{notice&&<div className="rounded-xl bg-emerald-50 p-3 text-xs font-bold text-emerald-700">{notice}</div>}
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="overflow-x-auto"><table className="w-full min-w-[1100px] text-right text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="p-4">العميل</th><th className="p-4">التواصل</th><th className="p-4">نوع الحساب</th><th className="p-4">النشاط</th><th className="p-4">التحقق</th><th className="p-4">الحالة</th><th className="p-4">الإجراءات</th></tr></thead><tbody className="divide-y divide-slate-100">{items.map(client=><tr key={client.id} className="align-top"><td className="p-4"><div className="font-black text-[#00102e]">{client.name}</div><div className="font-mono text-[10px] text-slate-400">{client.publicId}</div><div className="mt-1 text-[10px] text-slate-400">{client.email}</div></td><td className="p-4"><CustomerContactActions phone={client.phone} whatsapp={client.whatsappNumber} whatsappAllowed={Boolean(client.whatsappServiceConsentAt)} compact/></td><td className="p-4">{accountLabels[client.accountType]||"غير محدد"}{client.companyName&&<div className="text-[10px] text-slate-400">{client.companyName}</div>}</td><td className="p-4"><b>{client.contractsCount}</b> عقد · <b>{client.requestsCount}</b> طلب</td><td className="p-4">{client.emailVerified?<span className="font-black text-emerald-700">البريد مؤكد</span>:<span className="font-black text-amber-700">غير مؤكد</span>}</td><td className="p-4"><StatusBadge value={client.status}/></td><td className="p-4"><div className="flex flex-wrap gap-2"><Link href={`/users/${client.id}`} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 font-black text-[#00102e]"><Eye className="h-3.5 w-3.5"/>فتح الملف</Link>{canManage&&(client.status==="suspended"?<button disabled={busy===client.id} onClick={()=>void reactivate(client)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-700 px-3 py-2 font-black text-white"><Check className="h-3.5 w-3.5"/>تفعيل</button>:<button disabled={busy===client.id} onClick={()=>setSuspend({client,reason:""})} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 font-black text-red-700"><X className="h-3.5 w-3.5"/>تعليق</button>)}</div></td></tr>)}</tbody></table></div>{items.length===0&&<div className="p-12 text-center text-sm font-bold text-slate-500">لا توجد نتائج.</div>}</div>
+    <AdminDialog open={Boolean(suspend)} title="تعليق حساب العميل" description="سيتم تسجيل خروج العميل من كل الجلسات ومنعه من الدخول حتى إعادة التفعيل. اكتب سببًا واضحًا يُحفظ في سجل النظام." onClose={()=>!busy&&setSuspend(null)}>{suspend&&<form onSubmit={confirmSuspend} className="space-y-4"><textarea required maxLength={1000} value={suspend.reason} onChange={e=>setSuspend({...suspend,reason:e.target.value})} placeholder="سبب التعليق" className="min-h-28 w-full rounded-xl border border-slate-200 p-3 text-sm"/><button disabled={busy===suspend.client.id} className="w-full rounded-xl bg-red-700 px-5 py-3 text-xs font-black text-white">تأكيد تعليق الحساب</button></form>}</AdminDialog>
   </div>;
 }

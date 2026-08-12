@@ -11,6 +11,7 @@ final class TemplateEngineService
         $variant = collect($definition['variants'] ?? [])->firstWhere('key', $variantKey);
         if (!$variant) throw new ApiException(400, 'نوع العقد المختار غير صالح', 'INVALID_VARIANT');
         $allowed = array_values(array_unique(array_map('strval', $variant['allowedOptionalClauseKeys'] ?? [])));
+        $optionalKeys = $this->effectiveOptionalKeys($definition, $variant, $optionalKeys, $fieldValues);
         $optionalLibrary = collect($definition['optionalClauses'] ?? [])->keyBy('key');
         $invalid = [];
         foreach ($optionalKeys as $key) {
@@ -24,17 +25,23 @@ final class TemplateEngineService
         foreach ($optionalKeys as $key) {
             $clause = $optionalLibrary->get((string)$key);
             if (!$clause) continue;
-            $insert = array_values($clause['insertedSteps'] ?? []);
-            $before = (string)($clause['insertBeforeStepKey'] ?? '');
-            $index = null;
-            foreach ($steps as $i => $step) if (($step['key'] ?? null) === $before) { $index = $i; break; }
-            if ($index === null) $steps = array_merge($steps, $insert); else array_splice($steps, $index, 0, $insert);
+            if (!(bool)($clause['manualFillAnnex'] ?? false)) {
+                $insert = array_values($clause['insertedSteps'] ?? []);
+                $before = (string)($clause['insertBeforeStepKey'] ?? '');
+                $index = null;
+                foreach ($steps as $i => $step) if (($step['key'] ?? null) === $before) { $index = $i; break; }
+                if ($index === null) $steps = array_merge($steps, $insert); else array_splice($steps, $index, 0, $insert);
+            }
             foreach ($clause['legalClauseKeys'] ?? [] as $clauseKey) $active[(string)$clauseKey] = true;
         }
         $resolved = [];
         foreach ($steps as $step) {
             if (!$this->evaluate($step['visibleWhen'] ?? null, $fieldValues)) continue;
-            $step['fields'] = array_values(array_filter($step['fields'] ?? [], fn(array $field) => $this->evaluate($field['visibleWhen'] ?? null, $fieldValues)));
+            $visibleFields = array_values(array_filter($step['fields'] ?? [], fn(array $field) => $this->evaluate($field['visibleWhen'] ?? null, $fieldValues)));
+            $step['fields'] = array_map(function(array $field) use ($fieldValues) {
+                if (isset($field['requiredWhen']) && $this->evaluate($field['requiredWhen'], $fieldValues)) $field['required'] = true;
+                return $field;
+            }, $visibleFields);
             $resolved[] = $step;
         }
         return ['variant'=>$variant,'steps'=>$resolved,'activeClauseKeys'=>array_keys($active)];
@@ -43,6 +50,16 @@ final class TemplateEngineService
     public function evaluate(?array $condition, array $fieldValues): bool
     {
         if (!$condition) return true;
+        if (isset($condition['all']) && is_array($condition['all'])) {
+            if (count($condition['all']) === 0) return false;
+            foreach ($condition['all'] as $item) if (!$this->evaluate(is_array($item) ? $item : null, $fieldValues)) return false;
+            return true;
+        }
+        if (isset($condition['any']) && is_array($condition['any'])) {
+            foreach ($condition['any'] as $item) if ($this->evaluate(is_array($item) ? $item : null, $fieldValues)) return true;
+            return false;
+        }
+        if (isset($condition['not']) && is_array($condition['not'])) return !$this->evaluate($condition['not'], $fieldValues);
         $current = $fieldValues[(string)($condition['fieldKey'] ?? '')] ?? null;
         if (is_array($current)) $current = null;
         return match ($condition['operator'] ?? null) {
@@ -71,7 +88,9 @@ final class TemplateEngineService
                     foreach ($rows as $i => $row) {
                         if (!is_array($row)) continue;
                         foreach ($field['columns'] ?? [] as $column) {
-                            if (($column['required'] ?? false) && $this->emptyValue($row[$column['key']] ?? null)) {
+                            if (!empty($column['visibleWhen']) && !$this->evaluate(is_array($column['visibleWhen']) ? $column['visibleWhen'] : null, $row)) continue;
+                            $required = (bool)($column['required'] ?? false) || (!empty($column['requiredWhen']) && $this->evaluate(is_array($column['requiredWhen']) ? $column['requiredWhen'] : null, $row));
+                            if ($required && $this->emptyValue($row[$column['key']] ?? null)) {
                                 $issues[] = sprintf('%s — %s في العنصر رقم %d', $field['labelAr'] ?? $key, $column['labelAr'] ?? $column['key'], $i+1);
                             }
                         }
@@ -100,46 +119,102 @@ final class TemplateEngineService
                 }
             }
         }
-        if (($definition['slug'] ?? null) === 'apartment_sale') {
-            $installments = in_array('sale_installment_schedule', $optionalKeys, true);
-            $method = $fieldValues['sale_payment_method'] ?? null;
-            if ($installments && $method !== 'installments') $issues[] = 'ملحق الأقساط يتطلب اختيار السداد بالأقساط';
-            if (!$installments && $method === 'installments') $issues[] = 'السداد بالأقساط يتطلب تفعيل ملحق جدول الأقساط';
-            if ($installments) {
-                $total=(float)($fieldValues['sale_total_price']??0);$down=(float)($fieldValues['sale_down_payment']??0);$remaining=(float)($fieldValues['sale_remaining_amount']??0);
-                $rows=is_array($fieldValues['sale_installment_rows']??null)?$fieldValues['sale_installment_rows']:[];$sum=0;foreach($rows as $row)$sum+=(float)($row['amount']??0);
-                if($total>0&&abs($total-($down+$remaining))>0.01)$issues[]='إجمالي الثمن لا يساوي المقدم + المتبقي';
-                if($remaining>0&&$rows&&abs($remaining-$sum)>0.01)$issues[]='مجموع الأقساط لا يساوي المبلغ المتبقي';
+        if (($definition['slug'] ?? null) === 'apartment_sale' && ($fieldValues['sale_payment_plan'] ?? null) !== 'installments' && in_array('sale_installment_schedule', array_map('strval', $optionalKeys), true)) {
+            $issues[] = 'ملحق جدول الأقساط يُستخدم فقط عند اختيار السداد بالتقسيط';
+        }
+        if (($definition['slug'] ?? null) === 'apartment_sale' && ($fieldValues['sale_payment_plan'] ?? null) === 'installments') {
+            $total = (float)($fieldValues['sale_total_price'] ?? 0);
+            $down = (float)($fieldValues['sale_down_payment'] ?? 0);
+            $remaining = (float)($fieldValues['sale_remaining_amount'] ?? 0);
+            if ($total > 0 && abs($total - ($down + $remaining)) > 0.01) {
+                $issues[] = 'إجمالي الثمن يجب أن يساوي الدفعة المقدمة + باقي الثمن';
             }
         }
-        if (($definition['slug'] ?? null) === 'freelancer') {
-            if (in_array('visual_identity_financial_annex',$optionalKeys,true)) {
-                $total=(float)($fieldValues['visual_financial_total']??0);$rows=is_array($fieldValues['visual_payment_schedule']??null)?$fieldValues['visual_payment_schedule']:[];$sum=0;$pct=0;$hasPct=false;
-                foreach($rows as $r){$sum+=(float)($r['amount']??0);if((float)($r['percentage']??0)>0){$pct+=(float)$r['percentage'];$hasPct=true;}}
-                if($total>0&&$rows&&abs($total-$sum)>0.01)$issues[]='مجموع دفعات ملحق الهوية البصرية يجب أن يساوي إجمالي المقابل المالي';
-                if($hasPct&&abs($pct-100)>0.01)$issues[]='مجموع نسب دفعات ملحق الهوية البصرية يجب أن يساوي 100%';
-            }
-            if (in_array('social_media_financial_annex',$optionalKeys,true)) {
-                $total=(float)($fieldValues['social_financial_amount']??0);$rows=is_array($fieldValues['social_payment_plan']??null)?$fieldValues['social_payment_plan']:[];$sum=0;foreach($rows as $r)$sum+=(float)($r['amount']??0);
-                if($total>0&&$rows&&abs($total-$sum)>0.01)$issues[]='مجموع دفعات ملحق إدارة منصات التواصل يجب أن يساوي قيمة المقابل المالي';
-                if(($fieldValues['social_has_ad_budget']??null)==='yes'&&(float)($fieldValues['social_ad_budget']??0)<=0)$issues[]='يجب إدخال قيمة الميزانية الإعلانية عند اختيار وجود حملات ممولة';
-            }
-            if(in_array('website_sla_annex',$optionalKeys,true)&&empty($fieldValues['website_sla_levels']))$issues[]='يجب إدخال مستوى خدمة واحد على الأقل في ملحق الصيانة والدعم';
-        }
+        // Separate annexes marked manualFillAnnex are printed as blank templates.
+        // Their internal form fields are intentionally not validated in the customer wizard.
         return ['steps'=>$resolved['steps'],'issues'=>array_values(array_unique($issues))];
     }
 
     /** @return array{clauses:array,missingVariables:array,missingClauseKeys:array} */
     public function renderLegalClauses(array $definition,string $variantKey,array $optionalKeys,array $fieldValues):array
     {
-        $resolved=$this->resolve($definition,$variantKey,$optionalKeys,$fieldValues);$active=array_fill_keys($resolved['activeClauseKeys'],true);$available=[];$clauses=[];$missing=[];
-        foreach($definition['legalClauses']??[] as $clause){if(($clause['enabled']??true)!==false)$available[(string)$clause['key']]=true;}
-        $missingKeys=array_values(array_filter(array_keys($active),fn($key)=>!isset($available[$key])));
-        foreach($definition['legalClauses']??[] as $clause){$key=(string)($clause['key']??'');if(!isset($active[$key])||($clause['enabled']??true)===false||!$this->evaluate($clause['visibleWhen']??null,$fieldValues))continue;
-            $body=preg_replace_callback('/{{\s*([a-zA-Z0-9_.-]+)\s*}}/',function($m)use($fieldValues,&$missing){$v=$fieldValues[$m[1]]??null;$text=is_array($v)?json_encode($v,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES):(string)($v??'');if($text===''){$missing[$m[1]]=true;return '{{'.$m[1].'}}';}return $text;},(string)($clause['bodyAr']??''));
+        $resolved=$this->resolve($definition,$variantKey,$optionalKeys,$fieldValues);
+        $variant=$resolved['variant'];
+        $effectiveOptionalKeys=$this->effectiveOptionalKeys($definition,$variant,$optionalKeys,$fieldValues);
+        $available=[];$clauseByKey=[];$clauses=[];$missing=[];$manualClauseKeys=[];
+        foreach($definition['optionalClauses']??[] as$optional){if(in_array((string)($optional['key']??''),$effectiveOptionalKeys,true)&&($optional['manualFillAnnex']??false)){foreach($optional['legalClauseKeys']??[] as$key)$manualClauseKeys[(string)$key]=true;}}
+        foreach($definition['legalClauses']??[] as$clause){$key=(string)($clause['key']??'');if(($clause['enabled']??true)!==false){$available[$key]=true;$clauseByKey[$key]=$clause;}}
+        $missingKeys=array_values(array_filter($resolved['activeClauseKeys'],fn($key)=>!isset($available[$key])));
+        foreach($resolved['activeClauseKeys'] as$key){
+            $key=(string)$key;$clause=$clauseByKey[$key]??null;if(!$clause||!$this->evaluate($clause['visibleWhen']??null,$fieldValues))continue;
+            $manual=isset($manualClauseKeys[$key]);$body=(string)($clause['bodyAr']??'');$vars=$manual?[]:($clause['variables']??[]);
+            foreach($vars as$var){$token='{{'.$var.'}}';$value=$fieldValues[$var]??null;if($this->emptyValue($value)){$missing[]=(string)$var;continue;}$body=str_replace($token,(string)$value,$body);}
             $clauses[]=['key'=>$key,'titleAr'=>$clause['titleAr']??$key,'bodyAr'=>$body,'sourceDocumentName'=>$clause['sourceDocumentName']??null,'sourcePageStart'=>$clause['sourcePageStart']??null,'sourcePageEnd'=>$clause['sourcePageEnd']??null];
         }
-        return ['clauses'=>$clauses,'missingVariables'=>array_keys($missing),'missingClauseKeys'=>$missingKeys];
+        return ['clauses'=>$clauses,'missingVariables'=>array_values(array_unique($missing)),'missingClauseKeys'=>$missingKeys];
+    }
+
+    private function effectiveOptionalKeys(array $definition,array $variant,array $selected,array $fieldValues):array
+    {
+        $keys=array_map('strval',$variant['requiredAnnexKeys']??[]);
+        foreach($definition['optionalClauses']??[] as $clause){
+            $key=(string)($clause['key']??'');
+            if($key===''||empty($clause['requiredWhen']))continue;
+            if(!in_array($key,array_map('strval',$variant['allowedOptionalClauseKeys']??[]),true))continue;
+            if(!in_array((string)($variant['key']??''),array_map('strval',$clause['applicableVariantKeys']??[]),true))continue;
+            if($this->evaluate(is_array($clause['requiredWhen'])?$clause['requiredWhen']:null,$fieldValues))$keys[]=$key;
+        }
+        return array_values(array_unique(array_merge($keys,array_map('strval',$selected))));
+    }
+
+    private function normalizeLegalSourceText(string $body,string $title):string
+    {
+        $text=str_replace(["\r\n","\r","\f"],["\n","\n",''],$body);
+        $text=preg_replace('/[\t ]+$/mu','',$text)??$text;
+        $text=preg_replace('/^\s*[A-Za-z][A-Za-z0-9 &()\/._-]{4,140}\s*\n/u','',$text)??$text;
+        $text=preg_replace('/^\s*[^\n]{0,180}Z\s*DRAFT[^\n]*\n/iu','',$text)??$text;
+
+        // Signature forms from the source PDFs are replaced by one consistent
+        // signature block in the generated document. Keep any legal recital that
+        // precedes the form itself.
+        if(str_contains($title,'التوقيعات')){
+            $cut=$this->firstTextPosition($text,['وتوقيعات الأطراف','وتوقيعات األطراف','الطرف الثاني (','الطرف الثاني(']);
+            if($cut!==null)$text=mb_substr($text,0,$cut);
+        }
+        $cut=$this->firstTextPosition($text,['توقيعات الملحق','توقيعات الأطراف']);
+        if($cut!==null)$text=mb_substr($text,0,$cut);
+        $text=$this->trimTrailingSignatureForm($text);
+
+        // Source PDFs used a human-readable placeholder instead of template
+        // variables in a number of places. The actual values are printed once in
+        // the certified contract-data section; cross-reference that section rather
+        // than reproducing the raw placeholder text throughout the legal body.
+        $placeholder='البيان المثبت بجدول بيانات العقد أو الملحق';
+        $placeholderMain='البيان المثبت بجدول بيانات العقد';
+        foreach([$placeholder,$placeholderMain] as $raw){
+            $quoted=preg_quote($raw,'/');
+            $text=preg_replace('/\(\s*'.$quoted.'\s*\)\s*(\d+(?:[.,]\d+)?)/u','$1',$text)??$text;
+            $text=preg_replace('/'.$quoted.'\s*(\d+(?:[.,]\d+)?)/u','$1',$text)??$text;
+        }
+        $text=str_replace($placeholder,'البيان المعتمد في صدر العقد أو الملحق',$text);
+        $text=str_replace($placeholderMain,'البيان المعتمد في صدر العقد',$text);
+        $text=preg_replace('/(?<=\p{Arabic})(البيان المعتمد في صدر العقد(?: أو الملحق)?)/u',' — $1',$text)??$text;
+        $text=preg_replace('/\n{3,}/u',"\n\n",$text)??$text;
+        return trim($text);
+    }
+
+    private function trimTrailingSignatureForm(string $text):string
+    {
+        $length=max(1,mb_strlen($text));$positions=[];
+        foreach(['توقيعات الطرفين','عاشرا :التوقيعات','عاشرًا :التوقيعات','التوقيعات'] as$marker){$pos=mb_strrpos($text,$marker);if($pos!==false&&$pos>($length*0.58))$positions[]=$pos;}
+        return $positions?trim(mb_substr($text,0,min($positions))):$text;
+    }
+
+    private function firstTextPosition(string $text,array $needles):?int
+    {
+        $positions=[];
+        foreach($needles as $needle){$pos=mb_strpos($text,$needle);if($pos!==false)$positions[]=$pos;}
+        return $positions?min($positions):null;
     }
 
     public function coreIdentityFieldKeys(array $definition,string $variantKey):array

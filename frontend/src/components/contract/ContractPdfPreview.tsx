@@ -25,7 +25,7 @@ export default function ContractPdfPreview({ serialNumber, contractTitle, isPaid
           {isPaid ? "بيانات محفوظة" : "معاينة البيانات"}
         </div>
       </header>
-      <p className="mt-5 text-xs leading-6 text-slate-600">هذه معاينة للبيانات المدخلة فقط. النسخة القانونية النهائية تُنشأ على الخادم بعد اعتماد الدفع وانتهاء مهلة التعديل، ثم تظهر في صفحة العقد بصيغة PDF.</p>
+      <p className="mt-5 text-xs leading-6 text-slate-600">هذه معاينة للبيانات المدخلة فقط. النسخة القانونية النهائية تُنشأ بعد اعتماد الدفع وانتهاء مهلة التعديل، ثم تظهر في صفحة العقد بصيغة PDF.</p>
       <dl className="mt-5 grid gap-3 sm:grid-cols-2">
         {rows.map(([key, value]) => <div key={key} className="rounded-xl bg-slate-50 p-3"><dt className="text-[10px] font-bold text-slate-500">{key}</dt><dd className="mt-1 break-words text-xs font-black text-slate-900">{typeof value === "boolean" ? (value ? "نعم" : "لا") : String(value)}</dd></div>)}
       </dl>

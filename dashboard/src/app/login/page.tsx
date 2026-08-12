@@ -38,18 +38,18 @@ function DashboardLoginContent() {
       <section className="grid w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl lg:grid-cols-[1fr_1.1fr]">
         <div className="hidden bg-[#00102e] p-10 text-white lg:block">
           <div className="relative h-16 w-32"><Image src="/logo.png" alt="Z draft" fill className="object-contain object-right" /></div>
-          <h1 className="mt-12 text-3xl font-black leading-tight">لوحة تشغيل مكتب المحاماة</h1>
+          <h1 className="mt-12 text-3xl font-black leading-tight">لوحة إدارة Z draft</h1>
           <p className="mt-4 text-sm font-semibold leading-7 text-slate-300">إدارة العقود والمراجعات والاستشارات والمدفوعات بصلاحيات منفصلة وسجل تدقيق لكل إجراء.</p>
           <div className="mt-10 space-y-4 text-xs font-bold text-slate-300">
-            <div className="flex items-center gap-3"><ShieldCheck className="h-5 w-5 text-[#986410]"/> حساب مستقل لكل عضو فريق</div>
+            <div className="flex items-center gap-3"><ShieldCheck className="h-5 w-5 text-[#986410]"/> تشغيل محمي من حساب السوبر أدمن</div>
             <div className="flex items-center gap-3"><ShieldCheck className="h-5 w-5 text-[#986410]"/> الصلاحيات تُفرض من الباك إند</div>
             <div className="flex items-center gap-3"><ShieldCheck className="h-5 w-5 text-[#986410]"/> العقود النهائية لا تُعدّل دون إصدار جديد</div>
           </div>
         </div>
         <div className="p-7 sm:p-10">
           <div className="lg:hidden"><div className="relative h-14 w-28"><Image src="/logo.png" alt="Z draft" fill className="object-contain object-right" /></div></div>
-          <h2 className="mt-6 text-2xl font-black text-[#00102e]">تسجيل دخول فريق المكتب</h2>
-          <p className="mt-2 text-xs font-semibold text-slate-500">استخدم حساب الموظف أو المحامي المخصص لك.</p>
+          <h2 className="mt-6 text-2xl font-black text-[#00102e]">تسجيل دخول الإدارة</h2>
+          <p className="mt-2 text-xs font-semibold text-slate-500">استخدم حساب السوبر أدمن المخصص لإدارة المنصة.</p>
           {error && <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700">{error}</div>}
           <form onSubmit={submit} className="mt-6 space-y-4">
             <label className="block"><span className="mb-2 block text-xs font-black text-slate-700">البريد الإلكتروني</span><div className="flex items-center gap-2 rounded-xl border border-slate-300 px-3"><Mail className="h-4 w-4 text-slate-400"/><input type="email" required value={email} onChange={(event)=>setEmail(event.target.value)} className="w-full py-3 text-sm outline-none"/></div></label>

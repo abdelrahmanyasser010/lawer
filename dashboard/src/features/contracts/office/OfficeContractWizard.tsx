@@ -14,7 +14,6 @@ import {
   FileText,
   Loader2,
   RotateCcw,
-  ShieldCheck,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -35,6 +34,7 @@ import {
 } from "../data/officeContractRepository";
 import { getCurrentStaff } from "@/lib/adminAccess";
 import { dashboardRequest } from "@/lib/apiClient";
+import { dashboardFeatures } from "@/config/dashboardFeatures";
 
 type OfficeContext = Omit<OfficeContractContextDto, "createdByStaffId">;
 type ClientOption = { id: number; name: string; email: string; phone?: string; whatsappNumber?: string; status: string };
@@ -44,7 +44,7 @@ type TemplateCatalogItem = { slug: ContractSlug; nameAr: string; description: st
 const fallbackTemplateCards: TemplateCatalogItem[] = [
   { slug: "rental", nameAr: "عقود الإيجار", description: "سكني أو تجاري أو إداري", priceEgp: 0, version: 1, variantsCount: 3 },
   { slug: "apartment_sale", nameAr: "عقود البيع", description: "ابتدائي أو قابل للتسجيل أو ميراث", priceEgp: 0, version: 1, variantsCount: 3 },
-  { slug: "freelancer", nameAr: "عقود الخدمات والعمل الحر", description: "هوية بصرية، تطوير مواقع، وإدارة حسابات التواصل", priceEgp: 59, version: 2, variantsCount: 3 },
+  { slug: "freelancer", nameAr: "عقود الخدمات والعمل الحر", description: "هوية بصرية، تطوير مواقع، وإدارة حسابات التواصل", priceEgp: 0, version: 2, variantsCount: 3 },
 ];
 
 const defaultContext: OfficeContext = {
@@ -55,7 +55,7 @@ const defaultContext: OfficeContext = {
   clientEmail: "",
   assignedLawyerId: "",
   billingMode: "office_waiver",
-  waiverReason: "خدمة داخلية للمكتب",
+  waiverReason: "",
   notifyClient: true,
 };
 
@@ -65,11 +65,11 @@ function inputClass() {
 
 export default function OfficeContractWizard() {
   const staff = getCurrentStaff();
-  const canAssignLawyer = staff.role === "super_admin" || staff.permissions.includes("contracts.assign");
+  const canAssignLawyer = dashboardFeatures.assignment && (staff.role === "super_admin" || staff.permissions.includes("contracts.assign"));
   const canViewClients = staff.role === "super_admin" || staff.permissions.includes("clients.view");
   const [templateCatalog, setTemplateCatalog] = useState<TemplateCatalogItem[]>(fallbackTemplateCards);
   const [templateSlug, setTemplateSlug] = useState<ContractSlug>("rental");
-  const { definition, origin, loading, error } = useOfficeTemplate(templateSlug);
+  const { definition, loading, error } = useOfficeTemplate(templateSlug);
   const [variantKey, setVariantKey] = useState<string | null>(null);
   const [selectedOptionalClauseKeys, setSelectedOptionalClauseKeys] = useState<string[]>([]);
   const [fieldValues, setFieldValues] = useState<Record<string, ContractFieldValue>>({});
@@ -208,11 +208,11 @@ export default function OfficeContractWizard() {
       return;
     }
     if (officeContext.clientMode === "new" && !officeContext.clientName.trim()) {
-      setNotice("أدخل اسم العميل الجديد.");
+      setNotice("أدخل اسم العميل غير المسجل.");
       return;
     }
-    if (officeContext.billingMode === "office_waiver" && !officeContext.waiverReason.trim()) {
-      setNotice("سبب الإعفاء مطلوب للحفظ في سجل التدقيق.");
+    if (officeContext.billingMode === "office_waiver" && officeContext.clientMode !== "office_internal" && !officeContext.waiverReason.trim()) {
+      setNotice("اكتب سبب عدم المطالبة بالدفع للحفظ في سجل النظام.");
       return;
     }
     setNotice(null);
@@ -253,13 +253,6 @@ export default function OfficeContractWizard() {
   async function saveDraft() {
     if (!resolved || !draft || saving) return;
     const issues = validateDynamicDefinition(resolved, draft);
-    if (issues.length) {
-      const first = issues[0];
-      setCurrentStepKey(first.stepKey);
-      setNotice(`لا يمكن حفظ المسودة قبل استكمال: ${first.labelAr}`);
-      return;
-    }
-
     setSaving(true);
     setNotice(null);
     try {
@@ -267,6 +260,7 @@ export default function OfficeContractWizard() {
       setSerial(result.serialNumber);
       setSavedSource(result.source);
       setStage("success");
+      if (issues.length) setNotice(`تم حفظ المسودة، وما زال بها ${issues.length} حقل/متطلب يحتاج استكمالًا قبل الإصدار.`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "تعذر حفظ مسودة المكتب");
     } finally {
@@ -307,7 +301,7 @@ export default function OfficeContractWizard() {
           <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-right text-xs font-bold leading-7 text-slate-600">
             <div>العميل: {officeContext.clientMode === "office_internal" ? "استخدام داخلي للمكتب" : officeContext.clientName}</div>
             <div>القالب: {definition.nameAr} — {resolved?.variant.nameAr}</div>
-            <div>التحصيل: {officeContext.billingMode === "client_invoice" ? "بانتظار فاتورة العميل" : "بدون دفع داخل المنصة"}</div>
+            <div>التحصيل: {officeContext.billingMode === "client_invoice" ? "مطالبة العميل" : officeContext.billingMode === "external_collection" ? "تحصيل خارجي" : "إعفاء"}</div>
             <div>الملاحق: {selectedOptionalClauseKeys.length ? selectedOptionalClauseKeys.length : "لا يوجد"}</div>
             <div>الحفظ: {savedSource === "api" ? "تم عبر API وقاعدة البيانات" : "جارٍ التأكيد"}</div>
           </div>
@@ -325,15 +319,10 @@ export default function OfficeContractWizard() {
       <div className="mb-7 flex flex-col gap-4 border-b border-slate-200 pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Link href="/contracts" className="inline-flex items-center gap-1 text-xs font-black text-slate-500 hover:text-[#986410]"><ArrowRight className="h-4 w-4" /> إدارة العقود</Link>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-black text-[#00102e] sm:text-3xl">إنشاء عقد من مكتب المحاماة</h1>
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black text-emerald-800">بدون انتحال حساب العميل</span>
-          </div>
-          <p className="mt-2 max-w-3xl text-xs font-semibold leading-6 text-slate-500">يستخدم نفس تعريفات القوالب والـVariants والملاحق الموجودة في واجهة العميل، مع سياق تشغيلي خاص بالمكتب وسجل إعفاء واضح.</p>
+          <h1 className="mt-3 text-2xl font-black text-[#00102e] sm:text-3xl">إنشاء عقد من مكتب المحاماة</h1>
+          <p className="mt-2 max-w-3xl text-xs font-semibold leading-6 text-slate-500">اختر العميل ونوع العقد وسياسة التحصيل، ثم أدخل بيانات العقد واحفظ المسودة.</p>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-500">
-          <ShieldCheck className="h-4 w-4 text-[#986410]" /> مصدر القالب: {origin === "api" ? "API" : "Shared Engine"} — إصدار {definition.version}
-        </div>
+
       </div>
 
       {notice && <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-black leading-6 text-amber-900">{notice}</div>}
@@ -358,21 +347,22 @@ export default function OfficeContractWizard() {
             <div className="mb-5 flex items-start gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00102e] text-[#986410]"><UserRound className="h-5 w-5" /></div><div><h2 className="text-base font-black text-[#00102e]">سياق إنشاء العقد</h2><p className="mt-1 text-xs font-semibold text-slate-500">حدد صاحب العقد، المحامي المسؤول، وسياسة التحصيل قبل بدء البيانات القانونية.</p></div></div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2"><label className="mb-2 block text-xs font-black text-slate-700">إنشاء العقد لصالح</label><div className="grid gap-2 sm:grid-cols-3">{([
-                ["existing", "عميل موجود"], ["new", "عميل جديد"], ["office_internal", "استخدام داخلي للمكتب"],
-              ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setOfficeContext((current) => ({ ...current, clientMode: value as OfficeClientMode, clientId: "", clientName: "", clientPhone: "", clientEmail: "" }))} className={`rounded-xl border px-3 py-3 text-xs font-black ${officeContext.clientMode === value ? "border-[#986410] bg-[#986410]/5 text-[#00102e]" : "border-slate-200 bg-slate-50 text-slate-600"}`}>{label}</button>)}</div></div>
+                ["existing", "عميل مسجل"], ["new", "عميل غير مسجل"], ["office_internal", "استخدام داخلي للمكتب"],
+              ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setOfficeContext((current) => ({ ...current, clientMode: value as OfficeClientMode, clientId: "", clientName: "", clientPhone: "", clientEmail: "", notifyClient: value === "existing", billingMode: value === "existing" ? "client_invoice" : "office_waiver", waiverReason: value === "existing" ? "" : current.waiverReason }))} className={`rounded-xl border px-3 py-3 text-xs font-black ${officeContext.clientMode === value ? "border-[#986410] bg-[#986410]/5 text-[#00102e]" : "border-slate-200 bg-slate-50 text-slate-600"}`}>{label}</button>)}</div></div>
               {officeContext.clientMode === "existing" && <div className="sm:col-span-2"><label className="mb-1 block text-xs font-black text-slate-700">العميل المسجل *</label><select disabled={optionsLoading} className={inputClass()} value={officeContext.clientId} onChange={(event) => { const selected = clients.find((client) => String(client.id) === event.target.value); setOfficeContext((current) => ({ ...current, clientId: event.target.value, clientName: selected?.name ?? "", clientPhone: selected?.phone ?? selected?.whatsappNumber ?? "", clientEmail: selected?.email ?? "" })); }}><option value="">{optionsLoading ? "جارٍ تحميل العملاء..." : "اختر العميل"}</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.name} — {client.email}</option>)}</select></div>}
               {officeContext.clientMode === "new" && <>
+                <div className="sm:col-span-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-[11px] font-bold leading-5 text-blue-900">هذا يسجل بيانات العميل داخل العقد فقط ولا ينشئ له حسابًا على المنصة. إذا كان لديه حساب بالفعل اختر «عميل مسجل» حتى يظهر العقد في حسابه.</div>
                 <div><label className="mb-1 block text-xs font-black text-slate-700">اسم العميل *</label><input className={inputClass()} value={officeContext.clientName} onChange={(event) => setOfficeContext((current) => ({ ...current, clientName: event.target.value }))} /></div>
                 <div><label className="mb-1 block text-xs font-black text-slate-700">رقم واتساب</label><input dir="ltr" className={inputClass()} value={officeContext.clientPhone} onChange={(event) => setOfficeContext((current) => ({ ...current, clientPhone: event.target.value }))} /></div>
                 <div><label className="mb-1 block text-xs font-black text-slate-700">البريد الإلكتروني</label><input dir="ltr" type="email" className={inputClass()} value={officeContext.clientEmail} onChange={(event) => setOfficeContext((current) => ({ ...current, clientEmail: event.target.value }))} /></div>
               </>}
               {officeContext.clientMode === "existing" && officeContext.clientId && <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-600">{officeContext.clientName} — {officeContext.clientEmail || officeContext.clientPhone || "بيانات التواصل غير مكتملة"}</div>}
-              <div className="sm:col-span-2"><label className="mb-1 block text-xs font-black text-slate-700">المحامي المسؤول</label>{canAssignLawyer ? <select disabled={optionsLoading} className={inputClass()} value={officeContext.assignedLawyerId} onChange={(event) => setOfficeContext((current) => ({ ...current, assignedLawyerId: event.target.value }))}><option value="">يُسند لاحقًا</option>{lawyers.map((lawyer) => <option key={lawyer.id} value={lawyer.id}>{lawyer.name} — {lawyer.email}</option>)}</select> : <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-black text-slate-700">{staff.role === "lawyer" ? `${staff.name} — مسند إليك تلقائيًا` : "يُسند لاحقًا بواسطة إدارة التشغيل"}</div>}</div>
+              {canAssignLawyer && <div className="sm:col-span-2"><label className="mb-1 block text-xs font-black text-slate-700">المحامي المسؤول</label><select disabled={optionsLoading} className={inputClass()} value={officeContext.assignedLawyerId} onChange={(event) => setOfficeContext((current) => ({ ...current, assignedLawyerId: event.target.value }))}><option value="">يُسند لاحقًا</option>{lawyers.map((lawyer) => <option key={lawyer.id} value={lawyer.id}>{lawyer.name} — {lawyer.email}</option>)}</select></div>}
               <div className="sm:col-span-2"><label className="mb-2 block text-xs font-black text-slate-700">سياسة التحصيل</label><div className="grid gap-2 md:grid-cols-3">{([
-                ["office_waiver", "إعفاء موثق"], ["external_collection", "تم التحصيل خارج المنصة"], ["client_invoice", "إرسال فاتورة للعميل"],
+                ["client_invoice", "مطالبة العميل بالدفع"], ["external_collection", "تم التحصيل خارج المنصة"], ["office_waiver", "بدون مطالبة دفع"],
               ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setOfficeContext((current) => ({ ...current, billingMode: value as OfficeBillingMode }))} className={`rounded-xl border px-3 py-3 text-xs font-black ${officeContext.billingMode === value ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-slate-50 text-slate-600"}`}>{label}</button>)}</div></div>
-              {officeContext.billingMode === "office_waiver" && <div className="sm:col-span-2"><label className="mb-1 block text-xs font-black text-slate-700">سبب الإعفاء الذي سيظهر في سجل التدقيق *</label><input className={inputClass()} value={officeContext.waiverReason} onChange={(event) => setOfficeContext((current) => ({ ...current, waiverReason: event.target.value }))} /></div>}
-              <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700 sm:col-span-2"><input type="checkbox" checked={officeContext.notifyClient} onChange={(event) => setOfficeContext((current) => ({ ...current, notifyClient: event.target.checked }))} className="h-4 w-4 accent-[#986410]" /> إرسال إشعار للعميل عند حفظ المسودة أو طلب بيانات منه</label>
+              {officeContext.billingMode === "office_waiver" && officeContext.clientMode !== "office_internal" && <div className="sm:col-span-2"><label className="mb-1 block text-xs font-black text-slate-700">سبب عدم المطالبة بالدفع الذي سيظهر في سجل النظام *</label><input className={inputClass()} value={officeContext.waiverReason} onChange={(event) => setOfficeContext((current) => ({ ...current, waiverReason: event.target.value }))} /></div>}
+              {officeContext.clientMode === "existing" && <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700 sm:col-span-2"><input type="checkbox" checked={officeContext.notifyClient} onChange={(event) => setOfficeContext((current) => ({ ...current, notifyClient: event.target.checked }))} className="h-4 w-4 accent-[#986410]" /> إشعار العميل المسجل بإنشاء المسودة</label>}
             </div>
           </section>
           <aside className="rounded-2xl border border-[#986410]/25 bg-[#00102e] p-6 text-white shadow-sm"><BriefcaseBusiness className="h-7 w-7 text-[#986410]" /><h2 className="mt-4 text-base font-black">ضوابط الإنتاج</h2><div className="mt-4 space-y-3 text-xs font-semibold leading-6 text-slate-300"><p>• كل موظف يعمل بحسابه، ولا يتم الدخول بحساب العميل.</p><p>• الإعفاء لا يحذف السعر؛ يسجل سببًا وهوية صاحب القرار.</p><p>• العقد يظل مسودة حتى المراجعة والاعتماد وفق الصلاحية.</p><p>• تعديل العقد بعد القفل ينشئ إصدارًا جديدًا، وليس استبدالًا صامتًا.</p></div><button type="button" onClick={continueFromContext} className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#986410] px-4 py-3 text-xs font-black text-white">متابعة إلى القالب <ArrowLeft className="h-4 w-4" /></button></aside>
@@ -393,8 +383,8 @@ export default function OfficeContractWizard() {
           </main>
 
           <aside className="space-y-4">
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><UserRound className="h-4 w-4 text-[#986410]" /><h2 className="text-xs font-black text-[#00102e]">ملخص التشغيل</h2></div><div className="mt-4 space-y-3 text-xs font-bold text-slate-600"><div className="flex justify-between gap-3"><span>العميل</span><span className="text-left text-[#00102e]">{officeContext.clientMode === "office_internal" ? "المكتب" : officeContext.clientName || "غير محدد"}</span></div><div className="flex justify-between gap-3"><span>المحامي</span><span className="text-left text-[#00102e]">{officeContext.assignedLawyerId ? "مسند" : "لاحقًا"}</span></div><div className="flex justify-between gap-3"><span>الدفع</span><span className="text-left text-[#00102e]">{officeContext.billingMode === "client_invoice" ? "فاتورة" : "لا يوجد دفع داخل المنصة"}</span></div><div className="flex justify-between gap-3"><span>القالب</span><span className="text-left text-[#00102e]">{resolved?.variant.nameAr || "—"}</span></div></div><button type="button" onClick={() => setStage("context")} className="mt-4 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600">تعديل سياق الطلب</button></section>
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><CircleDollarSign className="h-4 w-4 text-emerald-600" /><h2 className="text-xs font-black text-[#00102e]">قاعدة الإعفاء</h2></div><p className="mt-3 text-[11px] font-semibold leading-6 text-slate-500">لا يتم حذف القيمة الأصلية من السجل. يسجل النظام السعر، قرار الإعفاء، السبب، ومن نفّذه.</p></section>
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><UserRound className="h-4 w-4 text-[#986410]" /><h2 className="text-xs font-black text-[#00102e]">ملخص التشغيل</h2></div><div className="mt-4 space-y-3 text-xs font-bold text-slate-600"><div className="flex justify-between gap-3"><span>العميل</span><span className="text-left text-[#00102e]">{officeContext.clientMode === "office_internal" ? "المكتب" : officeContext.clientName || "غير محدد"}</span></div><div className="flex justify-between gap-3"><span>المحامي</span><span className="text-left text-[#00102e]">{officeContext.assignedLawyerId ? "مسند" : "لاحقًا"}</span></div><div className="flex justify-between gap-3"><span>الدفع</span><span className="text-left text-[#00102e]">{officeContext.billingMode === "client_invoice" ? "مطالبة العميل" : officeContext.billingMode === "external_collection" ? "تحصيل خارجي" : "إعفاء"}</span></div><div className="flex justify-between gap-3"><span>القالب</span><span className="text-left text-[#00102e]">{resolved?.variant.nameAr || "—"}</span></div></div><button type="button" onClick={() => setStage("context")} className="mt-4 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600">تعديل سياق الطلب</button></section>
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><CircleDollarSign className="h-4 w-4 text-emerald-600" /><h2 className="text-xs font-black text-[#00102e]">سياسة التحصيل</h2></div><p className="mt-3 text-[11px] font-semibold leading-6 text-slate-500">السعر الأصلي يظل محفوظًا. المطالبة، التحصيل الخارجي، أو الإعفاء تُسجل كلٌ منها بصورة مستقلة في سجل النظام.</p></section>
             <button type="button" onClick={resetAll} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-black text-slate-500"><RotateCcw className="h-4 w-4" /> بدء جديد</button>
           </aside>
         </div>

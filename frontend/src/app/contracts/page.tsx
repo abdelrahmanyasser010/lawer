@@ -35,9 +35,9 @@ export default function ContractsPage() {
         <header className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-end">
           <div>
             <h1 className="text-3xl font-black text-[#00102e]">عقودي</h1>
-            <p className="mt-2 text-sm text-slate-600">المسودات والعقود التي أنشأتها بنفسك أو أعدها المكتب لصالحك.</p>
+            <p className="mt-2 text-sm text-slate-600">مسوداتك وعقودك المحفوظة في حسابك، من بداية الإعداد حتى الإصدار النهائي.</p>
           </div>
-          <Link href="/#templates" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-[#986410]">
+          <Link href="/create-contract?mode=self_service" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-[#986410]">
             <FilePlus2 className="h-4 w-4" /> إنشاء عقد جديد
           </Link>
         </header>
@@ -68,7 +68,7 @@ export default function ContractsPage() {
                   <div>
                     <div className="font-mono text-[10px] text-slate-400">{item.serialNumber}</div>
                     <h2 className="mt-2 text-lg font-black text-[#00102e]">{item.title || item.templateNameAr}</h2>
-                    <p className="mt-1 text-xs text-slate-500">{item.sourceChannel === "office" ? "أعده المكتب لصالحك" : "أنشأته بنفسك"}</p>
+                    <p className="mt-1 text-xs text-slate-500">{item.status === "issued" ? "نسخة صادرة ومحفوظة بحسابك" : "مسودة محفوظة بحسابك"}</p>
                   </div>
                   <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black text-blue-700">{contractStatusLabels[item.status] || item.status}</span>
                 </div>

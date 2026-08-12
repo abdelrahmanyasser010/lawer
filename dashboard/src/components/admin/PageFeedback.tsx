@@ -13,7 +13,7 @@ export function PageError({ message, onRetry }: { message: string; onRetry?: () 
 const statusLabels: Record<string, string> = {
   active: "نشط", approved: "معتمد", issued: "صادر", completed: "مكتمل", published: "منشور", locked: "مقفل",
   draft: "مسودة", legal_review: "مراجعة قانونية", archived: "مؤرشف", pending: "قيد الانتظار", in_progress: "قيد التنفيذ",
-  pending_review: "قيد المراجعة", pending_payment: "بانتظار الدفع", pending_verification: "مراجعة الدفع", awaiting_payment: "بانتظار الدفع",
+  pending_review: "قيد المراجعة", pending_payment: "بانتظار الدفع", pending_verification: "مراجعة الدفع", needs_client_info: "بانتظار توضيح العميل", replaced: "تم استبداله", awaiting_payment: "بانتظار الدفع",
   assigned: "قيد المتابعة", awaiting_client_info: "بانتظار بيانات العميل", meeting_scheduled: "موعد محدد", client_review: "مراجعة العميل",
   revision_requested: "تعديل مطلوب", internal_review: "مراجعة داخلية", superseded: "إصدار سابق", retry: "إعادة محاولة",
   suspended: "موقوف", rejected: "مرفوض", cancelled: "ملغي", overdue: "متأخر",

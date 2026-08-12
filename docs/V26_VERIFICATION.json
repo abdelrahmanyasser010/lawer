@@ -1,0 +1,581 @@
+{
+  "version": "V26",
+  "date": "2026-08-07",
+  "status": "staging_candidate",
+  "blockingStaticFailures": [],
+  "frontendProductionReview": {
+    "version": "V26",
+    "status": "passed",
+    "passed": 25,
+    "total": 25,
+    "checks": [
+      {
+        "key": "strict_api_no_localhost_runtime",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "csrf_cross_origin_bridge",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "cors_extra_origins_supported",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "demo_is_explicit_and_visible",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "home_production_has_no_fake_catalog",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "pricing_production_has_no_fake_values",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "consultation_is_single_service",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "consultation_only_zoom_whatsapp",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "consultation_prefills_profile_phone",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "requests_label_consistent",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "sensitive_drafts_session_ttl",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "no_legacy_sensitive_hydration",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "review_lifecycle_all_families",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "declaration_all_families",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "no_native_frontend_alert_confirm",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "floating_controls_do_not_overlap",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "privacy_page_and_footer",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "auth_secondary_pages_share_shell",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "demo_old_lawyer_assignment_removed",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "dashboard_empty_payments_finishes_loading",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "backend_catalog_single_source_contacts",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "backend_consultation_test_present",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "vps_deploy_scripts_present",
+        "passed": true,
+        "details": ""
+      },
+      {
+        "key": "stale_customer_copy_removed",
+        "passed": true,
+        "details": []
+      },
+      {
+        "key": "deploy_shell_syntax",
+        "passed": true,
+        "details": [
+          {
+            "script": "install-ubuntu.sh",
+            "ok": true,
+            "stderr": ""
+          },
+          {
+            "script": "activate-production.sh",
+            "ok": true,
+            "stderr": ""
+          },
+          {
+            "script": "smoke-production.sh",
+            "ok": true,
+            "stderr": ""
+          }
+        ]
+      }
+    ]
+  },
+  "backendStaticReview": {
+    "version": "V26",
+    "status": "passed",
+    "passed": 17,
+    "total": 20,
+    "blockingFailures": [],
+    "checks": [
+      {
+        "key": "php_syntax",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "files": 70,
+          "errors": []
+        }
+      },
+      {
+        "key": "controller_actions",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "references": 78,
+          "issues": []
+        }
+      },
+      {
+        "key": "local_class_references",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "unresolved": []
+        }
+      },
+      {
+        "key": "frozen_route_parity",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "frozen_legacy_contract_count": 109,
+          "laravel_v1_count": 109,
+          "matched_count": 109,
+          "missing_in_laravel": [],
+          "extra_in_laravel": [],
+          "status": "pass"
+        }
+      },
+      {
+        "key": "frontend_dashboard_api_contract",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "parsed_source_files": 118,
+          "parse_errors": [],
+          "used_call_count": 116,
+          "unique_api_calls": 75,
+          "declared_laravel_routes": 109,
+          "missing": [],
+          "status": "pass"
+        }
+      },
+      {
+        "key": "response_shape_contracts",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "version": "V20",
+          "status": "pass",
+          "passed": 10,
+          "total": 10,
+          "checks": [
+            {
+              "key": "auth_sessions_array_shape",
+              "passed": true,
+              "details": {
+                "backend": "direct data array",
+                "frontend": "SessionItem[]"
+              }
+            },
+            {
+              "key": "profile_route_and_shape",
+              "passed": true,
+              "details": {
+                "requiredFields": [
+                  "publicId",
+                  "whatsappNumber",
+                  "accountType",
+                  "companyName",
+                  "emailVerifiedAt",
+                  "createdAt"
+                ]
+              }
+            },
+            {
+              "key": "contract_detail_snake_case",
+              "passed": true,
+              "details": {
+                "field": "template_slug"
+              }
+            },
+            {
+              "key": "service_event_payload_decoded",
+              "passed": true,
+              "details": {
+                "field": "events[].payload"
+              }
+            },
+            {
+              "key": "notification_payload_decoded",
+              "passed": true,
+              "details": {
+                "field": "items[].payload"
+              }
+            },
+            {
+              "key": "audit_payloads_decoded",
+              "passed": true,
+              "details": {
+                "fields": [
+                  "oldValues",
+                  "newValues"
+                ]
+              }
+            },
+            {
+              "key": "dashboard_notifications_empty_state",
+              "passed": true,
+              "details": {
+                "loadingState": "explicit"
+              }
+            },
+            {
+              "key": "cors_headers_on_success_errors_and_preflight",
+              "passed": true,
+              "details": {
+                "coverage": [
+                  "success",
+                  "error",
+                  "preflight"
+                ]
+              }
+            },
+            {
+              "key": "dashboard_requires_staff_permission",
+              "passed": true,
+              "details": {
+                "permission": "dashboard.view"
+              }
+            },
+            {
+              "key": "database_smoke_contract_coverage",
+              "passed": true,
+              "details": {
+                "required": [
+                  "/api/v1/auth/sessions",
+                  "/api/v1/users/profile",
+                  "/api/v1/contracts/draft",
+                  "/api/v1/contracts/my",
+                  "/api/v1/contracts/shared/",
+                  "/api/v1/service-requests",
+                  "/api/v1/payments/receipts",
+                  "/api/v1/payments/my",
+                  "/api/v1/notifications",
+                  "/api/v1/admin/reports/overview?period=month",
+                  "/api/v1/admin/reports/customer-export?period=month"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "key": "sql_placeholder_bindings",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "status": "passed",
+          "checkedLiteralQueries": 140,
+          "skippedDynamicQueries": 1,
+          "issues": []
+        }
+      },
+      {
+        "key": "canonical_templates",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "definitions": [
+            {
+              "file": "apartment_sale.json",
+              "slug": "apartment_sale",
+              "version": 4,
+              "variants": 3,
+              "legalClauses": 74
+            },
+            {
+              "file": "freelancer.json",
+              "slug": "freelancer",
+              "version": 2,
+              "variants": 3,
+              "legalClauses": 172
+            },
+            {
+              "file": "rental.json",
+              "slug": "rental",
+              "version": 4,
+              "variants": 3,
+              "legalClauses": 65
+            }
+          ],
+          "totalLegalClauses": 311
+        }
+      },
+      {
+        "key": "template_engine_tests",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "stdout": "\n> zdraft-workspace@0.4.0 test:engine\n> npm --workspace @zdraft/template-engine run test\n\n\n> @zdraft/template-engine@0.2.0 test\n> npm run build && node --test tests/*.test.mjs\n\n\n> @zdraft/template-engine@0.2.0 build\n> tsc -p tsconfig.json\n\nTAP version 13\n# Subtest: published sale and rental definitions have no structural publish errors\nok 1 - published sale and rental definitions have no structural publish errors\n  ---\n  duration_ms: 10.393064\n  type: 'test'\n  ...\n# Subtest: freelancer service definitions are publish-ready\nok 2 - freelancer service definitions are publish-ready\n  ---\n  duration_ms: 5.994201\n  type: 'test'\n  ...\n# Subtest: sample values cover the selected variant fields\nok 3 - sample values cover the selected variant fields\n  ---\n  duration_ms: 0.449697\n  type: 'test'\n  ...\n# Subtest: moveArrayItem reorders without mutating source\nok 4 - moveArrayItem reorders without mutating source\n  ---\n  duration_ms: 0.192305\n  type: 'test'\n  ...\n# Subtest: freelancer party fields preserve required and optional color rules\nok 5 - freelancer party fields preserve required and optional color rules\n  ---\n  duration_ms: 0.225415\n  type: 'test'\n  ...\n# Subtest: freelancer annex steps are inserted only when selected\nok 6 - freelancer annex steps are inserted only when selected\n  ---\n  duration_ms: 0.443928\n  type: 'test'\n  ...\n1..6\n# tests 6\n# suites 0\n# pass 6\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 101.88826\n",
+          "stderr": ""
+        }
+      },
+      {
+        "key": "legacy_express_backend_removed",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "laravelBackendDirectory": "backend",
+          "laravelMarkers": [
+            "backend/artisan",
+            "backend/composer.json",
+            "backend/routes/api.php"
+          ],
+          "workspaces": [
+            "frontend",
+            "dashboard",
+            "packages/*"
+          ],
+          "oldLockEntries": [],
+          "legacyFiles": []
+        }
+      },
+      {
+        "key": "strict_laravel_api_linking",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "frontendEnv": [
+            "NEXT_PUBLIC_API_URL=http://localhost:8000",
+            "NEXT_PUBLIC_DASHBOARD_URL=http://localhost:3001",
+            "NEXT_PUBLIC_DEMO_MODE=false",
+            "NEXT_PUBLIC_TEMPLATE_SOURCE=api",
+            "NEXT_PUBLIC_CSRF_COOKIE_NAME=zdraft_csrf"
+          ],
+          "dashboardEnv": [
+            "NEXT_PUBLIC_API_URL=http://localhost:8000",
+            "NEXT_PUBLIC_FRONTEND_URL=http://localhost:3000",
+            "NEXT_PUBLIC_DASHBOARD_URL=http://localhost:3001",
+            "NEXT_PUBLIC_DEMO_MODE=false",
+            "NEXT_PUBLIC_TEMPLATE_SOURCE=api",
+            "NEXT_PUBLIC_DRAFT_SOURCE=api-only",
+            "NEXT_PUBLIC_CSRF_COOKIE_NAME=zdraft_csrf",
+            "",
+            "# Single-super-admin launch mode. Hidden features remain in source behind flags.",
+            "NEXT_PUBLIC_ENABLE_TEAM_MANAGEMENT=false",
+            "NEXT_PUBLIC_ENABLE_ASSIGNMENT=false",
+            "NEXT_PUBLIC_ENABLE_OFFICE_CONTRACT_CREATION=false",
+            "NEXT_PUBLIC_ENABLE_CONTRACT_EDITING=false",
+            "NEXT_PUBLIC_ENABLE_TEMPLATE_MANAGEMENT=false"
+          ]
+        }
+      },
+      {
+        "key": "typescript_syntax",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "files": 133,
+          "errors": []
+        }
+      },
+      {
+        "key": "database_schema_references",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "schemaTables": 39,
+          "queryBuilderTables": 13,
+          "missingTables": [],
+          "writeColumnIssues": []
+        }
+      },
+      {
+        "key": "runtime_and_api_defaults",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "phpRequirement": "^8.4",
+          "symfonyProcess": "^8.0",
+          "localhost8000References": 0,
+          "localhost5000References": 0,
+          "frontendStrictConfig": true,
+          "dashboardStrictConfig": true,
+          "unusedQueueServiceExists": false
+        }
+      },
+      {
+        "key": "deployment_script_syntax",
+        "passed": true,
+        "blocking": true,
+        "details": [
+          {
+            "command": "bash -n /mnt/data/zdraft_v26_work/zdraft-v25-work/backend/deploy/install-ubuntu.sh",
+            "ok": true,
+            "stderr": ""
+          },
+          {
+            "command": "bash -n /mnt/data/zdraft_v26_work/zdraft-v25-work/backend/deploy/activate-production.sh",
+            "ok": true,
+            "stderr": ""
+          },
+          {
+            "command": "bash -n /mnt/data/zdraft_v26_work/zdraft-v25-work/backend/deploy/smoke-production.sh",
+            "ok": true,
+            "stderr": ""
+          }
+        ]
+      },
+      {
+        "key": "laravel_runtime_tests_present",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "missing": []
+        }
+      },
+      {
+        "key": "secret_scan",
+        "passed": true,
+        "blocking": true,
+        "details": {
+          "realEnvFiles": [],
+          "credentialHits": []
+        }
+      },
+      {
+        "key": "frontend_lock_present",
+        "passed": false,
+        "blocking": false,
+        "details": {
+          "path": "package-lock.json",
+          "note": "Generate and commit a valid lock with npm install in a networked staging environment; the inherited incomplete lock was intentionally removed."
+        }
+      },
+      {
+        "key": "composer_lock_present",
+        "passed": false,
+        "blocking": false,
+        "details": {
+          "path": "backend/composer.lock",
+          "note": "Generate and commit it after composer install/update in a networked staging environment."
+        }
+      },
+      {
+        "key": "runtime_environment_available",
+        "passed": false,
+        "blocking": false,
+        "details": {
+          "composerAvailable": false,
+          "missingPhpExtensions": [
+            "pdo_pgsql",
+            "imagick",
+            "mbstring"
+          ],
+          "databaseConfigured": false
+        }
+      }
+    ]
+  },
+  "regressions": {
+    "consultationChannelsV25": {
+      "status": "passed",
+      "passed": 14,
+      "total": 14
+    },
+    "walletCatalogV24": {
+      "status": "passed",
+      "passed": 9,
+      "total": 9
+    },
+    "templateEngine": {
+      "status": "passed",
+      "passed": 6,
+      "total": 6
+    }
+  },
+  "keyCounts": {
+    "laravelApiRoutes": 109,
+    "frontendDashboardApiCalls": 116,
+    "uniqueFrontendDashboardApiCalls": 75,
+    "missingApiRoutes": 0,
+    "phpFilesSyntaxChecked": 70,
+    "typescriptFilesSyntaxChecked": 133,
+    "sqlLiteralQueriesChecked": 140,
+    "legalClauses": 311
+  },
+  "productionHardening": {
+    "runtimeLocalhostFallbackRemoved": true,
+    "productionFakePricingAndContactsRemoved": true,
+    "csrfCrossOriginResponseTokenBridge": true,
+    "csrfSessionStorageIsSessionScoped": true,
+    "corsExtraOriginsSupported": true,
+    "sameSiteNoneSecureCookieExample": true,
+    "vpsInstallScript": true,
+    "vpsActivationScript": true,
+    "productionSmokeScript": true,
+    "singleSuperAdminFlagsDefaultOff": true
+  },
+  "runtimeNotExecutedHere": [
+    "php artisan test: Composer/pdo_pgsql/imagick/mbstring/PostgreSQL unavailable in this execution environment",
+    "DatabaseWorkflowSmokeTest and AttachmentImagePipelineSmokeTest: run on isolated PostgreSQL zdraft_test on VPS",
+    "Next.js production build: template-engine build succeeded, but Next dependencies are unavailable because package installation cannot complete against this environment npm registry"
+  ],
+  "lockfilesRequiredBeforeFrozenProductionDeploys": [
+    "package-lock.json",
+    "backend/composer.lock"
+  ]
+}

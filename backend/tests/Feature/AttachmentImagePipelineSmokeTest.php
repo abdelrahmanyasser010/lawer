@@ -46,12 +46,11 @@ final class AttachmentImagePipelineSmokeTest extends TestCase
             'accountType' => 'individual',
             'agreedToTerms' => true,
         ]);
-        $session = $register->getCookie(config('zdraft.session_cookie'), false)?->getValue();
-        $csrf = $register->getCookie(config('zdraft.csrf_cookie'), false)?->getValue();
+        $session = $register->getCookie(config('zdraft.session_cookie'))?->getValue();
+        $csrf = $register->getCookie(config('zdraft.csrf_cookie'))?->getValue();
         $code = $register->json('data.debugVerificationCode');
-        $auth = $this->withCredentials()
-            ->withUnencryptedCookie(config('zdraft.session_cookie'), (string) $session)
-            ->withUnencryptedCookie(config('zdraft.csrf_cookie'), (string) $csrf)
+        $auth = $this->withCookie(config('zdraft.session_cookie'), (string) $session)
+            ->withCookie(config('zdraft.csrf_cookie'), (string) $csrf)
             ->withHeader('X-CSRF-Token', (string) $csrf);
         $auth->postJson('/api/v1/auth/email-verification/verify', ['code' => $code])->assertOk();
         return $auth;

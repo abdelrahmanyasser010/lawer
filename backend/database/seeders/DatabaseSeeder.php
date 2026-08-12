@@ -148,6 +148,23 @@ final class DatabaseSeeder extends Seeder
                 DB::statement("UPDATE template_versions SET status='published',approved_by=?,published_at=COALESCE(published_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=?", [$adminId, $existing->id]);
             }
             DB::statement('UPDATE contract_templates SET current_published_version_id=? WHERE id=?', [$existing->id, $template->id]);
+
+            foreach ($definition['variants'] as $variant) {
+                $variantKey = trim((string) ($variant['key'] ?? ''));
+                if ($variantKey === '') continue;
+                $defaults = (array) (($definition['variantPricing'][$variantKey] ?? []));
+                $selfPrice = (float) ($defaults['selfServicePriceEgp'] ?? 0);
+                $lawyerPrice = (float) ($defaults['lawyerAssistedPriceEgp'] ?? 0);
+                foreach ([
+                    ["pricing.contracts.self_service.{$definition['slug']}.{$variantKey}", $selfPrice],
+                    ["pricing.contracts.lawyer_assisted.{$definition['slug']}.{$variantKey}", $lawyerPrice],
+                ] as [$settingKey, $settingValue]) {
+                    DB::statement(
+                        'INSERT INTO platform_settings(setting_key,setting_value_json,is_secret,updated_by) VALUES (?,?::jsonb,FALSE,?) ON CONFLICT(setting_key) DO NOTHING',
+                        [$settingKey, json_encode($settingValue, JSON_UNESCAPED_UNICODE), $adminId]
+                    );
+                }
+            }
         }
     }
 }

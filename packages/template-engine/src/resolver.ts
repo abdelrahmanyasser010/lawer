@@ -17,8 +17,11 @@ export function evaluateCondition(
   fieldValues: ContractDraftData["fieldValues"],
 ): boolean {
   if (!condition) return true;
-  const current = primitiveValue(fieldValues[condition.fieldKey]);
+  if ("all" in condition) return condition.all.every((item) => evaluateCondition(item, fieldValues));
+  if ("any" in condition) return condition.any.some((item) => evaluateCondition(item, fieldValues));
+  if ("not" in condition) return !evaluateCondition(condition.not, fieldValues);
 
+  const current = primitiveValue(fieldValues[condition.fieldKey]);
   switch (condition.operator) {
     case "equals":
       return current === condition.value;
@@ -74,8 +77,17 @@ export function resolveWizardDefinition(
 
   let steps = variant.steps.map((step) => ({ ...step, fields: [...step.fields] }));
   const activeClauseKeys = new Set(variant.requiredClauseKeys);
+  const dynamicRequiredClauseKeys = template.optionalClauses
+    .filter((item) =>
+      Boolean(item.requiredWhen) &&
+      variant.allowedOptionalClauseKeys.includes(item.key) &&
+      item.applicableVariantKeys.includes(variant.key) &&
+      evaluateCondition(item.requiredWhen, fieldValues),
+    )
+    .map((item) => item.key);
+  const effectiveClauseKeys = [...new Set([...(variant.requiredAnnexKeys ?? []), ...dynamicRequiredClauseKeys, ...selectedOptionalClauseKeys])];
 
-  for (const clauseKey of selectedOptionalClauseKeys) {
+  for (const clauseKey of effectiveClauseKeys) {
     const clause = template.optionalClauses.find(
       (item) =>
         item.key === clauseKey &&
@@ -83,7 +95,9 @@ export function resolveWizardDefinition(
         item.applicableVariantKeys.includes(variant.key),
     );
     if (!clause) continue;
-    steps = insertStepsBefore(steps, clause.insertedSteps, clause.insertBeforeStepKey);
+    if (!clause.manualFillAnnex) {
+      steps = insertStepsBefore(steps, clause.insertedSteps, clause.insertBeforeStepKey);
+    }
     clause.legalClauseKeys.forEach((key) => activeClauseKeys.add(key));
   }
 
@@ -91,7 +105,12 @@ export function resolveWizardDefinition(
     .filter((step) => evaluateCondition(step.visibleWhen, fieldValues))
     .map((step) => ({
       ...step,
-      fields: step.fields.filter((field) => evaluateCondition(field.visibleWhen, fieldValues)),
+      fields: step.fields
+        .filter((field) => evaluateCondition(field.visibleWhen, fieldValues))
+        .map((field) => ({
+          ...field,
+          required: Boolean(field.required || (field.requiredWhen && evaluateCondition(field.requiredWhen, fieldValues))),
+        })),
     }));
 
   return { template, variant, steps, activeClauseKeys: [...activeClauseKeys] };

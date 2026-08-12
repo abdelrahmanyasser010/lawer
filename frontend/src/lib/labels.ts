@@ -2,7 +2,7 @@ export const contractStatusLabels: Record<string, string> = {
   draft: "مسودة",
   pending_payment: "بانتظار مراجعة الدفع",
   pending_review: "قيد مراجعة المكتب",
-  assigned: "تم إسناده لمحامٍ",
+  assigned: "قيد متابعة المكتب",
   in_progress: "قيد الإعداد",
   client_review: "متاح للمراجعة",
   revision_requested: "تعديلات مطلوبة",
@@ -15,7 +15,7 @@ export const contractStatusLabels: Record<string, string> = {
 export const requestStatusLabels: Record<string, string> = {
   awaiting_payment: "بانتظار مراجعة الدفع",
   new: "تم استلام الطلب",
-  assigned: "تم إسناده لمحامٍ",
+  assigned: "قيد متابعة المكتب",
   awaiting_client_info: "بانتظار مستندات منك",
   meeting_scheduled: "تم تحديد موعد التواصل",
   in_progress: "قيد التنفيذ",
@@ -26,8 +26,8 @@ export const requestStatusLabels: Record<string, string> = {
 };
 
 export const requestTypeLabels: Record<string, string> = {
-  contract_drafting: "إعداد عقد مع محامٍ",
-  contract_review: "مراجعة عقد",
+  contract_drafting: "إعداد عقد بواسطة محامي المكتب",
+  contract_review: "مراجعة عقد أو مستند",
   consultation: "استشارة قانونية",
 };
 
@@ -39,6 +39,8 @@ export const communicationLabels: Record<string, string> = {
 
 export const paymentStatusLabels: Record<string, string> = {
   pending_verification: "الإيصال قيد المراجعة",
+  needs_client_info: "مطلوب توضيح بخصوص الدفع",
+  replaced: "تم استبدال الإثبات",
   approved: "تم اعتماد الدفع",
   rejected: "تعذر اعتماد الدفع",
   waived: "معفى من الدفع",

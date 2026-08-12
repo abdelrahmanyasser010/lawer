@@ -144,7 +144,7 @@ export default function FloatingQuickAssistant() {
 
               <button
                 type="button"
-                onClick={() => goTo("#templates")}
+                onClick={() => goTo("/create-contract?mode=self_service")}
                 className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-right transition-colors hover:bg-white/15"
               >
                 <Sparkles className="h-4 w-4 shrink-0 text-blue-300" />

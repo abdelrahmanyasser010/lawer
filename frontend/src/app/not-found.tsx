@@ -4,7 +4,8 @@ import React from "react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { FileQuestion, ArrowRight, Phone, Home } from "lucide-react";
+import SupportContactLink from "@/components/support/SupportContactLink";
+import { FileQuestion, ArrowRight, Home } from "lucide-react";
 
 export default function NotFoundPage() {
   return (
@@ -36,22 +37,14 @@ export default function NotFoundPage() {
             </Link>
 
             <Link
-              href="/#templates"
+              href="/create-contract?mode=self_service"
               className="w-full rounded-xl border border-slate-300 bg-white px-5 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
             >
               <span>تصفح قوالب العقود الرسمية</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
 
-            <a
-              href="https://wa.me/201000000000?text=مرحباً،%20واجهت%20مشكلة%20في%20الوصول%20لصفحة%20في%20منصة%20Z%20draft"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1.5"
-            >
-              <Phone className="h-4 w-4 text-emerald-600" />
-              <span>مساعدة ودعم فوري عبر الواتساب</span>
-            </a>
+            <SupportContactLink message="مرحبًا، أحتاج مساعدة من الدعم الفني في منصة Z draft" />
           </div>
         </div>
       </main>

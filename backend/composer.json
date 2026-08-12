@@ -49,20 +49,17 @@
     "test": [
       "@php artisan test"
     ],
-    "doctor": [
-      "@php artisan zdraft:doctor --json"
-    ],
     "verify": [
       "@php artisan route:list --path=api/v1",
       "@php artisan test",
       "@verify:static"
     ],
     "verify:static": [
-      "@php tools/run_python.php tools/verify_route_compatibility.py",
+      "python3 tools/verify_route_compatibility.py",
       "node tools/verify_frontend_api_contract.mjs",
-      "@php tools/run_python.php tools/verify_response_contracts_v20.py",
-      "@php tools/run_python.php tools/verify_sql_placeholders.py",
-      "@php tools/run_python.php tools/verify_laravel_final_v20.py"
+      "python3 tools/verify_response_contracts_v20.py",
+      "python3 tools/verify_sql_placeholders.py",
+      "python3 tools/verify_laravel_final_v20.py"
     ]
   },
   "config": {

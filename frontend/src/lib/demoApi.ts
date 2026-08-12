@@ -13,6 +13,29 @@ import type {
 
 export const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
+
+const demoVariantPricing: Record<string, Record<string, { selfServicePriceEgp: number; lawyerAssistedPriceEgp: number }>> = {
+  rental: {
+    residential_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 499 },
+    commercial_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 599 },
+    administrative_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 549 },
+  },
+  apartment_sale: {
+    preliminary_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 899 },
+    registrable_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 999 },
+    inherited_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 1099 },
+  },
+  freelancer: {
+    visual_identity_design: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 599 },
+    website_development: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 799 },
+    social_media_management: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 699 },
+  },
+};
+
+function demoDefinition<T extends { slug: string; variants: Array<{ key: string }> }>(definition: T) {
+  return { ...definition, priceEgp: 0, variantPricing: demoVariantPricing[definition.slug] ?? {} };
+}
+
 const now = new Date();
 const iso = (offsetHours = 0) => new Date(now.getTime() + offsetHours * 60 * 60 * 1000).toISOString();
 
@@ -35,8 +58,20 @@ const catalogTemplates = Object.values(localTemplateRegistry)
     slug: definition.slug,
     nameAr: definition.nameAr,
     description: definition.description,
-    priceEgp: definition.priceEgp,
+    priceEgp: 0,
     version: definition.version,
+    variants: definition.variants.map((variant) => {
+      const pricing = demoVariantPricing[definition.slug]?.[variant.key] ?? { selfServicePriceEgp: 0, lawyerAssistedPriceEgp: 0 };
+      return {
+        key: variant.key,
+        nameAr: variant.nameAr,
+        description: variant.description ?? "",
+        documentTitleAr: variant.documentTitleAr,
+        selfServicePriceEgp: pricing.selfServicePriceEgp,
+        lawyerAssistedPriceEgp: pricing.lawyerAssistedPriceEgp,
+        lawyerDepositEgp: 100,
+      };
+    }),
   }));
 
 const catalog: PublicCatalog = {
@@ -44,19 +79,24 @@ const catalog: PublicCatalog = {
   services: {
     contractReviewDepositEgp: 100,
     consultationDepositEgp: 100,
+    consultationFeeEgp: 100,
     contractDraftingDepositEgp: 100,
   },
   office: {
     displayName: "Z draft",
-    address: "القاهرة - مكتب Z draft للديمو",
-    whatsappNumber: "201023817658",
+    address: "بيانات تجريبية",
+    whatsappNumber: "201000000000",
+    consultationWhatsappNumber: "201000000000",
+    supportWhatsappNumber: "201000000000",
+    supportPhone: "01000000000",
+    supportEmail: "zlegaleg@gmail.com",
   },
   payment: {
-    vodafoneCashNumber: process.env.NEXT_PUBLIC_VODAFONE_CASH_NUMBER || "01023817658",
+    vodafoneCashNumber: "01000000000",
   },
   policies: {
     selfServiceEditHours: 24,
-    communicationChannels: ["office", "zoom", "whatsapp"],
+    communicationChannels: ["zoom", "whatsapp"],
     chatEnabled: false,
   },
 };
@@ -66,8 +106,8 @@ const demoProfile: CustomerProfile = {
   publicId: demoUser.publicId,
   name: demoUser.name,
   email: demoUser.email,
-  phone: "01023817658",
-  whatsappNumber: "01023817658",
+  phone: "01000000000",
+  whatsappNumber: "01000000000",
   accountType: "individual",
   companyName: null,
   emailVerifiedAt: iso(-240),
@@ -110,7 +150,7 @@ function contractDetails(id: string): ContractDetails {
     source_channel: "customer",
     template_slug: isRental ? "rental" : "apartment_sale",
     template_name_ar: isRental ? "عقد إيجار سكني أو تجاري" : "عقد بيع وحدة سكنية",
-    variant_key: isRental ? "residential_lease" : "residential_apartment_sale",
+    variant_key: isRental ? "residential_lease" : "preliminary_sale",
     version_number: 1,
     current_version_id: 1001,
     template_version: 1,
@@ -127,21 +167,23 @@ function contractDetails(id: string): ContractDetails {
           deposit_amount: 10000,
         }
       : {
-          seller_name: "أحمد محمد حسن",
-          buyer_name: "علي حسن",
-          sale_property_governorate: "القاهرة",
-          sale_property_city: "مدينة نصر",
+          sale_seller_party_type: "individual",
+          sale_seller_name: "أحمد محمد حسن",
+          sale_buyer_party_type: "individual",
+          sale_buyer_name: "علي حسن",
+          sale_unit_governorate: "القاهرة",
+          sale_unit_city: "مدينة نصر",
           sale_total_price: 3500000,
-          sale_payment_method: "cash_full",
+          sale_payment_plan: "full",
         },
     selected_optional_clause_keys: [],
     core_identity_locked: false,
     edit_expires_at: isRental ? iso(20) : null,
     pdf_status: isRental ? "ready" : "queued",
     pdf_path: null,
-    original_price_egp: 149,
+    original_price_egp: 139,
     payment_status: isRental ? "approved" : null,
-    payment_amount_egp: 149,
+    payment_amount_egp: 139,
     payment_admin_notes: null,
     payment_serial_number: isRental ? "PAY-2026-00077" : null,
     versions: [
@@ -158,7 +200,9 @@ function contractDetails(id: string): ContractDetails {
     permissions: {
       canEdit: true,
       canEditCoreIdentity: false,
-      canRequestRevision: true,
+      canFinalize: isRental,
+      canRequestRevision: false,
+      canShare: isRental,
       canDownloadPdf: isRental,
     },
   };
@@ -168,8 +212,8 @@ const requests: ServiceRequestSummary[] = [
   {
     id: 501,
     serialNumber: "REQ-2026-DEMO01",
-    requestType: "contract_drafting",
-    title: "إعداد عقد بيع مع محامي",
+    requestType: "consultation",
+    title: "استشارة قبل توقيع عقد إيجار",
     status: "awaiting_payment",
     priority: "normal",
     communicationChannel: "whatsapp",
@@ -178,7 +222,7 @@ const requests: ServiceRequestSummary[] = [
     meetingProvider: "whatsapp",
     meetingUrl: null,
     linkedContractId: null,
-    assignedLawyerName: "أ. مريم سامي",
+    assignedLawyerName: null,
     deliverablesCount: 0,
     lastUpdate: iso(-1),
     createdAt: iso(-6),
@@ -190,8 +234,8 @@ function requestDetails(id: string): ServiceRequestDetails {
   return {
     id: Number(id) || 501,
     serialNumber: "REQ-2026-DEMO01",
-    requestType: "contract_drafting",
-    title: "إعداد عقد بيع مع محامي",
+    requestType: "consultation",
+    title: "استشارة قبل توقيع عقد إيجار",
     description: "طلب تجريبي لعرض مسار الحجز ورفع إثبات الدفع والمتابعة داخل الحساب.",
     status: "awaiting_payment",
     priority: "normal",
@@ -201,7 +245,7 @@ function requestDetails(id: string): ServiceRequestDetails {
     meetingProvider: "whatsapp",
     meetingUrl: null,
     meetingLocation: null,
-    assignedLawyerName: "أ. مريم سامي",
+    assignedLawyerName: null,
     linkedContractId: null,
     linkedContractSerial: null,
     linkedContractTitle: null,
@@ -238,7 +282,7 @@ export async function demoApiRequest<T>(path: string, init: RequestInit = {}): P
   if (pathname === "/api/v1/templates") return catalog.templates as T;
   if (pathname.startsWith("/api/v1/templates/") && pathname.endsWith("/definition")) {
     const slug = pathname.split("/")[4];
-    return localTemplateRegistry[slug] as T;
+    return demoDefinition(localTemplateRegistry[slug]) as T;
   }
   if (pathname === "/api/v1/auth/login" || pathname === "/api/v1/auth/register" || pathname === "/api/v1/auth/me") {
     return { user: demoUser, verificationRequired: false } as T;

@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, Download, FilePenLine, FileText, Loader2, LockKeyhole, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, Download, FilePenLine, FileText, Loader2, LockKeyhole, RefreshCw, Share2 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import VodafoneCashModal from "@/components/checkout/VodafoneCashModal";
+import ActionDialog from "@/components/ui/ActionDialog";
+import ZShareModal from "@/components/sharing/ZShareModal";
 import { apiRequest, apiUrl, ApiClientError, frontendApi } from "@/lib/apiClient";
 import { contractStatusLabels, formatDate } from "@/lib/labels";
 import type { ContractDetails, ContractDocumentFile } from "@/types/customer";
@@ -59,6 +61,8 @@ export default function ContractPage() {
   const [remaining, setRemaining] = useState(0);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [documents, setDocuments] = useState<ContractDocumentFile[]>([]);
+  const [finalizeConfirmOpen, setFinalizeConfirmOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,12 +107,9 @@ export default function ContractPage() {
       .slice(0, 18);
   }, [item]);
 
-  async function finalizeEarly() {
+  async function performFinalizeEarly() {
     if (!item) return;
-    const message = item.editWindow.active
-      ? "سيتم إنهاء مهلة التعديل الآن وتثبيت النسخة الحالية. هل تريد المتابعة؟"
-      : "هل تريد إصدار النسخة النهائية الآن؟";
-    if (!window.confirm(message)) return;
+    setFinalizeConfirmOpen(false);
     setBusy(true);
     setError("");
     setNotice("");
@@ -143,10 +144,11 @@ export default function ContractPage() {
             <div>
               <div className="font-mono text-[11px] text-slate-400">{item.serial_number}</div>
               <h1 className="mt-2 text-2xl font-black text-[#00102e]">{title}</h1>
-              <p className="mt-2 text-xs font-bold text-slate-500">{item.source_channel === "office" ? "أعده المكتب لصالحك" : "أنشأته بنفسك"}</p>
+              <p className="mt-2 text-xs font-bold text-slate-500">محفوظ ومتابَع داخل حسابك</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-black text-blue-700">{contractStatusLabels[item.status] || item.status}</span>
+              {item.permissions.canShare && <button type="button" onClick={() => setShareOpen(true)} className="inline-flex items-center gap-2 rounded-xl border border-[#986410]/30 bg-[#986410]/5 px-3 py-2.5 text-xs font-black text-[#00102e]"><Share2 className="h-4 w-4 text-[#986410]" /> مشاركة</button>}
               <button type="button" onClick={() => void load()} className="rounded-xl border border-slate-200 p-2.5" aria-label="تحديث"><RefreshCw className="h-4 w-4" /></button>
             </div>
           </div>
@@ -165,27 +167,29 @@ export default function ContractPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {item.permissions.canEdit && <Link href={`/wizard/${item.template_slug}?contractId=${item.id}`} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-3 text-xs font-black text-white"><FilePenLine className="h-4 w-4" /> تعديل البيانات المسموحة</Link>}
-                <button type="button" disabled={busy} onClick={() => void finalizeEarly()} className="inline-flex items-center gap-2 rounded-xl bg-amber-700 px-4 py-3 text-xs font-black text-white disabled:opacity-50"><LockKeyhole className="h-4 w-4" /> إصدار النسخة الحالية الآن</button>
+                {item.permissions.canFinalize && <button type="button" disabled={busy} onClick={() => setFinalizeConfirmOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-amber-700 px-4 py-3 text-xs font-black text-white disabled:opacity-50"><LockKeyhole className="h-4 w-4" /> إصدار النسخة الحالية الآن</button>}
               </div>
             </div>
           </section>
         )}
 
         {isSelfService && item.status === "pending_payment" && (
-          <section className={`mt-6 rounded-2xl border p-5 sm:p-6 ${item.payment_status === "rejected" ? "border-red-200 bg-red-50" : "border-blue-200 bg-blue-50"}`}>
-            <h2 className={`font-black ${item.payment_status === "rejected" ? "text-red-900" : "text-blue-950"}`}>
-              {item.payment_status === "rejected" ? "تعذر اعتماد إثبات الدفع" : item.payment_status === "pending_verification" ? "إثبات الدفع قيد المراجعة" : "استكمال الدفع"}
+          <section className={`mt-6 rounded-2xl border p-5 sm:p-6 ${item.payment_status === "rejected" ? "border-red-200 bg-red-50" : item.payment_status === "needs_client_info" ? "border-amber-200 bg-amber-50" : "border-blue-200 bg-blue-50"}`}>
+            <h2 className={`font-black ${item.payment_status === "rejected" ? "text-red-900" : item.payment_status === "needs_client_info" ? "text-amber-950" : "text-blue-950"}`}>
+              {item.payment_status === "rejected" ? "تعذر اعتماد إثبات الدفع" : item.payment_status === "needs_client_info" ? "مطلوب توضيح بخصوص الدفع" : item.payment_status === "pending_verification" ? "إثبات الدفع قيد المراجعة" : "استكمال الدفع"}
             </h2>
-            <p className={`mt-2 text-xs leading-6 ${item.payment_status === "rejected" ? "text-red-800" : "text-blue-900"}`}>
+            <p className={`mt-2 text-xs leading-6 ${item.payment_status === "rejected" ? "text-red-800" : item.payment_status === "needs_client_info" ? "text-amber-900" : "text-blue-900"}`}>
               {item.payment_status === "rejected"
                 ? (item.payment_admin_notes || "راجع بيانات التحويل وارفع إثباتًا جديدًا.")
-                : item.payment_status === "pending_verification"
-                  ? `تبدأ مهلة تعديل البيانات غير الأساسية لمدة ${editHours} ساعة بعد اعتماد الدفع، وليس بمجرد رفع الإيصال.`
-                  : "ارفع إثبات التحويل حتى تبدأ الإدارة مراجعته."}
+                : item.payment_status === "needs_client_info"
+                  ? (item.payment_admin_notes || "الإدارة تحتاج إثباتًا أو توضيحًا إضافيًا. ارفع إثباتًا بديلًا ثم ستعود العملية للمراجعة.")
+                  : item.payment_status === "pending_verification"
+                    ? `تبدأ مهلة تعديل البيانات غير الأساسية لمدة ${editHours} ساعة بعد اعتماد الدفع، وليس بمجرد رفع الإيصال.`
+                    : "ارفع إثبات التحويل حتى تبدأ الإدارة مراجعته."}
             </p>
-            {(!item.payment_status || item.payment_status === "rejected") && (
+            {(!item.payment_status || item.payment_status === "rejected" || item.payment_status === "needs_client_info") && (
               <button type="button" onClick={() => setPaymentOpen(true)} className="mt-4 rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-white">
-                {item.payment_status === "rejected" ? "رفع إثبات دفع جديد" : "رفع إثبات الدفع"}
+                {item.payment_status === "rejected" ? "رفع إثبات دفع جديد" : item.payment_status === "needs_client_info" ? "رفع إثبات بديل" : "رفع إثبات الدفع"}
               </button>
             )}
           </section>
@@ -210,7 +214,7 @@ export default function ContractPage() {
               </div>
               {item.permissions.canDownloadPdf && documents.length === 0 && <a href={apiUrl(`/api/v1/contracts/${item.id}/pdf`)} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-3 text-xs font-black text-white"><Download className="h-4 w-4" /> تحميل العقد النهائي</a>}
               {documents.length > 0 && <div className="mt-4 space-y-2">{documents.map((document) => <a key={document.id} href={apiUrl(`/api/v1/contracts/${item.id}/documents/${document.id}/download`)} className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-black text-emerald-900"><span>{document.titleAr}</span><Download className="h-4 w-4 shrink-0" /></a>)}</div>}
-              {item.status === "client_review" && !item.editWindow.active && <button type="button" disabled={busy} onClick={() => void finalizeEarly()} className="mt-4 w-full rounded-xl bg-[#00102e] px-4 py-3 text-xs font-black text-white">إصدار النسخة النهائية</button>}
+              {item.permissions.canFinalize && !item.editWindow.active && <button type="button" disabled={busy} onClick={() => setFinalizeConfirmOpen(true)} className="mt-4 w-full rounded-xl bg-[#00102e] px-4 py-3 text-xs font-black text-white">إصدار النسخة النهائية</button>}
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6">
@@ -228,7 +232,16 @@ export default function ContractPage() {
           </aside>
         </div>
       </main>
+      <ActionDialog open={finalizeConfirmOpen} title="تثبيت وإصدار العقد" message={item.editWindow.active ? "سيتم إنهاء مهلة التعديل الآن وتثبيت النسخة الحالية، ثم يبدأ تجهيز ملف PDF النهائي." : "سيتم تثبيت النسخة الحالية وبدء تجهيز ملف PDF النهائي."} confirmLabel="تأكيد الإصدار" onClose={() => setFinalizeConfirmOpen(false)} onConfirm={() => void performFinalizeEarly()} />
       <Footer />
+      <ZShareModal
+        isOpen={shareOpen}
+        onClose={() => setShareOpen(false)}
+        contractId={item.id}
+        documentTitle={title}
+        serialNumber={item.serial_number}
+        allowEdit={item.status === "client_review" && item.editWindow.active}
+      />
       <VodafoneCashModal
         isOpen={paymentOpen}
         onClose={() => setPaymentOpen(false)}

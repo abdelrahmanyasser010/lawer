@@ -54,8 +54,8 @@ add('notification_payload_decoded',
     'json_decode($item->payload, true)' in notice and '$item->payload = is_array($decoded) ? $decoded : [];' in notice,
     {'field':'items[].payload'})
 add('audit_payloads_decoded',
-    '$row->oldValues = $this->decodeJson($row->oldValues);' in audit
-    and '$row->newValues = $this->decodeJson($row->newValues);' in audit,
+    re.search(r'\$row->oldValues\s*=\s*\$this->decodeJson\(\$row->oldValues\)', audit) is not None
+    and re.search(r'\$row->newValues\s*=\s*\$this->decodeJson\(\$row->newValues\)', audit) is not None,
     {'fields':['oldValues','newValues']})
 
 # Empty notification inbox must settle to the empty-state instead of infinite loading.
@@ -71,7 +71,7 @@ add('dashboard_notifications_empty_state',
 add('cors_headers_on_success_errors_and_preflight',
     'public static function decorate' in security
     and 'SecurityHeaders::decorate($request, response()->json' in bootstrap
-    and ("Route::options('/{any}'" in routes or ("Route::any('/{any}'" in routes and "isMethod('OPTIONS')" in routes))
+    and "Route::options('/{any}'" in routes
     and 'test_preflight_and_error_responses_keep_cors_headers' in health_test,
     {'coverage':['success','error','preflight']})
 

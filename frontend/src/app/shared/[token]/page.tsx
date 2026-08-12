@@ -27,14 +27,13 @@ type ShareContent = ShareMetadata & {
 
 const LABELS: Record<string, string> = {
   sale_total_price: "إجمالي ثمن البيع",
-  sale_payment_method: "طريقة السداد",
+  sale_payment_plan: "طريقة سداد الثمن",
   sale_handover_date: "تاريخ التسليم",
   sale_unit_governorate: "المحافظة",
   sale_unit_city: "المدينة / المركز",
   sale_unit_district: "الحي / المنطقة",
   sale_unit_street: "اسم الشارع",
   sale_unit_area: "مساحة الوحدة",
-  sale_competent_court: "المحكمة المختصة",
   property_governorate: "المحافظة",
   property_city: "المدينة / المركز",
   property_district: "الحي / المنطقة",
@@ -42,10 +41,24 @@ const LABELS: Record<string, string> = {
   property_area: "مساحة العين",
   start_date: "تاريخ بداية الإيجار",
   end_date: "تاريخ نهاية الإيجار",
-  monthly_rent: "القيمة الإيجارية الشهرية",
+  property_delivery_date: "تاريخ تسليم العين المؤجرة",
+  lease_duration_text: "مدة عقد الإيجار",
+  contract_copies_count: "عدد النسخ الأصلية للعقد",
+  rent_period: "دورية الأجرة",
+  rent_amount: "القيمة الإيجارية",
+  rent_amount_words: "القيمة الإيجارية كتابةً",
+  rent_due_day: "أقصى يوم لسداد الأجرة",
+  rental_payment_method: "وسيلة سداد الأجرة",
+  rental_payment_method_other: "وسيلة السداد الأخرى",
+  rental_payment_methods: "وسائل سداد الأجرة",
   deposit_amount: "مبلغ التأمين",
-  annual_increase: "نسبة الزيادة السنوية",
-  competent_court: "المحكمة المختصة",
+  deposit_amount_words: "مبلغ التأمين كتابةً",
+  annual_increase_rate: "نسبة الزيادة الدورية",
+  late_payment_daily_compensation: "تعويض التأخير اليومي في سداد الأجرة",
+  holdover_daily_compensation: "تعويض التأخير اليومي في الإخلاء",
+  monthly_rent: "القيمة الإيجارية الشهرية (عقد قديم)",
+  annual_increase: "نسبة الزيادة السنوية (عقد قديم)",
+  competent_court: "المحكمة المختصة (عقد قديم)",
 };
 
 function labelFor(key: string) {
@@ -135,7 +148,7 @@ export default function SharedContractPage() {
           <div className="space-y-6">
             <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                <div><div className="flex items-center gap-2"><h1 className="text-2xl font-black text-[#00102e]">{content.contractTitle}</h1>{content.permission === "edit" ? <Pencil className="h-5 w-5 text-[#986410]"/> : <Eye className="h-5 w-5 text-slate-400"/>}</div><p className="mt-1 font-mono text-xs text-slate-400">{content.serialNumber} · {content.variantKey}</p></div>
+                <div><div className="flex items-center gap-2"><h1 className="text-2xl font-black text-[#00102e]">{content.contractTitle}</h1>{content.permission === "edit" ? <Pencil className="h-5 w-5 text-[#986410]"/> : <Eye className="h-5 w-5 text-slate-400"/>}</div><p className="mt-1 font-mono text-xs text-slate-400">{content.serialNumber}</p></div>
                 <div className="rounded-xl bg-emerald-50 px-4 py-2 text-xs font-black text-emerald-700"><ShieldCheck className="ml-1 inline h-4 w-4"/>{content.permission === "edit" ? "تعديل حقول محددة" : "عرض فقط"}</div>
               </div>
             </header>

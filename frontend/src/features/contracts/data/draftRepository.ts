@@ -15,6 +15,7 @@ function draftPayload(draft: ContractDraftData) {
     variantKey: draft.variantKey,
     selectedOptionalClauseKeys: draft.selectedOptionalClauseKeys,
     fieldValues: draft.fieldValues,
+    touchedFieldKeys: draft.touchedFieldKeys ?? [],
     attachmentRefs: draft.attachmentRefs,
     currentStepKey: draft.currentStepKey,
     creationMode: draft.creationMode,

@@ -1,6 +1,5 @@
 import type { ElementType } from "react";
 import {
-  Bell,
   ClipboardList,
   CreditCard,
   FileCheck2,
@@ -8,7 +7,6 @@ import {
   FileText,
   LayoutDashboard,
   MessageSquareText,
-  ScrollText,
   Settings,
   Tags,
   Users,
@@ -37,13 +35,12 @@ export const adminNavigation: NavigationGroup[] = [
     label: "الرئيسية",
     items: [
       { href: "/", label: "نظرة عامة", icon: LayoutDashboard, permission: "dashboard.view" },
-      { href: "/notifications", label: "الإشعارات", icon: Bell, permission: "dashboard.view" },
     ],
   },
   {
     label: "التشغيل اليومي",
     items: [
-      { href: "/work", label: "قائمة العمل", icon: ClipboardList, permission: "requests.view" },
+      { href: "/work", label: "مركز المتابعة", icon: ClipboardList, permission: "requests.view" },
       { href: "/contracts", label: "العقود", icon: FileText, permission: "contracts.view" },
       { href: "/reviews", label: "مراجعة العقود", icon: FileCheck2, permission: "contracts.review", feature: "contractEditing" },
       { href: "/consultations", label: "الاستشارات والمواعيد", icon: MessageSquareText, permission: "consultations.manage" },
@@ -55,7 +52,7 @@ export const adminNavigation: NavigationGroup[] = [
     label: "إدارة المنصة",
     items: [
       { href: "/templates", label: "القوالب والإصدارات", icon: FileCog, permission: "templates.manage", feature: "templateManagement" },
-      { href: "/pricing", label: "الأسعار والخدمات", icon: Tags, permission: "pricing.manage" },
+      { href: "/pricing", label: "الأسعار", icon: Tags, permission: "pricing.manage" },
       { href: "/team", label: "الفريق والصلاحيات", icon: UsersRound, permission: "team.manage", feature: "teamManagement" },
       { href: "/reports", label: "التقارير", icon: ChartNoAxesCombined, permission: "reports.view" },
     ],
@@ -63,7 +60,6 @@ export const adminNavigation: NavigationGroup[] = [
   {
     label: "النظام",
     items: [
-      { href: "/audit", label: "سجل التدقيق", icon: ScrollText, permission: "audit.view" },
       { href: "/settings", label: "الإعدادات", icon: Settings, permission: "settings.manage" },
     ],
   },

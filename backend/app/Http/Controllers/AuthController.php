@@ -6,6 +6,7 @@ use App\Services\NotificationService;
 use App\Services\PasswordService;
 use App\Services\SessionService;
 use App\Support\ApiResponse;
+use App\Support\AuthAudience;
 use App\Support\Security;
 use App\Support\UserPresenter;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ final class AuthController extends Controller
 
     public function register(Request $request)
     {
+        if (AuthAudience::resolve($request) !== AuthAudience::FRONTEND) throw new ApiException(403, 'إنشاء حسابات العملاء متاح من واجهة العملاء فقط', 'AUTH_AUDIENCE_FORBIDDEN');
         $data = $request->validate([
             'fullName' => ['required','string','max:150'],
             'email' => ['required','email','max:255'],
@@ -54,8 +56,8 @@ final class AuthController extends Controller
             $this->audit->write($request, 'auth.registered', 'user', $id, null, ['email' => $email, 'accountType' => $data['accountType'] ?? 'individual'], $id);
             return ['user' => $user, 'code' => $code];
         });
-        [$sessionCookie,$csrfCookie] = $this->sessions->create((int) $result['user']->id, $request);
-        $payload = ['user' => UserPresenter::make($result['user']), 'verificationRequired' => true, 'otpExpiresMinutes' => config('zdraft.otp_ttl_minutes')];
+        [$sessionCookie,$csrfCookie,$csrfToken] = $this->sessions->create((int) $result['user']->id, $request);
+        $payload = ['user' => UserPresenter::make($result['user']), 'verificationRequired' => true, 'otpExpiresMinutes' => config('zdraft.otp_ttl_minutes'), 'csrfToken' => $csrfToken];
         if (config('zdraft.expose_debug_tokens')) $payload['debugVerificationCode'] = $result['code'];
         return $this->created($request, $payload, 'تم إنشاء الحساب وإرسال رمز التأكيد إلى بريدك')->withCookie($sessionCookie)->withCookie($csrfCookie);
     }
@@ -66,19 +68,31 @@ final class AuthController extends Controller
         $user = DB::table('users')->whereRaw('lower(email)=lower(?)', [strtolower($data['email'])])->first();
         if (!$user || !$this->passwords->verify($data['password'], $user->password_hash ?? null)) throw new ApiException(401, 'بيانات الدخول غير صحيحة', 'INVALID_CREDENTIALS');
         if (($user->status ?? '') === 'suspended') throw new ApiException(403, 'الحساب موقوف. تواصل مع الإدارة', 'ACCOUNT_SUSPENDED');
+        $presented = UserPresenter::make($user);
+        $audience = AuthAudience::resolve($request);
+        if (!AuthAudience::allows($presented, $audience)) throw new ApiException(403, $audience === AuthAudience::DASHBOARD ? 'هذا الحساب غير مخول للدخول إلى لوحة التحكم' : 'حسابات الإدارة لا تسجل الدخول من واجهة العملاء', 'AUTH_AUDIENCE_FORBIDDEN');
         if ($this->passwords->needsRehash($user->password_hash ?? null)) DB::table('users')->where('id', $user->id)->update(['password_hash' => $this->passwords->hash($data['password']), 'updated_at' => now()]);
-        [$sessionCookie,$csrfCookie] = $this->sessions->create((int) $user->id, $request);
+        [$sessionCookie,$csrfCookie,$csrfToken] = $this->sessions->create((int) $user->id, $request);
         DB::table('staff_profiles')->where('user_id', $user->id)->update(['last_login_at' => now()]);
         $this->audit->write($request, 'auth.login', 'user', $user->id, null, null, (int) $user->id);
-        return $this->ok($request, ['user' => UserPresenter::make($user)], 'تم تسجيل الدخول بنجاح')->withCookie($sessionCookie)->withCookie($csrfCookie);
+        return $this->ok($request, ['user' => $presented, 'csrfToken' => $csrfToken], 'تم تسجيل الدخول بنجاح')->withCookie($sessionCookie)->withCookie($csrfCookie);
     }
 
     public function logout(Request $request)
     {
         if ($request->attributes->get('session_id')) DB::table('auth_sessions')->where('id', $request->attributes->get('session_id'))->update(['revoked_at' => now()]);
-        return $this->ok($request, null, 'تم تسجيل الخروج')->withCookie(Security::expiredCookie(config('zdraft.session_cookie')))->withCookie(Security::expiredCookie(config('zdraft.csrf_cookie')));
+        return $this->ok($request, null, 'تم تسجيل الخروج')->withCookie(Security::expiredCookie(AuthAudience::sessionCookie($request)))->withCookie(Security::expiredCookie(AuthAudience::csrfCookie($request)));
     }
-    public function me(Request $request) { return $this->ok($request, ['user' => $request->attributes->get('auth_user')]); }
+    public function me(Request $request)
+    {
+        $csrfCookieName = AuthAudience::csrfCookie($request);
+        $csrfToken = (string) $request->cookie($csrfCookieName);
+        $response = $this->ok($request, ['user' => $request->attributes->get('auth_user'), 'csrfToken' => $csrfToken ?: ($csrfToken = Security::randomToken(24))]);
+        if (!$request->cookie($csrfCookieName)) {
+            $response->withCookie(Security::cookie($csrfCookieName, $csrfToken, ((int) config('zdraft.session_ttl_hours')) * 60, false));
+        }
+        return $response;
+    }
 
     public function requestVerification(Request $request)
     {

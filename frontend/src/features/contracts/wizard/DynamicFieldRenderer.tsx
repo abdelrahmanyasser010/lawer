@@ -2,6 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import type { ChangeEvent } from "react";
+import { evaluateCondition } from "@zdraft/template-engine";
 import type {
   ContractFieldValue,
   PrimitiveFieldValue,
@@ -87,7 +88,9 @@ function renderScalarControl(
           onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.checked)}
           className="mt-0.5 h-4 w-4 accent-[#986410]"
         />
-        <span className="text-xs font-bold leading-6 text-slate-700">{field.labelAr}</span>
+        <span className={`text-xs font-bold leading-6 ${field.required ? "text-[#c66b22]" : "text-slate-700"}`}>
+          {field.labelAr} {field.required && <span aria-label="إلزامي">*</span>}
+        </span>
       </label>
     );
   }
@@ -139,10 +142,14 @@ function RepeaterRenderer({
             </button>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            {field.columns?.map((column) => (
+            {field.columns
+              ?.filter((column) => !column.visibleWhen || evaluateCondition(column.visibleWhen, row))
+              .map((column) => {
+                const required = Boolean(column.required || (column.requiredWhen && evaluateCondition(column.requiredWhen, row)));
+                return (
               <div key={column.key}>
                 <label className="mb-1 block text-[10px] font-black text-slate-600">
-                  {column.labelAr} {column.required && <span className="text-rose-500">*</span>}
+                  {column.labelAr} {required && <span className="text-[#c66b22]">*</span>}
                 </label>
                 {column.type === "select" ? (
                   <select
@@ -168,7 +175,8 @@ function RepeaterRenderer({
                   />
                 )}
               </div>
-            ))}
+                );
+              })}
           </div>
         </div>
       ))}
@@ -191,7 +199,7 @@ export default function DynamicFieldRenderer({ field, value, onChange, onFilesSe
     return (
       <div>
         <label className="mb-1 block text-xs font-black text-slate-700">
-          {field.labelAr} {field.required && <span className="text-rose-500">*</span>}
+          <span className={field.required ? "text-[#c66b22]" : undefined}>{field.labelAr}</span> {field.required && <span className="text-[#c66b22]">*</span>}
         </label>
         <label className="flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-center transition hover:border-[#986410]/50 hover:bg-[#986410]/5">
           <span className="text-xs font-black text-[#00102e]">{uploading ? "جاري رفع الملفات..." : "اختر صورًا أو ملفات داعمة"}</span>
@@ -227,7 +235,7 @@ export default function DynamicFieldRenderer({ field, value, onChange, onFilesSe
     return (
       <div>
         <label className="mb-2 block text-xs font-black text-slate-700">
-          {field.labelAr} {field.required && <span className="text-rose-500">*</span>}
+          <span className={field.required ? "text-[#c66b22]" : undefined}>{field.labelAr}</span> {field.required && <span className="text-[#c66b22]">*</span>}
         </label>
         <RepeaterRenderer field={field} value={rows} onChange={onChange} />
       </div>
@@ -241,7 +249,7 @@ export default function DynamicFieldRenderer({ field, value, onChange, onFilesSe
   return (
     <div>
       <label className="mb-1 block text-xs font-black text-slate-700">
-        {field.labelAr} {field.required && <span className="text-rose-500">*</span>}
+        <span className={field.required ? "text-[#c66b22]" : undefined}>{field.labelAr}</span> {field.required && <span className="text-[#c66b22]">*</span>}
       </label>
       {renderScalarControl(field, scalarValue(value), onChange)}
       {field.helpText && <p className="mt-1 text-[10px] font-semibold leading-5 text-slate-500">{field.helpText}</p>}

@@ -2,8 +2,11 @@
 return [
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
     'dashboard_url' => env('DASHBOARD_URL', 'http://localhost:3001'),
-    'session_cookie' => env('ZDRAFT_SESSION_COOKIE', 'zdraft_session'),
-    'csrf_cookie' => env('ZDRAFT_CSRF_COOKIE', 'zdraft_csrf'),
+    'cors_extra_origins' => array_values(array_filter(array_map('trim', explode(',', (string) env('CORS_EXTRA_ORIGINS', env('CORS_EXTRA_ORIGIN', '')))))),
+    'frontend_session_cookie' => env('ZDRAFT_FRONTEND_SESSION_COOKIE', env('ZDRAFT_SESSION_COOKIE', 'zdraft_user_session')),
+    'frontend_csrf_cookie' => env('ZDRAFT_FRONTEND_CSRF_COOKIE', env('ZDRAFT_CSRF_COOKIE', 'zdraft_user_csrf')),
+    'dashboard_session_cookie' => env('ZDRAFT_DASHBOARD_SESSION_COOKIE', 'zdraft_admin_session'),
+    'dashboard_csrf_cookie' => env('ZDRAFT_DASHBOARD_CSRF_COOKIE', 'zdraft_admin_csrf'),
     'cookie_domain' => env('COOKIE_DOMAIN'),
     'cookie_same_site' => env('COOKIE_SAME_SITE', 'lax'),
     'cookie_secure' => filter_var(env('COOKIE_SECURE', env('APP_ENV', 'production') === 'production'), FILTER_VALIDATE_BOOL),

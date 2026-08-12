@@ -1,10 +1,40 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 import type { ContractSlug, CreationMode } from "@/types/zdraft";
 import type {
   ContractDraftData,
   ContractFieldValue,
 } from "@/features/contracts/domain/contractTemplate.types";
+
+
+const DRAFT_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+
+const expiringSessionStorage: StateStorage = {
+  getItem(name) {
+    if (typeof window === "undefined") return null;
+    const raw = window.sessionStorage.getItem(name);
+    if (!raw) return null;
+    try {
+      const wrapped = JSON.parse(raw) as { value?: string; expiresAt?: number };
+      if (!wrapped.value || !wrapped.expiresAt || Date.now() > wrapped.expiresAt) {
+        window.sessionStorage.removeItem(name);
+        return null;
+      }
+      return wrapped.value;
+    } catch {
+      window.sessionStorage.removeItem(name);
+      return null;
+    }
+  },
+  setItem(name, value) {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem(name, JSON.stringify({ value, expiresAt: Date.now() + DRAFT_SESSION_TTL_MS }));
+  },
+  removeItem(name) {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.removeItem(name);
+  },
+};
 
 interface InitializeDraftInput {
   slug: ContractSlug;
@@ -46,16 +76,12 @@ interface WizardState {
     variantKey: string;
     selectedOptionalClauseKeys: string[];
     fieldValues: Record<string, ContractFieldValue>;
+    touchedFieldKeys?: string[];
     attachmentRefs?: Record<string, string[]>;
     currentStepKey: string;
     creationMode: CreationMode;
     coreIdentityLocked: boolean;
   }) => void;
-  hydrateLegacyDraft: (
-    slug: ContractSlug,
-    formData: Record<string, ContractFieldValue>,
-    currentStepKey: string,
-  ) => void;
   lockCoreIdentityData: (slug: ContractSlug) => void;
   openAuthModalAtCheckout: () => void;
   closeAuthModal: () => void;
@@ -91,6 +117,7 @@ export const useWizardStore = create<WizardState>()(
             variantKey: input.variantKey,
             selectedOptionalClauseKeys: [],
             fieldValues: { ...(input.defaultFieldValues ?? {}) },
+            touchedFieldKeys: [],
             attachmentRefs: {},
             currentStepKey: input.firstStepKey,
             creationMode: input.creationMode,
@@ -122,6 +149,7 @@ export const useWizardStore = create<WizardState>()(
                 fieldValues: changedVariant
                   ? { ...defaultFieldValues }
                   : { ...defaultFieldValues, ...existing.fieldValues },
+                touchedFieldKeys: changedVariant ? [] : (existing.touchedFieldKeys ?? []),
               }),
             },
           };
@@ -138,6 +166,7 @@ export const useWizardStore = create<WizardState>()(
               [slug]: touch({
                 ...draft,
                 fieldValues: { ...draft.fieldValues, [fieldName]: value },
+                touchedFieldKeys: [...new Set([...(draft.touchedFieldKeys ?? []), fieldName])],
               }),
             },
           };
@@ -230,6 +259,7 @@ export const useWizardStore = create<WizardState>()(
               variantKey: input.variantKey,
               selectedOptionalClauseKeys: input.selectedOptionalClauseKeys,
               fieldValues: input.fieldValues,
+              touchedFieldKeys: input.touchedFieldKeys ?? [],
               attachmentRefs: input.attachmentRefs ?? {},
               currentStepKey: input.currentStepKey,
               creationMode: input.creationMode,
@@ -238,23 +268,6 @@ export const useWizardStore = create<WizardState>()(
             },
           },
         }));
-      },
-
-      hydrateLegacyDraft: (slug, formData, currentStepKey) => {
-        set((state) => {
-          const draft = state.drafts[slug];
-          if (!draft) return state;
-          return {
-            drafts: {
-              ...state.drafts,
-              [slug]: touch({
-                ...draft,
-                fieldValues: { ...draft.fieldValues, ...formData },
-                currentStepKey,
-              }),
-            },
-          };
-        });
       },
 
       lockCoreIdentityData: (slug) => {
@@ -288,7 +301,8 @@ export const useWizardStore = create<WizardState>()(
       },
     }),
     {
-      name: "zdraft-wizard-storage-v2",
+      name: "zdraft-wizard-session-v3",
+      storage: createJSONStorage(() => expiringSessionStorage),
       partialize: (state: WizardState) => ({
         drafts: state.drafts,
         activeTemplateSlug: state.activeTemplateSlug,

@@ -27,7 +27,7 @@ export default function DynamicOptionalStep({ step, fieldValues, onFieldChange, 
             <h3 className="text-sm font-black text-[#00102e]">{step.titleAr}</h3>
             {isAnnex && (
               <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-black text-emerald-800">
-                سيصدر كمستند مستقل
+                سيُضاف بعد العقد في ملف PDF النهائي
               </span>
             )}
           </div>

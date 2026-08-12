@@ -51,6 +51,7 @@ export interface ContractDetails {
   current_step_key?: string;
   attachment_refs_json?: Record<string, string[]>;
   field_values_json: Record<string, string | number | boolean | null>;
+  touched_field_keys_json?: string[];
   selected_optional_clause_keys: string[];
   core_identity_locked: boolean;
   edit_expires_at?: string | null;
@@ -85,7 +86,9 @@ export interface ContractDetails {
   permissions: {
     canEdit: boolean;
     canEditCoreIdentity: boolean;
+    canFinalize: boolean;
     canRequestRevision: boolean;
+    canShare: boolean;
     canDownloadPdf: boolean;
   };
 }
@@ -102,7 +105,7 @@ export interface ContractDocumentFile {
   createdAt: string;
 }
 
-export type CommunicationChannel = "office" | "zoom" | "whatsapp";
+export type CommunicationChannel = "zoom" | "whatsapp";
 
 export interface ServiceRequestSummary {
   id: number;
@@ -113,6 +116,9 @@ export interface ServiceRequestSummary {
   priority: string;
   communicationChannel?: CommunicationChannel | null;
   preferredContactAt?: string | null;
+  preferredContactPeriodLabel?: string | null;
+  bookingExpiresAt?: string | null;
+  bookingStatus?: string | null;
   meetingAt?: string | null;
   meetingProvider?: CommunicationChannel | null;
   meetingUrl?: string | null;
@@ -130,10 +136,22 @@ export interface ServiceRequestDetails {
   requestType: ServiceRequestSummary["requestType"];
   title: string;
   description: string;
+  templateSlug?: string | null;
+  variantKey?: string | null;
+  expectedPaymentEgp?: number;
+  lawyerTotalPriceEgp?: number | null;
+  lawyerDepositEgp?: number | null;
+  lawyerRemainingEgp?: number | null;
+  approvedPaidEgp?: number;
+  outstandingEgp?: number;
+  paymentStage?: "deposit" | "working" | "balance" | "paid" | "single" | null;
   status: string;
   priority: string;
   communicationChannel?: CommunicationChannel | null;
   preferredContactAt?: string | null;
+  preferredContactPeriodLabel?: string | null;
+  bookingExpiresAt?: string | null;
+  bookingStatus?: string | null;
   meetingAt?: string | null;
   meetingProvider?: CommunicationChannel | null;
   meetingUrl?: string | null;
@@ -187,16 +205,30 @@ export interface PublicCatalog {
     description: string;
     priceEgp: number;
     version: number;
+    variants: Array<{
+      key: string;
+      nameAr: string;
+      description: string;
+      documentTitleAr?: string;
+      selfServicePriceEgp: number;
+      lawyerAssistedPriceEgp: number;
+      lawyerDepositEgp: number;
+    }>;
   }>;
   services: {
     contractReviewDepositEgp: number;
     consultationDepositEgp: number;
+    consultationFeeEgp: number;
     contractDraftingDepositEgp: number;
   };
   office: {
     displayName: string;
     address: string;
     whatsappNumber: string;
+    consultationWhatsappNumber: string;
+    supportWhatsappNumber: string;
+    supportPhone: string;
+    supportEmail: string;
   };
   payment: {
     vodafoneCashNumber: string;

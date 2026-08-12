@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Clock3, Copy, Loader2, Upload, X } from "lucide-react";
-import { apiRequest, ApiClientError } from "@/lib/apiClient";
+import { apiRequest, ApiClientError, frontendApi } from "@/lib/apiClient";
 import { compressUploadFile } from "@/lib/compression";
 import { usePublicCatalog } from "@/hooks/usePublicCatalog";
+import { normalizePhoneInput, phoneValidationError } from "@/lib/inputValidation";
 
 interface Props {
   isOpen: boolean;
@@ -30,7 +31,7 @@ export default function VodafoneCashModal({
   onSubmitted,
 }: Props) {
   const router = useRouter();
-  const { catalog } = usePublicCatalog();
+  const { catalog, loading: catalogLoading, loadError: catalogLoadError } = usePublicCatalog();
   const cashNumber = catalog.payment.vodafoneCashNumber;
   const editHours = catalog.policies.selfServiceEditHours;
   const targetPath = contractId ? `/contract/${contractId}` : serviceRequestId ? `/requests/${serviceRequestId}` : "/";
@@ -49,6 +50,17 @@ export default function VodafoneCashModal({
       setError("");
       setPaymentReference("");
     }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    frontendApi.profile().then((profile) => {
+      if (!active) return;
+      const phone = profile.whatsappNumber || profile.phone || "";
+      if (phone) setSenderPhone((current) => current || phone);
+    }).catch(() => undefined);
+    return () => { active = false; };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -75,14 +87,16 @@ export default function VodafoneCashModal({
 
   async function submitReceipt() {
     setError("");
+    if (catalogLoading || catalogLoadError || !cashNumber) {
+      setError("بيانات الدفع غير متاحة الآن. حاول مرة أخرى بعد قليل أو تواصل مع الدعم الفني.");
+      return;
+    }
     if (!contractId && !serviceRequestId) {
       setError("تعذر تحديد العقد أو الطلب المرتبط بالدفع.");
       return;
     }
-    if (senderPhone.replace(/\D/g, "").length < 10) {
-      setError("اكتب رقم المحفظة التي تم التحويل منها بصورة صحيحة.");
-      return;
-    }
+    const phoneError = phoneValidationError(senderPhone, true);
+    if (phoneError) { setError("اكتب رقم المحفظة التي تم التحويل منها بصورة صحيحة."); return; }
     if (!receipt) {
       setError("ارفع صورة أو ملف إثبات التحويل.");
       return;
@@ -95,7 +109,7 @@ export default function VodafoneCashModal({
       const attachment = await apiRequest<{ id: number }>("/api/v1/attachments", { method: "POST", body: upload });
       const payment = await apiRequest<{ id: number; serialNumber: string; status: string }>("/api/v1/payments/receipts", {
         method: "POST",
-        body: JSON.stringify({ contractId, serviceRequestId, amountEgp, senderPhone, attachmentId: attachment.id }),
+        body: JSON.stringify({ contractId, serviceRequestId, amountEgp, senderPhone: normalizePhoneInput(senderPhone), attachmentId: attachment.id }),
       });
       setPaymentReference(payment.serialNumber);
       onSubmitted?.(payment);
@@ -132,7 +146,7 @@ export default function VodafoneCashModal({
 
             <div className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-4">
               <div className="flex items-center justify-between gap-3">
-                <div><span className="block text-[10px] text-slate-400">رقم Vodafone Cash</span><strong className="mt-1 block font-mono text-base text-emerald-400" dir="ltr">{cashNumber || "يُحدد في إعدادات التشغيل"}</strong></div>
+                <div><span className="block text-[10px] text-slate-400">رقم Vodafone Cash</span><strong className="mt-1 block font-mono text-base text-emerald-400" dir="ltr">{catalogLoading ? "جاري التحميل..." : cashNumber || "غير متاح"}</strong></div>
                 {cashNumber && <button type="button" onClick={() => void copyNumber()} className="rounded-xl border border-slate-700 p-2 text-slate-300"><Copy className="h-4 w-4" /></button>}
               </div>
               {copied && <p className="mt-2 text-[10px] font-bold text-emerald-400">تم نسخ الرقم.</p>}
@@ -140,7 +154,7 @@ export default function VodafoneCashModal({
             </div>
 
             <label className="mt-5 block text-xs font-bold text-slate-300">رقم المحفظة المحول منها
-              <input value={senderPhone} onChange={(event) => setSenderPhone(event.target.value)} dir="ltr" placeholder="01XXXXXXXXX" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-left text-sm text-white outline-none focus:border-emerald-500" />
+              <input value={senderPhone} onChange={(event) => setSenderPhone(normalizePhoneInput(event.target.value))} dir="ltr" placeholder="01XXXXXXXXX" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-left text-sm text-white outline-none focus:border-emerald-500" />
             </label>
 
             <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-600 bg-slate-900 p-5 text-center">
@@ -151,8 +165,8 @@ export default function VodafoneCashModal({
 
             {contractId && <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] leading-6 text-amber-100"><Clock3 className="mt-1 h-4 w-4 shrink-0" /> يبدأ احتساب مهلة تعديل البيانات غير الأساسية لمدة {editHours} ساعة بعد اعتماد الدفع، وليس بمجرد رفع الإيصال.</div>}
             {error && <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs font-bold text-red-300">{error}</div>}
-            <button type="button" disabled={submitting || preparing || !cashNumber} onClick={() => void submitReceipt()} className="mt-5 w-full rounded-xl bg-emerald-600 py-3.5 text-sm font-black text-white disabled:opacity-50">{submitting ? "جاري إرسال الإثبات..." : "إرسال إثبات التحويل للمراجعة"}</button>
-            {!cashNumber && <p className="mt-2 text-center text-[10px] text-red-300">رقم Vodafone Cash غير مضبوط في إعدادات المكتب.</p>}
+            <button type="button" disabled={submitting || preparing || catalogLoading || catalogLoadError || !cashNumber} onClick={() => void submitReceipt()} className="mt-5 w-full rounded-xl bg-emerald-600 py-3.5 text-sm font-black text-white disabled:opacity-50">{submitting ? "جاري إرسال الإثبات..." : "إرسال إثبات التحويل للمراجعة"}</button>
+            {!catalogLoading && (catalogLoadError || !cashNumber) && <p className="mt-2 text-center text-[10px] text-red-300">{catalogLoadError ? "تعذر تحميل بيانات الدفع حاليًا. حاول مرة أخرى بعد قليل." : "رقم Vodafone Cash غير مضبوط في إعدادات المكتب."}</p>}
           </div>
         )}
       </section>

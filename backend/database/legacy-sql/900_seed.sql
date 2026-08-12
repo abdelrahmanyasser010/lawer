@@ -10,7 +10,7 @@ ON CONFLICT (pubg_id) DO NOTHING;
 INSERT INTO contract_templates (id, name, name_ar, slug, description, price_egp, icon)
 VALUES
 (1, 'Rental Contract', 'عقد إيجار', 'rental', 'عقد إيجار سكني أو تجاري معتمد قانونياً يحفظ حقوق المؤجر والمستأجر', 59.00, 'home'),
-(2, 'Apartment Sale Contract', 'عقد بيع شقة', 'apartment_sale', 'عقد بيع وحدة سكنية شامل بنود الملكية ونظام الدفع والأقساط والرهن', 149.00, 'building'),
+(2, 'Apartment Sale Contract', 'عقد بيع شقة', 'apartment_sale', 'عقد بيع وحدة سكنية شامل بنود الملكية ونظام الدفع والأقساط والرهن', 139.00, 'building'),
 (3, 'Service & Freelance Agreements', 'عقود الخدمات والعمل الحر', 'freelancer', 'عقود تصميم الهوية البصرية وتطوير المواقع وإدارة منصات التواصل مع ملاحقها المستقلة', 59.00, 'briefcase')
 ON CONFLICT (slug) DO UPDATE
 SET name_ar = EXCLUDED.name_ar, price_egp = EXCLUDED.price_egp;

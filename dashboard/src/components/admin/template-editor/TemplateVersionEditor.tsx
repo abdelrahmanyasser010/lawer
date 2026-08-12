@@ -35,6 +35,7 @@ import { ChangeEvent, FormEvent, MouseEvent, ReactNode, useCallback, useEffect, 
 import { dashboardRequest } from "@/lib/apiClient";
 import { hasBackendPermission } from "@/lib/adminAccess";
 import { PageError, PageLoading, StatusBadge } from "@/components/admin/PageFeedback";
+import { useAdminConfirm } from "@/components/admin/AdminDialog";
 
 type Version = {
   id: number;
@@ -193,6 +194,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [returnReviewOpen, setReturnReviewOpen] = useState(false);
   const [returnReason, setReturnReason] = useState("");
+  const { confirm, dialog: confirmDialog } = useAdminConfirm();
 
   const load = useCallback(async () => {
     setError("");
@@ -254,7 +256,8 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
   }
 
   async function submitForReview() {
-    if (!version || !canEdit || version.status !== "draft" || !window.confirm("بعد الإرسال للمراجعة القانونية سيتوقف التعديل حتى يعيده المسؤول. هل تريد المتابعة؟")) return;
+    if (!version || !canEdit || version.status !== "draft") return;
+    if (!await confirm({ title: "إرسال للمراجعة القانونية", message: "بعد الإرسال سيتوقف تعديل هذه المسودة حتى تعود من المراجعة. هل تريد المتابعة؟", confirmLabel: "إرسال للمراجعة" })) return;
     await mutate(`/api/v1/admin/templates/versions/${version.id}/submit-review`, { method: "POST" }, "تم إرسال الإصدار للمراجعة القانونية");
   }
 
@@ -266,7 +269,8 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
   }
 
   async function publish() {
-    if (!version || !canPublish || version.status !== "legal_review" || !window.confirm("هل تريد اعتماد هذا الإصدار ونشره للعقود الجديدة؟ العقود القديمة لن تتغير.")) return;
+    if (!version || !canPublish || version.status !== "legal_review") return;
+    if (!await confirm({ title: "اعتماد ونشر الإصدار", message: "سيُستخدم هذا الإصدار للعقود الجديدة فقط، ولن تتغير العقود السابقة.", confirmLabel: "اعتماد ونشر" })) return;
     await mutate(`/api/v1/admin/templates/versions/${version.id}/publish`, { method: "POST" }, "تم اعتماد الإصدار ونشره");
   }
 
@@ -406,7 +410,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
   }
 
   async function remove(path: string, message: string, confirmation: string, body?: unknown) {
-    if (!window.confirm(confirmation)) return;
+    if (!await confirm({ title: "تأكيد الحذف", message: confirmation, confirmLabel: "تأكيد", danger: true })) return;
     await mutate(path, { method: "DELETE", ...(body ? { body: JSON.stringify(body) } : {}) }, message);
   }
 
@@ -462,6 +466,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-6 p-5 sm:p-8">
+      {confirmDialog}
       <header className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 xl:flex-row xl:items-center">
         <div>
           <div className="flex flex-wrap items-center gap-2">

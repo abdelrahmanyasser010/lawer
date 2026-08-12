@@ -3,30 +3,37 @@
 import { FormEvent, Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Lock } from "lucide-react";
+import { Eye, EyeOff, Lock } from "lucide-react";
+import AuthShell from "@/components/auth/AuthShell";
 import { frontendApi, ApiClientError } from "@/lib/apiClient";
+import PasswordRequirements from "@/components/auth/PasswordRequirements";
+import { passwordValidationError } from "@/lib/inputValidation";
 
 function ResetPasswordContent() {
   const params = useSearchParams();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [show, setShow] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
   async function submit(event: FormEvent) {
     event.preventDefault(); setNotice(null);
-    if (password !== confirm) { setNotice("كلمتا المرور غير متطابقتين."); return; }
-    const token = params.get("token");
-    if (!token) { setNotice("رابط إعادة التعيين غير مكتمل."); return; }
+    const passwordError = passwordValidationError(password); if (passwordError) return setNotice(passwordError);
+    if (password !== confirm) return setNotice("كلمتا المرور غير متطابقتين.");
+    const token = params.get("token"); if (!token) return setNotice("رابط إعادة التعيين غير مكتمل.");
+    setLoading(true);
     try { await frontendApi.resetPassword(token, password); setDone(true); setNotice("تم تغيير كلمة المرور بنجاح."); }
     catch (error) { setNotice(error instanceof ApiClientError ? error.message : "تعذر تغيير كلمة المرور."); }
+    finally { setLoading(false); }
   }
-  return <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4" dir="rtl"><section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"><Lock className="h-9 w-9 text-[#986410]"/><h1 className="mt-4 text-2xl font-black text-[#00102e]">تعيين كلمة مرور جديدة</h1>{notice && <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700">{notice}</div>}{done ? <Link href="/login" className="mt-6 block rounded-xl bg-[#00102e] py-3 text-center text-xs font-black text-white">تسجيل الدخول</Link> : <form onSubmit={submit} className="mt-5 space-y-4"><input type="password" minLength={8} required value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="كلمة المرور الجديدة" className="w-full rounded-xl border border-slate-300 px-3 py-3 text-sm outline-none"/><input type="password" minLength={8} required value={confirm} onChange={(e)=>setConfirm(e.target.value)} placeholder="تأكيد كلمة المرور" className="w-full rounded-xl border border-slate-300 px-3 py-3 text-sm outline-none"/><button className="w-full rounded-xl bg-[#00102e] py-3 text-xs font-black text-white">حفظ كلمة المرور</button></form>}</section></main>;
+  return <AuthShell title="تعيين كلمة مرور جديدة" subtitle="استخدم كلمة مرور من 8 أحرف على الأقل وتحتوي على حرف ورقم.">
+    {notice && <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs font-bold leading-6 text-slate-700">{notice}</div>}
+    {done ? <Link href="/login" className="mt-5 block rounded-2xl bg-[#00102e] py-3.5 text-center text-sm font-black text-white">تسجيل الدخول</Link> : <form onSubmit={submit} className="mt-4 space-y-4">
+      {[{label:"كلمة المرور الجديدة",value:password,set:setPassword},{label:"تأكيد كلمة المرور",value:confirm,set:setConfirm}].map((field)=><label key={field.label} className="block text-xs font-black text-slate-700">{field.label}<div className="relative mt-2"><Lock className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"/><input type={show?"text":"password"} minLength={8} maxLength={128} required value={field.value} onChange={(e)=>field.set(e.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white py-3 pl-11 pr-11 text-sm outline-none focus:border-[#986410] focus:ring-2 focus:ring-[#986410]/10"/><button type="button" onClick={()=>setShow(v=>!v)} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">{show?<EyeOff className="h-4 w-4"/>:<Eye className="h-4 w-4"/>}</button></div></label>)}
+      <PasswordRequirements value={password} />
+      <button disabled={loading || Boolean(passwordValidationError(password)) || password !== confirm} className="w-full rounded-2xl bg-[#00102e] py-3.5 text-sm font-black text-white disabled:opacity-60">{loading?"جاري الحفظ...":"حفظ كلمة المرور"}</button>
+    </form>}
+  </AuthShell>;
 }
-
-export default function ResetPasswordPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
-      <ResetPasswordContent />
-    </Suspense>
-  );
-}
+export default function ResetPasswordPage(){return <Suspense fallback={<div className="min-h-screen bg-[#f8fafc]"/>}><ResetPasswordContent/></Suspense>}

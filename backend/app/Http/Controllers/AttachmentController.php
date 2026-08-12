@@ -62,12 +62,22 @@ final class AttachmentController extends Controller
     {
         $file=DB::table('document_attachments')->where('id',$id)->first();if(!$file)throw new ApiException(404,'الملف غير موجود');$this->authorizeFile($request,$file);$path=$file->storage_key?$this->storage->path($file->storage_key):$file->file_path;if(!is_file($path))throw new ApiException(404,'الملف غير موجود في التخزين','STORED_FILE_MISSING');return response()->download($path,$file->file_name,['Content-Type'=>$file->file_type]);
     }
-    private function authorizeFile(Request $request,object $file):void{if((int)$file->owner_user_id===$request->attributes->get('auth_user')['id']||$this->canAccessTarget($request,$file->attachable_type,(int)$file->attachable_id,(int)$file->owner_user_id,$file->visibility))return;throw new ApiException(403,'ليس لديك صلاحية الوصول إلى الملف');}
-    private function canAccessTarget(Request $request,string $type,int $id,?int $owner=null,?string $visibility=null):bool
+    private function authorizeFile(Request $request,object $file):void{if((int)$file->owner_user_id===$request->attributes->get('auth_user')['id']||$this->canAccessTarget($request,$file->attachable_type,(int)$file->attachable_id,(int)$file->owner_user_id,$file->visibility,(int)$file->id))return;throw new ApiException(403,'ليس لديك صلاحية الوصول إلى الملف');}
+    private function canAccessTarget(Request $request,string $type,int $id,?int $owner=null,?string $visibility=null,?int $attachmentId=null):bool
     {
         $auth=$request->attributes->get('auth_user');if(in_array('super_admin',$auth['roles']??[],true)||in_array('attachments.view_all',$auth['permissions']??[],true))return true;
         if($type==='contract')return DB::table('contracts')->where('id',$id)->whereNull('deleted_at')->where(fn($q)=>$q->where('user_id',$auth['id'])->orWhere('client_user_id',$auth['id'])->orWhere('created_by_user_id',$auth['id'])->orWhere('assigned_lawyer_id',$auth['id']))->exists();
-        if($type==='service_request'){$r=DB::table('service_requests')->where('id',$id)->first();if(!$r)return false;if((int)$r->assigned_lawyer_id===$auth['id'])return true;if((int)$r->client_user_id===$auth['id'])return$owner===$auth['id']||$visibility==='client';return false;}
+        if($type==='service_request'){$r=DB::table('service_requests')->where('id',$id)->first();if(!$r)return false;if((int)$r->assigned_lawyer_id===$auth['id'])return true;if((int)$r->client_user_id===$auth['id']){if($owner===$auth['id'])return true;if($visibility!=='client')return false;if($attachmentId&&!$this->clientServiceRequestAttachmentUnlocked($r,$attachmentId))return false;return true;}return false;}
         if($type==='payment')return in_array('payments.review',$auth['permissions']??[],true)||DB::table('payments')->where('id',$id)->where('user_id',$auth['id'])->exists();return false;
+    }
+    private function clientServiceRequestAttachmentUnlocked(object $requestRow,int $attachmentId):bool
+    {
+        $deliverable=DB::table('service_request_deliverables')->select('is_final')->where('service_request_id',$requestRow->id)->where('attachment_id',$attachmentId)->first();
+        if(!$deliverable||!(bool)$deliverable->is_final||(string)$requestRow->request_type!=='contract_drafting')return true;
+        $meta=is_string($requestRow->metadata_json??null)?(json_decode($requestRow->metadata_json,true)?:[]):(array)($requestRow->metadata_json??[]);
+        $total=max(0.0,(float)($meta['lawyerTotalPriceEgp']??0));
+        if($total<=0.009)return true;
+        $paid=DB::selectOne("SELECT COALESCE(SUM(amount_egp) FILTER (WHERE status='approved'),0)::float AS amount FROM payments WHERE service_request_id=?",[$requestRow->id]);
+        return (float)($paid->amount??0)+0.009>=$total;
     }
 }

@@ -3,6 +3,29 @@ import type { DashboardUser } from "./apiClient";
 
 export const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
+
+const demoVariantPricing: Record<string, Record<string, { selfServicePriceEgp: number; lawyerAssistedPriceEgp: number }>> = {
+  rental: {
+    residential_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 499 },
+    commercial_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 599 },
+    administrative_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 549 },
+  },
+  apartment_sale: {
+    preliminary_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 899 },
+    registrable_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 999 },
+    inherited_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 1099 },
+  },
+  freelancer: {
+    visual_identity_design: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 599 },
+    website_development: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 799 },
+    social_media_management: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 699 },
+  },
+};
+
+function withDemoPricing<T extends { slug: string; variants: Array<{ key: string }> }>(definition: T) {
+  return { ...definition, priceEgp: 0, variantPricing: demoVariantPricing[definition.slug] ?? {} };
+}
+
 const now = new Date();
 const iso = (offsetHours = 0) => new Date(now.getTime() + offsetHours * 60 * 60 * 1000).toISOString();
 
@@ -54,8 +77,12 @@ const templates = Object.values(localTemplateRegistry).map((definition, index) =
   slug: definition.slug,
   nameAr: definition.nameAr,
   description: definition.description,
-  priceEgp: definition.priceEgp,
+  priceEgp: 0,
   isActive: definition.variants.length > 0,
+  variants: definition.variants.map((variant) => {
+    const pricing = demoVariantPricing[definition.slug]?.[variant.key] ?? { selfServicePriceEgp: 0, lawyerAssistedPriceEgp: 0 };
+    return { key: variant.key, nameAr: variant.nameAr, description: variant.description ?? "", ...pricing };
+  }),
   currentPublishedVersionId: (index + 1) * 100,
   versions: [
     {
@@ -98,14 +125,19 @@ const requests = [
 ];
 
 const payments = [
-  { id: 701, serialNumber: "PAY-2026-DEMO01", amountEgp: 149, status: "pending_verification", senderPhone: "01023817658", receiptAttachmentId: 9001, contractId: 101, serviceRequestId: null, createdAt: iso(-1), clientName: "أحمد محمد حسن", clientEmail: "client.demo@zdraft.local", clientPhone: "01023817658" },
-  { id: 702, serialNumber: "PAY-2026-DEMO02", amountEgp: 100, status: "approved", senderPhone: "01011111111", receiptAttachmentId: 9002, contractId: null, serviceRequestId: 502, createdAt: iso(-20), clientName: "علي حسن", clientEmail: "ali.demo@zdraft.local", clientPhone: "01011111111" },
+  { id: 701, clientId: 1, serialNumber: "PAY-2026-DEMO01", amountEgp: 139, status: "pending_verification", senderPhone: "01023817658", receiptAttachmentId: 9001, contractId: 101, serviceRequestId: null, createdAt: iso(-1), clientName: "أحمد محمد حسن", clientEmail: "client.demo@zdraft.local", clientPhone: "01023817658" },
+  { id: 702, clientId: 2, serialNumber: "PAY-2026-DEMO02", amountEgp: 100, status: "approved", senderPhone: "01011111111", receiptAttachmentId: 9002, contractId: null, serviceRequestId: 502, createdAt: iso(-20), clientName: "علي حسن", clientEmail: "ali.demo@zdraft.local", clientPhone: "01011111111" },
 ];
 
 const settings = [
   { key: "office.display_name", value: "Z draft", isSecret: false, updatedAt: iso(-24) },
   { key: "office.support_email", value: "support@zdraft.com", isSecret: false, updatedAt: iso(-24) },
   { key: "office.whatsapp_number", value: "201023817658", isSecret: false, updatedAt: iso(-24) },
+  { key: "office.consultation_whatsapp_number", value: "201023817658", isSecret: false, updatedAt: iso(-24) },
+  { key: "office.support_whatsapp_number", value: "201023817658", isSecret: false, updatedAt: iso(-24) },
+  { key: "office.support_phone", value: "01023817658", isSecret: false, updatedAt: iso(-24) },
+  { key: "payments.vodafone_cash_number", value: "01023817658", isSecret: false, updatedAt: iso(-24) },
+  { key: "services.consultation.fee_egp", value: 100, isSecret: false, updatedAt: iso(-24) },
   { key: "contracts.require_email_verification", value: true, isSecret: false, updatedAt: iso(-24) },
   { key: "notifications.whatsapp_mode", value: "manual_wa_me", isSecret: false, updatedAt: iso(-24) },
   { key: "notifications.web_push_enabled", value: false, isSecret: false, updatedAt: iso(-24) },
@@ -126,7 +158,18 @@ export async function demoDashboardRequest<T>(path: string, init: RequestInit = 
   if (pathname === "/api/v1/dashboard/work-queue") return requests as T;
   if (pathname === "/api/v1/admin/reports/overview") return demoReports(url.searchParams.get("period")) as T;
   if (pathname === "/api/v1/admin/reports/customer-export") return { rows: demoClients(url).map((client) => ({ ...client, approvedPaymentsEgp: client.id === 1 ? 249 : 0 })) } as T;
-  if (pathname === "/api/v1/admin/payments") return filterByStatus(payments, url.searchParams.get("status")) as T;
+  if (pathname === "/api/v1/admin/payments") {
+    const statusFiltered = filterByStatus(payments, url.searchParams.get("status"));
+    const search = (url.searchParams.get("search") || "").trim().toLowerCase();
+    const filtered = search ? statusFiltered.filter((payment) => `${payment.serialNumber} ${payment.clientName} ${payment.clientEmail} ${payment.contractId || ""} ${payment.serviceRequestId || ""}`.toLowerCase().includes(search)) : statusFiltered;
+    if (url.searchParams.get("paginate") === "1") {
+      const page = Math.max(1, Number(url.searchParams.get("page") || 1));
+      const perPage = Math.max(20, Number(url.searchParams.get("perPage") || 50));
+      const start = (page - 1) * perPage;
+      return { items: filtered.slice(start, start + perPage), pagination: { page, perPage, total: filtered.length, pages: Math.max(1, Math.ceil(filtered.length / perPage)) } } as T;
+    }
+    return filtered as T;
+  }
   if (pathname === "/api/v1/admin/contracts") return filterContracts(url) as T;
   if (pathname.match(/^\/api\/v1\/contracts\/\d+$/)) return contractDetails(Number(pathname.split("/").pop())) as T;
   if (pathname.match(/^\/api\/v1\/admin\/contracts\/\d+/)) return { ok: true, versionId: 1001, versionNumber: 2 } as T;
@@ -147,11 +190,12 @@ export async function demoDashboardRequest<T>(path: string, init: RequestInit = 
   if (pathname.match(/^\/api\/v1\/admin\/templates\/versions\/\d+\/validation$/)) return templateInspection() as T;
   if (pathname.match(/^\/api\/v1\/admin\/templates\/versions\/\d+\/preview$/)) return templatePreview() as T;
   if (pathname.startsWith("/api/v1/admin/templates/")) return { ok: true } as T;
-  if (pathname === "/api/v1/templates/apartment_sale/definition") return localTemplateRegistry.apartment_sale as T;
-  if (pathname === "/api/v1/templates/rental/definition") return localTemplateRegistry.rental as T;
-  if (pathname === "/api/v1/templates/freelancer/definition") return localTemplateRegistry.freelancer as T;
+  if (pathname === "/api/v1/templates/apartment_sale/definition") return withDemoPricing(localTemplateRegistry.apartment_sale) as T;
+  if (pathname === "/api/v1/templates/rental/definition") return withDemoPricing(localTemplateRegistry.rental) as T;
+  if (pathname === "/api/v1/templates/freelancer/definition") return withDemoPricing(localTemplateRegistry.freelancer) as T;
   if (pathname === "/api/v1/admin/settings") return (method === "GET" ? settings : { ok: true }) as T;
-  if (pathname === "/api/v1/admin/audit") return auditRows() as T;
+  if (pathname === "/api/v1/admin/audit/verify") return { valid: true, checked: auditRows().length, total: auditRows().length, fullyVerified: auditRows().length, legacyUnverifiable: 0, firstBroken: null } as T;
+  if (pathname === "/api/v1/admin/audit") { const rows = auditRows(); return { items: rows, pagination: { page: 1, perPage: 50, total: rows.length, pages: 1 } } as T; }
   if (pathname === "/api/v1/notifications") return { items: notifications(), unreadCount: 2 } as T;
   if (pathname.startsWith("/api/v1/notifications/")) return { ok: true } as T;
   if (pathname === "/api/v1/attachments") return { id: Math.floor(Math.random() * 10000), fileName: "demo-upload.png" } as T;
@@ -173,7 +217,7 @@ function filterContracts(url: URL) {
 function summary() {
   return {
     contracts: { total: contracts.length, active: 2, issued: 1, office: contracts.filter((item) => item.sourceChannel === "office").length },
-    requests: { total: requests.length, unassigned: 1, awaiting_client: 1, meetings_today: 1, overdue: 0 },
+    requests: { total: requests.length, needs_attention: 1, unassigned: 1, awaiting_client: 1, meetings_today: 1, overdue: 0 },
     payments: { pending: payments.filter((item) => item.status === "pending_verification").length, approved_month: 249 },
     notifications: { unread: 2 },
   };
@@ -335,7 +379,7 @@ function demoCustomerDetails(id: number) {
   const client = demoClients(new URL("https://demo.local" as string)).find((item) => item.id === id) || demoClients(new URL("https://demo.local" as string))[0];
   return {
     profile: { ...client, emailVerifiedAt: iso(-220), updatedAt: iso(-1), activeSessions: 1, attachmentsCount: 3, approvedPaymentsEgp: 249 },
-    contracts: contracts.filter((item) => item.clientName === client.name).map((item) => ({ ...item, priceEgp: 149, templateNameAr: item.templateNameAr, issuedAt: item.status === "issued" ? iso(-12) : null })),
+    contracts: contracts.filter((item) => item.clientName === client.name).map((item) => ({ ...item, priceEgp: 139, templateNameAr: item.templateNameAr, issuedAt: item.status === "issued" ? iso(-12) : null })),
     requests: requests.filter((item) => item.clientName === client.name),
     payments: payments.filter((item) => item.clientName === client.name).map((item) => ({ ...item, paymentMethod: "vodafone_cash", reviewedAt: item.status === "approved" ? iso(-10) : null })),
     activity: auditRows(),

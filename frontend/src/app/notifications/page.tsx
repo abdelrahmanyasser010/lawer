@@ -43,7 +43,7 @@ export default function NotificationsPage() {
       <Navbar />
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-9 sm:px-6">
         <header className="flex items-end justify-between gap-4 border-b border-slate-200 pb-6">
-          <div><h1 className="text-3xl font-black text-[#00102e]">الإشعارات</h1><p className="mt-2 text-sm text-slate-600">تحديثات الدفع والعقود وطلبات المحامي.</p></div>
+          <div><h1 className="text-3xl font-black text-[#00102e]">الإشعارات</h1><p className="mt-2 text-sm text-slate-600">تحديثات الدفع والعقود والاستشارات القانونية.</p></div>
           <button type="button" onClick={() => void readAll()} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700"><CheckCheck className="h-4 w-4" /> تعليم الكل كمقروء</button>
         </header>
 

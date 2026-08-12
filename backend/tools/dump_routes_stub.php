@@ -37,7 +37,6 @@ namespace Illuminate\Support\Facades {
         public static function patch(string $uri, mixed $action): CapturedRoute { return self::add('PATCH',$uri); }
         public static function delete(string $uri, mixed $action): CapturedRoute { return self::add('DELETE',$uri); }
         public static function options(string $uri, mixed $action): CapturedRoute { return self::add('OPTIONS',$uri); }
-        public static function any(string $uri, mixed $action): CapturedRoute { return self::add('ANY',$uri); }
     }
 }
 namespace {

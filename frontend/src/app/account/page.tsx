@@ -7,6 +7,8 @@ import Footer from "@/components/layout/Footer";
 import { apiRequest, ApiClientError, frontendApi } from "@/lib/apiClient";
 import type { CustomerProfile } from "@/types/customer";
 import { formatDate } from "@/lib/labels";
+import PasswordRequirements from "@/components/auth/PasswordRequirements";
+import { normalizePhoneInput, passwordValidationError, phoneValidationError } from "@/lib/inputValidation";
 
 interface SessionItem {
   id: number;
@@ -50,6 +52,9 @@ export default function AccountPage() {
 
   async function save() {
     if (!profile) return;
+    const phoneError = profile.phone ? phoneValidationError(profile.phone, false) : "";
+    const whatsappError = profile.whatsappNumber ? phoneValidationError(profile.whatsappNumber, false) : "";
+    if (phoneError || whatsappError) { setError(phoneError || whatsappError); return; }
     setSaving(true);
     setError("");
     setNotice("");
@@ -78,7 +83,7 @@ export default function AccountPage() {
   async function changePassword() {
     setError("");
     setNotice("");
-    if (passwords.next.length < 8) return setError("كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف.");
+    const passwordError = passwordValidationError(passwords.next); if (passwordError) return setError(passwordError);
     if (passwords.next !== passwords.confirm) return setError("تأكيد كلمة المرور غير مطابق.");
     setChangingPassword(true);
     try {
@@ -123,8 +128,8 @@ export default function AccountPage() {
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <label className="text-xs font-black text-slate-700">الاسم الكامل<input value={profile.name} onChange={(event) => setProfile({ ...profile, name: event.target.value })} className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#986410]" /></label>
                 <label className="text-xs font-black text-slate-700">البريد الإلكتروني<input value={profile.email} readOnly className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500" /></label>
-                <label className="text-xs font-black text-slate-700">رقم الهاتف<input value={profile.phone || ""} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} dir="ltr" className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-left text-sm outline-none focus:border-[#986410]" /></label>
-                <label className="text-xs font-black text-slate-700">رقم WhatsApp<input value={profile.whatsappNumber || ""} onChange={(event) => setProfile({ ...profile, whatsappNumber: event.target.value })} dir="ltr" className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-left text-sm outline-none focus:border-[#986410]" /></label>
+                <label className="text-xs font-black text-slate-700">رقم الهاتف<input value={profile.phone || ""} onChange={(event) => setProfile({ ...profile, phone: normalizePhoneInput(event.target.value) })} dir="ltr" className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-left text-sm outline-none focus:border-[#986410]" /></label>
+                <label className="text-xs font-black text-slate-700">رقم WhatsApp<input value={profile.whatsappNumber || ""} onChange={(event) => setProfile({ ...profile, whatsappNumber: normalizePhoneInput(event.target.value) })} dir="ltr" className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-left text-sm outline-none focus:border-[#986410]" /></label>
                 {profile.accountType === "business" && <label className="text-xs font-black text-slate-700 sm:col-span-2">اسم الشركة<input value={profile.companyName || ""} onChange={(event) => setProfile({ ...profile, companyName: event.target.value })} className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#986410]" /></label>}
               </div>
               <button type="button" disabled={saving} onClick={() => void save()} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-white disabled:opacity-50"><Save className="h-4 w-4" /> حفظ التغييرات</button>
@@ -141,8 +146,9 @@ export default function AccountPage() {
                 <div className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-[#986410]" /><h2 className="font-black text-[#00102e]">تغيير كلمة المرور</h2></div>
                 <div className="mt-4 space-y-3">
                   <input type="password" value={passwords.current} onChange={(event) => setPasswords({ ...passwords, current: event.target.value })} placeholder="كلمة المرور الحالية" className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#986410]" />
-                  <input type="password" value={passwords.next} onChange={(event) => setPasswords({ ...passwords, next: event.target.value })} placeholder="كلمة المرور الجديدة" className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#986410]" />
-                  <input type="password" value={passwords.confirm} onChange={(event) => setPasswords({ ...passwords, confirm: event.target.value })} placeholder="تأكيد كلمة المرور الجديدة" className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#986410]" />
+                  <input type="password" minLength={8} maxLength={128} value={passwords.next} onChange={(event) => setPasswords({ ...passwords, next: event.target.value })} placeholder="كلمة المرور الجديدة" className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#986410]" />
+                  <input type="password" maxLength={128} value={passwords.confirm} onChange={(event) => setPasswords({ ...passwords, confirm: event.target.value })} placeholder="تأكيد كلمة المرور الجديدة" className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#986410]" />
+                  <PasswordRequirements value={passwords.next} />
                   <button type="button" disabled={changingPassword || !passwords.current || !passwords.next || !passwords.confirm} onClick={() => void changePassword()} className="w-full rounded-xl border border-[#986410] px-4 py-2.5 text-xs font-black text-[#986410] disabled:opacity-50">{changingPassword ? "جاري التغيير..." : "حفظ كلمة المرور الجديدة"}</button>
                 </div>
               </section>

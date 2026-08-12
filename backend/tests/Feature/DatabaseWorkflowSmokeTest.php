@@ -49,6 +49,38 @@ final class DatabaseWorkflowSmokeTest extends TestCase
             ->assertJsonPath('data.id', $requestId);
     }
 
+    public function test_consultation_channels_catalog_and_office_rejection(): void
+    {
+        $auth = $this->registerAndVerifyClient();
+
+        $catalog = $auth->getJson('/api/v1/catalog')->assertOk();
+        $channels = $catalog->json('data.policies.communicationChannels');
+        $this->assertSame(['zoom', 'whatsapp'], array_values($channels));
+        $catalog->assertJsonStructure(['data' => [
+            'services' => ['consultationFeeEgp'],
+            'office' => ['consultationWhatsappNumber', 'supportWhatsappNumber', 'supportPhone', 'supportEmail'],
+            'payment' => ['vodafoneCashNumber'],
+        ]]);
+
+        $auth->postJson('/api/v1/service-requests', [
+            'requestType' => 'consultation',
+            'title' => 'استشارة بقناة غير متاحة',
+            'description' => 'يجب أن يرفض Laravel قناة المكتب للاستشارات الجديدة.',
+            'communicationChannel' => 'office',
+            'paymentRequired' => false,
+        ])->assertUnprocessable();
+
+        foreach (['zoom', 'whatsapp'] as $channel) {
+            $auth->postJson('/api/v1/service-requests', [
+                'requestType' => 'consultation',
+                'title' => 'استشارة اختبار '.$channel,
+                'description' => 'اختبار قناة التواصل المسموح بها في الاستشارة القانونية.',
+                'communicationChannel' => $channel,
+                'paymentRequired' => false,
+            ])->assertCreated()->assertJsonPath('data.communicationChannel', $channel);
+        }
+    }
+
     public function test_payment_receipt_history_and_notification_flow(): void
     {
         $auth = $this->registerAndVerifyClient();
@@ -77,7 +109,7 @@ final class DatabaseWorkflowSmokeTest extends TestCase
             'visibility' => 'private',
             'created_at' => now(),
         ]);
-        $setting = DB::selectOne("SELECT COALESCE((setting_value_json #>> '{}')::numeric,100)::float AS amount FROM platform_settings WHERE setting_key='services.consultation.deposit_egp'");
+        $setting = DB::selectOne("SELECT COALESCE((setting_value_json #>> '{}')::numeric,100)::float AS amount FROM platform_settings WHERE setting_key='services.consultation.fee_egp'");
         $amount = (float) ($setting->amount ?? 100);
 
         $payment = $auth->postJson('/api/v1/payments/receipts', [
@@ -118,13 +150,13 @@ final class DatabaseWorkflowSmokeTest extends TestCase
         ]);
         $login->assertOk()->assertJsonPath('data.user.roles.0', 'super_admin');
 
-        $session = $login->getCookie(config('zdraft.session_cookie'), false)?->getValue();
-        $csrf = $login->getCookie(config('zdraft.csrf_cookie'), false)?->getValue();
+        $session = $login->getCookie(config('zdraft.session_cookie'))?->getValue();
+        $csrf = $login->getCookie(config('zdraft.csrf_cookie'))?->getValue();
         $this->assertNotEmpty($session);
         $this->assertNotEmpty($csrf);
-        $auth = $this->withCredentials()
-            ->withUnencryptedCookie(config('zdraft.session_cookie'), $session)
-            ->withUnencryptedCookie(config('zdraft.csrf_cookie'), $csrf)
+        $login->assertJsonPath('data.csrfToken', $csrf);
+        $auth = $this->withCookie(config('zdraft.session_cookie'), $session)
+            ->withCookie(config('zdraft.csrf_cookie'), $csrf)
             ->withHeader('X-CSRF-Token', $csrf);
 
         $auth->getJson('/api/v1/dashboard/summary')
@@ -198,16 +230,16 @@ final class DatabaseWorkflowSmokeTest extends TestCase
         ]);
         $register->assertCreated()->assertJsonPath('data.verificationRequired', true);
 
-        $session = $register->getCookie(config('zdraft.session_cookie'), false)?->getValue();
-        $csrf = $register->getCookie(config('zdraft.csrf_cookie'), false)?->getValue();
+        $session = $register->getCookie(config('zdraft.session_cookie'))?->getValue();
+        $csrf = $register->getCookie(config('zdraft.csrf_cookie'))?->getValue();
         $code = $register->json('data.debugVerificationCode');
         $this->assertNotEmpty($session);
         $this->assertNotEmpty($csrf);
+        $register->assertJsonPath('data.csrfToken', $csrf);
         $this->assertMatchesRegularExpression('/^\d{6}$/', (string) $code);
 
-        $auth = $this->withCredentials()
-            ->withUnencryptedCookie(config('zdraft.session_cookie'), $session)
-            ->withUnencryptedCookie(config('zdraft.csrf_cookie'), $csrf)
+        $auth = $this->withCookie(config('zdraft.session_cookie'), $session)
+            ->withCookie(config('zdraft.csrf_cookie'), $csrf)
             ->withHeader('X-CSRF-Token', $csrf);
         $auth->postJson('/api/v1/auth/email-verification/verify', ['code' => $code])
             ->assertOk()

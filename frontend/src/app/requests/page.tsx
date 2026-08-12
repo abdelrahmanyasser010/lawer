@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, BriefcaseBusiness, Clock3, FileSearch, Loader2, Scale } from "lucide-react";
+import { ArrowLeft, Clock3, FileText, Loader2, Scale } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { ApiClientError, frontendApi } from "@/lib/apiClient";
@@ -33,8 +33,8 @@ export default function RequestsPage() {
       <Navbar />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-9 sm:px-6">
         <header className="border-b border-slate-200 pb-6">
-          <h1 className="text-3xl font-black text-[#00102e]">طلبات المحامي</h1>
-          <p className="mt-2 text-sm text-slate-600">تابع طلبات إعداد العقود والمراجعة والاستشارات والنسخ التي أتاحها المكتب لك.</p>
+          <h1 className="text-3xl font-black text-[#00102e]">طلباتي</h1>
+          <p className="mt-2 text-sm text-slate-600">تابع الاستشارات وطلبات إعداد العقود ومراجعة المستندات والملفات التي يتيحها المكتب لك من مكان واحد.</p>
         </header>
 
         <div className="mt-6 flex gap-2 overflow-x-auto">
@@ -52,7 +52,7 @@ export default function RequestsPage() {
         ) : (
           <div className="mt-8 space-y-4">
             {filtered.map((item) => {
-              const Icon = item.requestType === "contract_review" ? FileSearch : item.requestType === "consultation" ? Scale : BriefcaseBusiness;
+              const Icon = item.requestType === "consultation" ? Scale : FileText;
               return (
                 <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                   <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -62,9 +62,8 @@ export default function RequestsPage() {
                         <div className="font-mono text-[10px] text-slate-400">{item.serialNumber}</div>
                         <h2 className="mt-1 font-black text-[#00102e]">{item.title}</h2>
                         <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold text-slate-500">
-                          <span>{requestTypeLabels[item.requestType]}</span>
+                          <span>{requestTypeLabels[item.requestType] || item.requestType}</span>
                           {item.communicationChannel && <span>• {communicationLabels[item.communicationChannel]}</span>}
-                          {item.assignedLawyerName && <span>• المحامي: {item.assignedLawyerName}</span>}
                         </div>
                       </div>
                     </div>

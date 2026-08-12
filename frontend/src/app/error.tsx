@@ -4,7 +4,8 @@ import React, { useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { AlertTriangle, RefreshCw, Home, Phone } from "lucide-react";
+import SupportContactLink from "@/components/support/SupportContactLink";
+import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 
 export default function GlobalErrorPage({
   error,
@@ -53,15 +54,7 @@ export default function GlobalErrorPage({
               <span>العودة للرئيسية</span>
             </Link>
 
-            <a
-              href="https://wa.me/201000000000?text=مرحباً،%20واجهت%20خطأ%20أثناء%20استخدام%20منصة%20Z%20draft"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1.5"
-            >
-              <Phone className="h-4 w-4 text-emerald-600" />
-              <span>دعم فني عاجل عبر الواتساب</span>
-            </a>
+            <SupportContactLink message="مرحبًا، أحتاج مساعدة من الدعم الفني في منصة Z draft" />
           </div>
         </div>
       </main>

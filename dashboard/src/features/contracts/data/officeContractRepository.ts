@@ -2,7 +2,7 @@ import type { ContractDraftData } from "@zdraft/template-engine";
 import { dashboardRequest } from "@/lib/apiClient";
 
 export type OfficeClientMode = "existing" | "new" | "office_internal";
-export type OfficeBillingMode = "office_waiver" | "external_collection" | "client_invoice";
+export type OfficeBillingMode = "office_waiver" | "client_invoice" | "external_collection";
 
 export interface OfficeContractContextDto {
   clientMode: OfficeClientMode;
