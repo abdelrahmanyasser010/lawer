@@ -39,6 +39,9 @@ final class NotificationOutboxSchedulingTest extends TestCase
         $this->assertStringContainsString('ensure_laravel_scheduler', $deploy);
         $this->assertStringContainsString('artisan list --raw | grep -F "zdraft:process-outbox"', $deploy);
         $this->assertStringContainsString('artisan schedule:list | grep -F "zdraft:process-outbox"', $deploy);
+        $this->assertStringContainsString('WorkingDirectory=${BACKEND_DIR}', $deploy);
+        $this->assertStringContainsString('User=${APP_USER}', $deploy);
+        $this->assertStringContainsString('Group=${APP_GROUP}', $deploy);
         $this->assertStringContainsString('systemctl enable --now zdraft-laravel-scheduler.service', $deploy);
         $this->assertStringContainsString('systemctl is-active --quiet zdraft-laravel-scheduler.service', $deploy);
         $this->assertStringNotContainsString('systemctl restart zdraft-laravel-scheduler.service || true', $deploy);

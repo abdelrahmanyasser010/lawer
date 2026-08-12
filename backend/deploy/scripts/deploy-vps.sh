@@ -6,6 +6,8 @@ BACKEND_DIR=${BACKEND_DIR:-${ROOT_DIR}/backend}
 FRONTEND_DIR=${FRONTEND_DIR:-${ROOT_DIR}/frontend}
 DASHBOARD_DIR=${DASHBOARD_DIR:-${ROOT_DIR}/dashboard}
 PHP_BIN=${PHP_BIN:-php}
+APP_USER=${APP_USER:-www-data}
+APP_GROUP=${APP_GROUP:-${APP_USER}}
 SCHEDULER_UNIT_SOURCE=${SCHEDULER_UNIT_SOURCE:-${BACKEND_DIR}/deploy/systemd/zdraft-laravel-scheduler.service}
 SCHEDULER_UNIT_TARGET=${SCHEDULER_UNIT_TARGET:-/etc/systemd/system/zdraft-laravel-scheduler.service}
 
@@ -20,7 +22,14 @@ ensure_laravel_scheduler() {
     exit 3
   fi
 
-  cp "${SCHEDULER_UNIT_SOURCE}" "${SCHEDULER_UNIT_TARGET}"
+  local php_path
+  php_path=$(command -v "${PHP_BIN}")
+  sed \
+    -e "s#^User=.*#User=${APP_USER}#" \
+    -e "s#^Group=.*#Group=${APP_GROUP}#" \
+    -e "s#^WorkingDirectory=.*#WorkingDirectory=${BACKEND_DIR}#" \
+    -e "s#^ExecStart=.*#ExecStart=${php_path} artisan schedule:work#" \
+    "${SCHEDULER_UNIT_SOURCE}" > "${SCHEDULER_UNIT_TARGET}"
   systemctl daemon-reload
   systemctl enable --now zdraft-laravel-scheduler.service
   systemctl restart zdraft-laravel-scheduler.service
@@ -40,7 +49,7 @@ composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 "${PHP_BIN}" artisan config:cache
 "${PHP_BIN}" artisan route:cache
 "${PHP_BIN}" artisan view:cache
-chown -R www-data:www-data storage bootstrap/cache
+chown -R "${APP_USER}:${APP_GROUP}" storage bootstrap/cache
 chmod -R ug+rwX storage bootstrap/cache
 
 cd "${ROOT_DIR}"
