@@ -183,7 +183,7 @@ export default function LegalConsultationCard() {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-[#986410]/40 bg-[#986410]/10 px-3 py-1.5 text-xs font-black text-[#d9a84e]"><Scale className="h-4 w-4" /> استشارة قانونية</div>
           <h2 className="mt-5 text-2xl font-black">اطلب استشارة من المكتب</h2>
-          <p className="mt-4 text-sm leading-8 text-slate-300">اكتب موضوع الاستشارة وارفع أي مستندات تساعد على فهم الحالة، ثم اختر وسيلة التواصل واليوم والموعد المتاح من جدول المكتب. يُحجز الموعد مبدئيًا لحين مراجعة الدفع.</p>
+          <p className="mt-4 text-[13px] leading-7 text-slate-300">اكتب موضوع الاستشارة وارفع أي مستندات تساعد على فهم الحالة، ثم اختر وسيلة التواصل واليوم والموعد المتاح من جدول المكتب. يُحجز الموعد مبدئيًا لحين مراجعة الدفع.</p>
 
           <div className="mt-5 rounded-2xl border border-[#986410]/35 bg-[#986410]/10 p-5">
             <span className="text-[11px] font-bold text-[#d9a84e]">سعر الاستشارة</span>
@@ -194,10 +194,10 @@ export default function LegalConsultationCard() {
             ) : (
               <div className="mt-1 text-3xl font-black text-white">{consultationFee.toLocaleString("ar-EG")} <span className="text-sm">ج.م</span></div>
             )}
-            <p className="mt-2 text-[11px] leading-6 text-slate-300">يتم اعتماد الطلب بعد مراجعة إثبات الدفع، وتظهر حالته داخل حسابك.</p>
+            <p className="mt-2 text-[10px] leading-5 text-slate-400">يتم اعتماد الطلب بعد مراجعة إثبات الدفع، وتظهر حالته داخل حسابك.</p>
           </div>
 
-          <div className="mt-6 space-y-3 text-xs leading-6 text-slate-300">
+          <div className="mt-6 space-y-3 text-[11px] leading-5 text-slate-300">
             <div className="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-4"><FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#d9a84e]" /> يمكنك إرفاق عقد أو مستند أو صورة ضمن الاستشارة دون اختيار نوع خدمة منفصل.</div>
             <div className="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-4"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> حالة الاستشارة والمواعيد وأي ملفات يتيحها المكتب تظل محفوظة داخل حسابك.</div>
             <div className="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-4"><Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" /> موعدك يُحجز مبدئيًا عند إرسال الطلب، ويُثبت بعد مراجعة الدفع.</div>
@@ -206,16 +206,16 @@ export default function LegalConsultationCard() {
         </div>
 
         <div className="space-y-5 rounded-2xl border border-white/10 bg-slate-950/60 p-5 sm:p-6">
-          <label className="block text-xs font-bold text-slate-300">موضوع الاستشارة
-            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="مثال: استشارة قبل توقيع عقد إيجار تجاري" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-sm text-white" />
+          <label className="block text-[11px] font-bold text-slate-300">موضوع الاستشارة
+            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="مثال: استشارة قبل توقيع عقد إيجار تجاري" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-[13px] text-white placeholder:text-[11px] placeholder:text-slate-500" />
           </label>
 
-          <label className="block text-xs font-bold text-slate-300">تفاصيل الاستشارة
-            <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} placeholder="اشرح السؤال أو المشكلة والنقاط التي تريد من المكتب توضيحها." className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-white" />
+          <label className="block text-[11px] font-bold text-slate-300">تفاصيل الاستشارة
+            <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} placeholder="اشرح السؤال أو المشكلة والنقاط التي تريد من المكتب توضيحها." className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-[13px] text-white placeholder:text-[11px] placeholder:text-slate-500" />
           </label>
 
           <div>
-            <p className="text-xs font-bold text-slate-300">طريقة التواصل</p>
+            <p className="text-[11px] font-bold text-slate-300">طريقة التواصل</p>
             <div className={`mt-2 grid gap-2 ${enabledChannels.length >= 3 ? "grid-cols-3" : enabledChannels.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
               {enabledChannels.map((option) => {
                 const Icon = option.icon;
@@ -224,8 +224,8 @@ export default function LegalConsultationCard() {
             </div>
           </div>
 
-          <label className="block text-xs font-bold text-slate-300">رقم الهاتف أو WhatsApp
-            <input value={phone} onChange={(event) => setPhone(normalizePhoneInput(event.target.value))} dir="ltr" placeholder="01XXXXXXXXX" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-left text-sm text-white" />
+          <label className="block text-[11px] font-bold text-slate-300">رقم الهاتف أو WhatsApp
+            <input value={phone} onChange={(event) => setPhone(normalizePhoneInput(event.target.value))} dir="ltr" placeholder="01XXXXXXXXX" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-left text-[13px] text-white placeholder:text-[11px] placeholder:text-slate-500" />
           </label>
 
           <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">

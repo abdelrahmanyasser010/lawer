@@ -75,14 +75,13 @@ export default function Navbar() {
   const navItems = useMemo<NavItem[]>(() => {
     const base: NavItem[] = [
       { href: "/create-contract?mode=self_service", label: "إنشاء عقد", icon: Sparkles },
-      { href: "/#consultation", label: "استشارة قانونية", icon: Scale },
+      { href: "/request-review", label: "مراجعة عقد", icon: Scale },
     ];
     if (!user) return base;
     return [
       ...base,
       { href: "/contracts", label: "عقودي", icon: FileText, badge: counts.contracts },
       { href: "/requests", label: "طلباتي", icon: Scale, badge: counts.requests },
-      { href: "/notifications", label: "الإشعارات", icon: Bell, badge: counts.notifications },
     ];
   }, [counts, user]);
 
@@ -128,94 +127,128 @@ export default function Navbar() {
         key={item.href}
         href={item.href}
         onClick={() => { if (mobile) setMobileOpen(false); }}
-        className={`${mobile ? "flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-sm" : "flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs"} font-extrabold transition-all ${
+        className={`${mobile ? "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-[14px]" : "flex items-center gap-1.5 rounded-full px-4 py-2 text-[12px]"} font-black transition-all ${
           isActive
-            ? "border-[#986410]/30 bg-[#986410]/10 text-[#00102e]"
-            : "border-transparent text-slate-600 hover:bg-slate-100 hover:text-[#00102e]"
+            ? "bg-[#00102e] text-white shadow-md"
+            : "text-slate-500 hover:bg-slate-50 hover:text-[#00102e]"
         }`}
       >
-        <Icon className="h-4 w-4 shrink-0" />
+        <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[#d9a84e]" : ""}`} strokeWidth={isActive ? 2.5 : 2} />
         <span className="flex-1">{item.label}</span>
         {!!item.badge && item.badge > 0 && (
-          <span className="rounded-full bg-[#00102e] px-2 py-0.5 text-[10px] font-black text-white">{item.badge}</span>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${isActive ? 'bg-[#d9a84e] text-[#00102e]' : 'bg-slate-200 text-slate-700'}`}>{item.badge}</span>
         )}
       </Link>
     );
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-md">
-      <div className="mx-auto flex min-h-16 max-w-[1500px] items-center justify-between gap-3 px-3 py-2 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-3">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100">
+      
+      {/* Premium Top Banner */}
+      <div className="bg-[#00102e] py-2 text-center">
+        <p className="text-[10px] font-bold text-[#d9a84e] tracking-widest uppercase">
+          نسخة تجريبية للمعاينة — عمليات التسجيل والدفع والإرسال هنا وهمية تماماً
+        </p>
+      </div>
+
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        
+        {/* Right side: Logo & Mobile Menu */}
+        <div className="flex items-center gap-4">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
             aria-label="فتح القائمة"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-[#00102e] lg:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-[#00102e] hover:bg-slate-100 transition lg:hidden"
           >
             <Menu className="h-5 w-5" />
           </button>
 
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Z draft" width={140} height={44} className="h-11 w-auto object-contain" priority />
-            <div className="hidden sm:block">
-              <div className="text-base font-black text-[#00102e]">Z draft</div>
-              <div className="text-[10px] font-bold text-[#986410]">عقود وخدمات قانونية</div>
+          <Link href="/" className="flex items-center gap-3">
+            <Image src="/logo.png" alt="Z draft" width={140} height={44} className="h-10 w-auto object-contain" priority />
+            <div className="hidden sm:block border-r border-slate-200 pr-3">
+              <div className="text-[15px] font-black text-[#00102e] leading-tight">Z Draft</div>
+              <div className="text-[9px] font-black tracking-widest text-[#986410]">للعقود القانونية</div>
             </div>
           </Link>
-
-          <nav className="hidden items-center gap-1 lg:flex">{navItems.map((item) => navLink(item))}</nav>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Center: Nav links */}
+        <nav className="hidden lg:flex items-center gap-2 bg-slate-50/80 p-1.5 rounded-full border border-slate-100">
+          {navItems.map((item) => navLink(item))}
+        </nav>
+
+        {/* Left side: Auth & Actions */}
+        <div className="flex items-center gap-3">
           {!loading && user ? (
-            <div className="relative">
-              <button type="button" onClick={() => setProfileOpen((value) => !value)} className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-[#00102e]" aria-expanded={profileOpen}>
-                <UserRound className="h-4 w-4" />
-                <span className="hidden sm:inline">{user.name.split(" ")[0]}</span>
-                <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition ${profileOpen ? "rotate-180" : ""}`} />
-              </button>
+            <>
+              <Link href="/notifications" className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-[#00102e] transition" aria-label="الإشعارات">
+                <Bell className="h-5 w-5" />
+                {counts.notifications > 0 && (
+                  <span className="absolute top-0 right-0 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white shadow-sm ring-2 ring-white">
+                    {counts.notifications}
+                  </span>
+                )}
+              </Link>
+              
+              <div className="relative">
+                <button type="button" onClick={() => setProfileOpen((value) => !value)} className="flex h-11 items-center gap-3 rounded-full bg-slate-50 pl-3 pr-4 text-[13px] font-black text-[#00102e] hover:bg-slate-100 transition" aria-expanded={profileOpen}>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#00102e] text-white">
+                    <UserRound className="h-4 w-4 text-[#d9a84e]" />
+                  </div>
+                  <span className="hidden sm:inline">{user.name.split(" ")[0]}</span>
+                  <ChevronDown className={`h-4 w-4 text-slate-400 transition ${profileOpen ? "rotate-180" : ""}`} />
+                </button>
               {profileOpen && (
                 <>
                   <button type="button" aria-label="إغلاق قائمة الحساب" className="fixed inset-0 z-40 cursor-default" onClick={() => setProfileOpen(false)} />
-                  <div className="absolute left-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-right shadow-2xl">
-                    <div className="border-b border-slate-100 px-3 py-3">
-                      <div className="truncate text-xs font-black text-[#00102e]">{user.name}</div>
-                      <button type="button" onClick={() => void copyPublicId()} className="mt-2 flex w-full items-center justify-between rounded-lg bg-slate-50 px-2.5 py-2 text-[10px] font-bold text-slate-500">
-                        <span>Z-ID <span className="font-mono text-blue-700">{user.publicId}</span></span>
-                        {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  <div className="absolute left-0 z-50 mt-3 w-64 overflow-hidden rounded-[1.5rem] border border-slate-100 bg-white p-2 text-right shadow-2xl">
+                    <div className="px-4 py-4 border-b border-slate-50">
+                      <div className="text-[14px] font-black text-[#00102e]">{user.name}</div>
+                      <button type="button" onClick={() => void copyPublicId()} className="mt-3 flex w-full items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5 text-[11px] font-bold text-slate-500 hover:bg-slate-100 transition">
+                        <span>Z-ID <span className="font-mono font-black text-blue-600">{user.publicId}</span></span>
+                        {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
                       </button>
                     </div>
-                    <Link href="/account" className="mt-1 flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-black text-[#00102e] hover:bg-slate-50"><UserRound className="h-4 w-4" /> حسابي</Link>
-                    <button type="button" onClick={() => void logout()} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-black text-red-700 hover:bg-red-50"><LogOut className="h-4 w-4" /> تسجيل الخروج</button>
+                    <div className="p-2 space-y-1">
+                      <Link href="/account" className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12px] font-black text-slate-600 hover:bg-slate-50 hover:text-[#00102e] transition">
+                        <UserRound className="h-4 w-4" /> حسابي
+                      </Link>
+                      <button type="button" onClick={() => void logout()} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12px] font-black text-red-600 hover:bg-red-50 transition">
+                        <LogOut className="h-4 w-4" /> تسجيل الخروج
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
             </div>
+            </>
           ) : !loading ? (
             <>
-              <Link href="/login" className="hidden items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black text-[#00102e] sm:flex">
-                <LogIn className="h-4 w-4" /> تسجيل الدخول
+              <Link href="/login" className="hidden items-center gap-2 rounded-full px-5 py-2.5 text-[12px] font-black text-slate-500 hover:text-[#00102e] hover:bg-slate-50 transition sm:flex">
+                 تسجيل الدخول
               </Link>
-              <Link href="/register" className="rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-black text-[#986410]">إنشاء حساب</Link>
+              <Link href="/register" className="flex items-center gap-2 rounded-full bg-[#00102e] px-6 py-2.5 text-[12px] font-black text-white hover:bg-[#0a1f4d] transition shadow-lg shadow-[#00102e]/20">
+                إنشاء حساب <Sparkles className="h-3.5 w-3.5 text-[#d9a84e]" />
+              </Link>
             </>
           ) : null}
         </div>
       </div>
 
-      {demoMode && (
-        <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-center text-[11px] font-black text-amber-900">
-          نسخة تجريبية للمعاينة — التسجيل والدفع والرسائل هنا ليست عمليات إنتاج حقيقية.
-        </div>
-      )}
-
       {user && !user.emailVerified && (
-        <div className="border-t border-amber-200 bg-amber-50 px-4 py-2.5 text-amber-950">
-          <div className="mx-auto flex max-w-7xl flex-col justify-between gap-2 text-xs sm:flex-row sm:items-center">
-            <span className="flex items-center gap-2 font-bold"><MailCheck className="h-4 w-4 shrink-0" /> أكد بريدك قبل الدفع أو إرسال طلب للمكتب.</span>
+        <div className="bg-amber-50 px-4 py-3 border-t border-amber-100">
+          <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 text-[12px] sm:flex-row sm:items-center">
+            <span className="flex items-center gap-2 font-bold text-amber-900">
+              <MailCheck className="h-4 w-4 shrink-0 text-amber-600" /> 
+              يرجى تأكيد بريدك الإلكتروني لتتمكن من الدفع أو إرسال طلب للمكتب.
+            </span>
             <div className="flex items-center gap-3">
-              {verificationNotice && <span className="text-[11px]">{verificationNotice}</span>}
-              <button type="button" disabled={verificationSending} onClick={() => void resendVerification()} className="rounded-lg bg-amber-700 px-3 py-1.5 font-black text-white disabled:opacity-50">{verificationSending ? "جاري الإرسال..." : "إرسال رمز التأكيد"}</button>
+              {verificationNotice && <span className="text-[11px] text-amber-700">{verificationNotice}</span>}
+              <button type="button" disabled={verificationSending} onClick={() => void resendVerification()} className="rounded-lg bg-amber-600 px-4 py-2 font-black text-white hover:bg-amber-700 transition disabled:opacity-50">
+                {verificationSending ? "جاري الإرسال..." : "إرسال رمز التأكيد"}
+              </button>
             </div>
           </div>
         </div>
@@ -223,35 +256,44 @@ export default function Navbar() {
 
       {mobileOpen && (
         <div className="fixed inset-0 z-[100] lg:hidden" role="dialog" aria-modal="true" aria-label="القائمة الرئيسية">
-          <button type="button" className="absolute inset-0 bg-[#00102e]/70 backdrop-blur-[2px]" aria-label="إغلاق القائمة" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute bottom-0 right-0 top-0 flex h-dvh w-[min(86vw,22rem)] flex-col overflow-hidden border-l border-slate-200 bg-white shadow-2xl">
-            <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
-              <div className="text-base font-black text-[#00102e]">القائمة</div>
-              <button type="button" onClick={() => setMobileOpen(false)} aria-label="إغلاق القائمة" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-[#00102e]"><X className="h-5 w-5" /></button>
+          <button type="button" className="absolute inset-0 bg-[#00102e]/40 backdrop-blur-sm" aria-label="إغلاق القائمة" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute bottom-0 right-0 top-0 flex h-dvh w-[min(86vw,22rem)] flex-col overflow-hidden bg-white shadow-2xl">
+            <div className="flex h-20 shrink-0 items-center justify-between border-b border-slate-100 px-6">
+              <div className="text-[16px] font-black text-[#00102e]">القائمة الرئيسية</div>
+              <button type="button" onClick={() => setMobileOpen(false)} aria-label="إغلاق القائمة" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-[#00102e] transition"><X className="h-5 w-5" /></button>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 pb-5">
+            <div className="flex-1 overflow-y-auto px-4 py-6">
 
             {user && (
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-sm font-black text-[#00102e]">{user.name}</div>
-                <button type="button" onClick={copyPublicId} className="mt-2 flex items-center gap-2 text-xs font-bold text-blue-700">
-                  <span className="font-mono">{user.publicId}</span>{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              <div className="mb-6 rounded-2xl bg-slate-50 p-5 border border-slate-100">
+                <div className="text-[15px] font-black text-[#00102e]">{user.name}</div>
+                <button type="button" onClick={copyPublicId} className="mt-3 flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-[11px] font-bold text-slate-500 border border-slate-100">
+                  <span>Z-ID <span className="font-mono text-blue-600 font-black">{user.publicId}</span></span>
+                  {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
                 </button>
               </div>
             )}
 
-            <nav className="mt-4 space-y-2">{navItems.map((item) => navLink(item, true))}</nav>
+            <nav className="space-y-1.5">{navItems.map((item) => navLink(item, true))}</nav>
 
-            <div className="mt-5 border-t border-slate-200 pt-4">
+            <div className="mt-8 border-t border-slate-100 pt-6">
               {user ? (
                 <div className="space-y-2">
-                  <Link href="/account" className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-black"><UserRound className="h-4 w-4" /> حسابي</Link>
-                  <button type="button" onClick={() => void logout()} className="flex w-full items-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-black text-red-700"><LogOut className="h-4 w-4" /> تسجيل الخروج</button>
+                  <Link href="/account" className="flex items-center gap-3 rounded-2xl px-4 py-3 text-[14px] font-black text-slate-600 hover:bg-slate-50 transition">
+                    <UserRound className="h-5 w-5" /> حسابي
+                  </Link>
+                  <button type="button" onClick={() => void logout()} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-[14px] font-black text-red-600 hover:bg-red-50 transition">
+                    <LogOut className="h-5 w-5" /> تسجيل الخروج
+                  </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <Link href="/login" className="rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-black">تسجيل الدخول</Link>
-                  <Link href="/register" className="rounded-xl bg-[#00102e] px-4 py-3 text-center text-sm font-black text-[#986410]">إنشاء حساب</Link>
+                <div className="grid grid-cols-2 gap-3">
+                  <Link href="/login" className="flex justify-center rounded-2xl bg-slate-50 px-4 py-3.5 text-[13px] font-black text-[#00102e] hover:bg-slate-100 transition">
+                    تسجيل الدخول
+                  </Link>
+                  <Link href="/register" className="flex justify-center rounded-2xl bg-[#00102e] px-4 py-3.5 text-[13px] font-black text-[#d9a84e] shadow-lg shadow-[#00102e]/20 hover:bg-[#0a1f4d] transition">
+                    إنشاء حساب
+                  </Link>
                 </div>
               )}
             </div>
@@ -262,3 +304,4 @@ export default function Navbar() {
     </header>
   );
 }
+
