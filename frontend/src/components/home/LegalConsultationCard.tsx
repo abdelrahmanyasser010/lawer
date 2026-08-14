@@ -35,6 +35,10 @@ export default function LegalConsultationCard() {
   const [error, setError] = useState("");
 
   const consultationFee = catalog.services.consultationFeeEgp;
+  const consultationDeposit = catalog.services.consultationDepositEgp;
+  const hasDepositSplit = consultationDeposit > 0 && consultationDeposit < consultationFee;
+  const requiredAmount = hasDepositSplit ? consultationDeposit : consultationFee;
+  const remainingAmount = Math.max(0, consultationFee - requiredAmount);
   const cashNumber = catalog.payment.vodafoneCashNumber;
   const consultationNumber = catalog.office.consultationWhatsappNumber;
   const enabledChannels = useMemo(() => channels.filter((option) => catalog.policies.communicationChannels.includes(option.key)), [catalog.policies.communicationChannels]);
@@ -110,12 +114,12 @@ export default function LegalConsultationCard() {
       setError("اختر يومًا وموعدًا متاحًا للتواصل.");
       return;
     }
-    if (consultationFee > 0 && !cashNumber) {
+    if (requiredAmount > 0 && !cashNumber) {
       setError("بيانات الدفع غير متاحة حاليًا. تواصل مع الدعم إذا استمرت المشكلة.");
       return;
     }
-    if (consultationFee > 0 && !receipt) {
-      setError("ارفع إثبات دفع سعر الاستشارة.");
+    if (requiredAmount > 0 && !receipt) {
+      setError(`ارفع إثبات دفع ${hasDepositSplit ? "عربون الاستشارة" : "سعر الاستشارة"}.`);
       return;
     }
 
@@ -141,7 +145,7 @@ export default function LegalConsultationCard() {
           communicationChannel: channel,
           availabilitySlotKey: selectedSlotKey,
           attachmentIds,
-          paymentRequired: consultationFee > 0,
+          paymentRequired: requiredAmount > 0,
           clientContactSnapshot: {
             phone: normalizePhoneInput(phone),
             preferredDate: selectedDate,
@@ -152,13 +156,13 @@ export default function LegalConsultationCard() {
       });
       createdRequestId = request.id;
 
-      if (consultationFee > 0 && receipt) {
+      if (requiredAmount > 0 && receipt) {
         const receiptBody = new FormData();
         receiptBody.append("file", receipt);
         const receiptAttachment = await apiRequest<{ id: number }>("/api/v1/attachments", { method: "POST", body: receiptBody });
         await apiRequest("/api/v1/payments/receipts", {
           method: "POST",
-          body: JSON.stringify({ serviceRequestId: request.id, amountEgp: consultationFee, senderPhone: normalizePhoneInput(phone), attachmentId: receiptAttachment.id }),
+          body: JSON.stringify({ serviceRequestId: request.id, amountEgp: requiredAmount, senderPhone: normalizePhoneInput(phone), attachmentId: receiptAttachment.id }),
         });
       }
       router.push(`/requests/${request.id}`);
@@ -186,13 +190,20 @@ export default function LegalConsultationCard() {
           <p className="mt-4 text-[13px] leading-7 text-slate-300">اكتب موضوع الاستشارة وارفع أي مستندات تساعد على فهم الحالة، ثم اختر وسيلة التواصل واليوم والموعد المتاح من جدول المكتب. يُحجز الموعد مبدئيًا لحين مراجعة الدفع.</p>
 
           <div className="mt-5 rounded-2xl border border-[#986410]/35 bg-[#986410]/10 p-5">
-            <span className="text-[11px] font-bold text-[#d9a84e]">سعر الاستشارة</span>
+            <span className="text-[11px] font-bold text-[#d9a84e]">{hasDepositSplit ? "عربون حجز الاستشارة" : "سعر الاستشارة"}</span>
             {catalogLoading ? (
               <div className="mt-2 inline-flex items-center gap-2 text-sm font-bold text-slate-300"><Loader2 className="h-4 w-4 animate-spin" /> جاري تحميل السعر...</div>
             ) : catalogLoadError ? (
               <div className="mt-2 text-sm font-black text-red-200">السعر غير متاح مؤقتًا</div>
             ) : (
-              <div className="mt-1 text-3xl font-black text-white">{consultationFee.toLocaleString("ar-EG")} <span className="text-sm">ج.م</span></div>
+              <div className="mt-1">
+                <div className="text-3xl font-black text-white">{requiredAmount.toLocaleString("ar-EG")} <span className="text-sm">ج.م</span></div>
+                {hasDepositSplit && (
+                  <div className="mt-1 text-xs font-bold text-slate-300">
+                    من إجمالي قيمة الاستشارة: <span className="line-through text-slate-400">{consultationFee.toLocaleString("ar-EG")} ج.م</span> (المتبقي: {remainingAmount.toLocaleString("ar-EG")} ج.م يُسدد لاحقًا)
+                  </div>
+                )}
+              </div>
             )}
             <p className="mt-2 text-[10px] leading-5 text-slate-400">يتم اعتماد الطلب بعد مراجعة إثبات الدفع، وتظهر حالته داخل حسابك.</p>
           </div>
@@ -262,18 +273,20 @@ export default function LegalConsultationCard() {
             {attachments.length > 0 && <div className="mt-3 flex max-h-28 flex-wrap gap-2 overflow-y-auto">{attachments.map((file, index) => <span key={`${file.name}-${index}`} className="inline-flex max-w-full items-center gap-2 rounded-lg bg-slate-800 px-3 py-1.5 text-[10px]"><span className="max-w-40 truncate">{file.name}</span><button type="button" onClick={() => setAttachments((items) => items.filter((_, itemIndex) => itemIndex !== index))}><X className="h-3 w-3 text-red-300" /></button></span>)}</div>}
           </div>
 
-          {consultationFee > 0 && <>
+          {requiredAmount > 0 && <>
             <div className="rounded-xl border border-[#986410]/30 bg-[#986410]/10 p-4 text-xs leading-6 text-slate-200">
-              <span className="block text-slate-400">المبلغ المطلوب</span>
-              <strong className="text-base text-white">{consultationFee.toLocaleString("ar-EG")} ج.م</strong>
-              <div className="mt-3 rounded-lg border border-white/10 bg-slate-950/50 px-3 py-2.5">
-                <span className="block text-[10px] font-bold text-slate-400">حوّل إلى رقم Vodafone Cash</span>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">{hasDepositSplit ? "العربون المطلوب الآن" : "المبلغ المطلوب"}</span>
+                <strong className="text-base text-white">{requiredAmount.toLocaleString("ar-EG")} ج.م</strong>
+              </div>
+              <div className="mt-3 rounded-lg border border-white/10 bg-slate-950/50 px-3 py-2.5 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400">حوّل إلى رقم فودافون كاش:</span>
                 {catalogLoading ? (
-                  <span className="mt-1 inline-flex items-center gap-2 text-xs font-bold text-slate-300"><Loader2 className="h-3.5 w-3.5 animate-spin" /> جاري تحميل بيانات الدفع...</span>
+                  <span className="inline-flex items-center gap-2 text-xs font-bold text-slate-300"><Loader2 className="h-3.5 w-3.5 animate-spin" /> جاري التحميل...</span>
                 ) : cashNumber ? (
-                  <b dir="ltr" className="mt-1 block font-mono text-lg tracking-wide text-[#d9a84e]">{cashNumber}</b>
+                  <b dir="ltr" className="font-mono text-base tracking-wider text-[#d9a84e] bg-black/40 px-2.5 py-0.5 rounded border border-[#986410]/30">{cashNumber}</b>
                 ) : (
-                  <span className="mt-1 block text-xs font-bold text-red-300">بيانات الدفع غير متاحة مؤقتًا.</span>
+                  <span className="text-xs font-bold text-red-300">غير متاح مؤقتًا.</span>
                 )}
               </div>
               {!catalogLoading && !cashNumber && (
@@ -281,10 +294,10 @@ export default function LegalConsultationCard() {
               )}
             </div>
 
-            <label className={`block rounded-xl border border-dashed border-[#986410]/50 bg-[#986410]/10 p-4 text-center ${catalogLoading || !cashNumber ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
+            <label className={`block rounded-xl border border-dashed border-[#986410]/50 bg-[#986410]/10 p-4 text-center transition hover:bg-[#986410]/20 ${catalogLoading || !cashNumber ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
               <input type="file" accept="image/*,.pdf" className="hidden" disabled={catalogLoading || !cashNumber} onChange={(event) => void selectReceipt(event.target.files?.[0] || null)} />
               <Upload className="mx-auto h-5 w-5 text-[#d9a84e]" />
-              <span className="mt-2 block text-xs font-black">{receipt?.name || `رفع إثبات دفع الاستشارة — ${consultationFee.toLocaleString("ar-EG")} ج.م`}</span>
+              <span className="mt-2 block text-xs font-black">{receipt?.name || `رفع إثبات دفع ${hasDepositSplit ? "عربون الاستشارة" : "الاستشارة"} — ${requiredAmount.toLocaleString("ar-EG")} ج.م`}</span>
             </label>
           </>}
 

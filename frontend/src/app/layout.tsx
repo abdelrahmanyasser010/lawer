@@ -5,6 +5,9 @@ import "@fontsource/cairo/600.css";
 import "@fontsource/cairo/700.css";
 import "@fontsource/cairo/800.css";
 import "@fontsource/cairo/900.css";
+import "@fontsource/alexandria/700.css";
+import "@fontsource/alexandria/800.css";
+import "@fontsource/alexandria/900.css";
 import "./globals.css";
 import FloatingSupportButton from "@/components/support/FloatingSupportButton";
 

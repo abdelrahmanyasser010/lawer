@@ -11,8 +11,10 @@ type Setting = { key:string; value:unknown; isSecret:boolean; updatedAt:string }
 type Toast = { kind:"success"|"error"; text:string } | null;
 
 const servicePriceDefs = [
-  { key:"services.consultation.fee_egp", label:"سعر الاستشارة القانونية", description:"المبلغ الكامل المطلوب عند طلب استشارة.", icon:MessageSquareText },
-  { key:"services.contract_drafting.deposit_egp", label:"العربون الموحد لإعداد عقد بواسطة المحامي", description:"العربون الذي يدفعه العميل الآن عند اختيار أي عقد في مسار محامي المكتب.", icon:BriefcaseBusiness },
+  { key:"services.consultation.fee_egp", label:"سعر الاستشارة القانونية (الإجمالي)", description:"المبلغ الكامل المطلوب لقيمة الاستشارة.", icon:MessageSquareText },
+  { key:"services.consultation.deposit_egp", label:"عربون حجز الاستشارة", description:"المبلغ المطلوب دفعه كعربون مبدئي لحجز موعد الاستشارة.", icon:MessageSquareText },
+  { key:"services.contract_review.deposit_egp", label:"عربون مراجعة العقد", description:"المبلغ المطلوب دفعه كعربون مبدئي عند طلب مراجعة عقد قائم.", icon:BriefcaseBusiness },
+  { key:"services.contract_drafting.deposit_egp", label:"العربون الموحد لإعداد عقد بواسطة المحامي", description:"العربون الذي يدفعه العميل عند طلب صياغة عقد بواسطة محامي المكتب.", icon:BriefcaseBusiness },
 ] as const;
 
 function parseMoney(value:string) { const clean=value.replace(/[^0-9.]/g,""); const n=Number(clean); return Number.isFinite(n)&&n>=0?n:0; }

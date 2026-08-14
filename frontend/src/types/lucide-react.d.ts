@@ -42,12 +42,14 @@ declare module "lucide-react" {
   export const Copy: LucideIcon;
   export const CopyPlus: LucideIcon;
   export const CreditCard: LucideIcon;
+  export const Database: LucideIcon;
   export const DollarSign: LucideIcon;
   export const Download: LucideIcon;
   export const Edit3: LucideIcon;
   export const ExternalLink: LucideIcon;
   export const Eye: LucideIcon;
   export const EyeOff: LucideIcon;
+  export const FileBadge2: LucideIcon;
   export const FileCheck: LucideIcon;
   export const FileCheck2: LucideIcon;
   export const FileClock: LucideIcon;
@@ -60,6 +62,8 @@ declare module "lucide-react" {
   export const FileStack: LucideIcon;
   export const FileText: LucideIcon;
   export const Filter: LucideIcon;
+  export const FolderLock: LucideIcon;
+  export const Headset: LucideIcon;
   export const HelpCircle: LucideIcon;
   export const Home: LucideIcon;
   export const KeyRound: LucideIcon;
@@ -75,6 +79,7 @@ declare module "lucide-react" {
   export const Mail: LucideIcon;
   export const MailCheck: LucideIcon;
   export const MailWarning: LucideIcon;
+  export const MapPin: LucideIcon;
   export const Menu: LucideIcon;
   export const MessageCircle: LucideIcon;
   export const MessageSquareText: LucideIcon;
@@ -84,6 +89,8 @@ declare module "lucide-react" {
   export const Play: LucideIcon;
   export const Plus: LucideIcon;
   export const PlusCircle: LucideIcon;
+  export const Printer: LucideIcon;
+  export const QrCode: LucideIcon;
   export const Receipt: LucideIcon;
   export const RefreshCw: LucideIcon;
   export const Rocket: LucideIcon;

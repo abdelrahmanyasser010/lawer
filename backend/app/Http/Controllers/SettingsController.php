@@ -12,7 +12,7 @@ final class SettingsController extends Controller
     private const EDITABLE = [
         'office.display_name','office.support_email','office.address','office.whatsapp_number','office.consultation_whatsapp_number','office.support_whatsapp_number','office.support_phone','payments.vodafone_cash_number',
         'contracts.self_service_edit_hours','services.contract_review.deposit_egp',
-        'services.consultation.fee_egp','services.contract_drafting.deposit_egp','customer_portal.communication_channels',
+        'services.consultation.fee_egp','services.consultation.deposit_egp','services.contract_drafting.deposit_egp','customer_portal.communication_channels',
         'notifications.whatsapp_mode','notifications.web_push_enabled',
     ];
     public function __construct(private AuditService $audit) {}

@@ -68,6 +68,7 @@ function CreateContractContent() {
   const resetWizard = useWizardStore((state) => state.resetWizard);
   const mode: CatalogMode = searchParams.get("mode") === "lawyer_assisted" ? "lawyer_assisted" : "self_service";
   const [query, setQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selected, setSelected] = useState<SelectedVariant | null>(null);
 
   const grouped = useMemo(() => {
@@ -93,40 +94,68 @@ function CreateContractContent() {
     setSelected({ template, variant });
   }
 
-  const pageTitle = mode === "self_service" ? "اختر العقد الذي تريد إعداده بنفسك" : "اختر العقد الذي تريد أن يعده محامي المكتب";
-  const pageSubtitle = mode === "self_service"
-    ? "ابحث باسم العقد أو استخدامه، ثم ابدأ إدخال بياناته خطوة بخطوة. السعر الظاهر هو سعر هذا العقد تحديدًا."
-    : "اختر نوع العقد، ثم ارفع المستندات اللازمة. يظهر لك السعر الكامل والعربون المطلوب قبل إرسال الطلب للمكتب.";
-
   return (
     <div className="flex min-h-screen flex-col bg-[#f8fafc]">
       <Navbar />
       <main className="flex-1">
-        <section className="border-b border-slate-200 bg-white py-10 sm:py-14">
+        <section className="border-b border-slate-200 bg-white pt-8 pb-4 sm:pt-10 sm:pb-4">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#986410]/20 bg-[#986410]/10 px-3 py-1.5 text-xs font-black text-[#986410]">
-                  {mode === "self_service" ? <FileText className="h-4 w-4" /> : <Scale className="h-4 w-4" />}
-                  {mode === "self_service" ? "إعداد ذاتي" : "إعداد بواسطة محامي المكتب"}
-                </div>
-                <h1 className="mt-4 text-2xl font-black text-[#00102e] sm:text-4xl">{pageTitle}</h1>
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">{pageSubtitle}</p>
+                <h1 className="text-2xl font-black text-[#00102e] sm:text-3xl">اختر العقد الذي تريد إعداده</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
+                  {mode === "self_service"
+                    ? "ابحث باسم العقد أو استخدامه، ثم ابدأ إدخال بياناته خطوة بخطوة. السعر الظاهر هو سعر هذا العقد تحديدًا."
+                    : "اختر نوع العقد، ثم ارفع المستندات اللازمة. يظهر لك السعر الكامل والعربون المطلوب قبل إرسال الطلب للمكتب."}
+                </p>
               </div>
-              <Link href="/" className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700">
-                <ArrowLeft className="h-4 w-4 rotate-180" /> العودة للرئيسية
-              </Link>
+
+              <div className="shrink-0 inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+                <Link href="/create-contract?mode=self_service" className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-bold transition-all ${mode === "self_service" ? "bg-[#00102e] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                  إعداد بنفسي
+                </Link>
+                <Link href="/create-contract?mode=lawyer_assisted" className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-bold transition-all ${mode === "lawyer_assisted" ? "bg-[#00102e] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                  إعداد بواسطة محامٍ
+                </Link>
+              </div>
             </div>
 
-            <label className="relative mt-7 block max-w-2xl">
-              <Search className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="ابحث عن عقد... مثال: إيجار تجاري، بيع بالميراث، تطوير موقع"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-4 pr-12 pl-4 text-sm font-bold text-[#00102e] outline-none transition focus:border-[#986410] focus:bg-white"
-              />
-            </label>
+            <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
+              <div className="flex items-center gap-6 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide text-sm font-bold text-slate-500">
+                {categoryOrder.map(slug => {
+                  const m = categoryMeta[slug];
+                  if (!m) return null;
+                  return (
+                    <a key={slug} href={`#category-${slug}`} className="hover:text-[#00102e] whitespace-nowrap transition-colors">{m.title}</a>
+                  );
+                })}
+              </div>
+
+              <div className="relative flex items-center shrink-0">
+                {isSearchOpen ? (
+                  <div className="relative animate-in slide-in-from-left-4 fade-in duration-200 w-[240px] sm:w-[320px]">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
+                      autoFocus
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Escape' && setIsSearchOpen(false)}
+                      placeholder="ابحث باسم العقد..."
+                      className="w-full rounded-full border border-slate-200 bg-white py-2 pl-10 pr-9 text-sm font-bold text-[#00102e] outline-none transition focus:border-[#986410] focus:ring-1 focus:ring-[#986410]"
+                    />
+                    <button onClick={() => { setIsSearchOpen(false); setQuery(""); }} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setIsSearchOpen(true)} className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition">
+                    <Search className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
           </div>
         </section>
 
@@ -141,9 +170,9 @@ function CreateContractContent() {
             const meta = categoryMeta[template.slug] || { title: template.nameAr, subtitle: template.description, icon: FileText };
             const Icon = meta.icon;
             return (
-              <section key={template.slug}>
-                <header className="mb-5 flex items-start gap-3 border-b border-slate-200 pb-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#00102e] text-[#d9a84e]"><Icon className="h-5 w-5" /></div>
+              <section key={template.slug} id={`category-${template.slug}`}>
+                <header className="mb-6 flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#00102e] text-[#d9a84e]"><Icon className="h-4 w-4" /></div>
                   <div><h2 className="text-xl font-black text-[#00102e]">{meta.title}</h2><p className="mt-1 text-xs leading-6 text-slate-500">{meta.subtitle}</p></div>
                 </header>
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -170,7 +199,7 @@ function VariantCard({ mode, template, variant, onChoose }: { mode: CatalogMode;
   const remaining = total > 0 ? Math.max(0, total - deposit) : 0;
   const disabled = mode === "lawyer_assisted" ? total <= 0 : selfPrice <= 0;
   return (
-    <article className="flex min-h-[280px] flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <article className="flex min-h-[260px] flex-col rounded-2xl border border-slate-200 bg-white p-[24px] transition hover:border-[#d9a84e]">
       <div className="flex items-start justify-between gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-[#00102e]"><FileText className="h-5 w-5" /></div>
         {mode === "self_service" ? (

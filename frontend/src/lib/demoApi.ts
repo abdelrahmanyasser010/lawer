@@ -211,9 +211,9 @@ function contractDetails(id: string): ContractDetails {
 const requests: ServiceRequestSummary[] = [
   {
     id: 501,
-    serialNumber: "REQ-2026-DEMO01",
-    requestType: "consultation",
-    title: "استشارة قبل توقيع عقد إيجار",
+    serialNumber: "REQ-2026-00001",
+    requestType: "contract_review",
+    title: "مراجعة عقد إيجار قبل التوقيع",
     status: "awaiting_payment",
     priority: "normal",
     communicationChannel: "whatsapp",
@@ -233,10 +233,10 @@ const requests: ServiceRequestSummary[] = [
 function requestDetails(id: string): ServiceRequestDetails {
   return {
     id: Number(id) || 501,
-    serialNumber: "REQ-2026-DEMO01",
-    requestType: "consultation",
-    title: "استشارة قبل توقيع عقد إيجار",
-    description: "طلب تجريبي لعرض مسار الحجز ورفع إثبات الدفع والمتابعة داخل الحساب.",
+    serialNumber: "REQ-2026-00001",
+    requestType: "contract_review",
+    title: "مراجعة عقد إيجار قبل التوقيع",
+    description: "طلب مراجعة وتدقيق قانوني لبنود عقد إيجار تجاري قبل التوقيع والاعتماد.",
     status: "awaiting_payment",
     priority: "normal",
     communicationChannel: "whatsapp",
@@ -293,7 +293,7 @@ export async function demoApiRequest<T>(path: string, init: RequestInit = {}): P
   if (pathname.match(/^\/api\/v1\/contracts\/\d+$/)) return contractDetails(pathname.split("/").pop() || "101") as T;
   if (pathname.match(/^\/api\/v1\/contracts\/\d+\/documents$/)) return demoDocuments() as T;
   if (pathname === "/api/v1/contracts/draft" || pathname.match(/^\/api\/v1\/contracts\/\d+\/draft$/)) {
-    return { id: 101, serialNumber: "SCP-2026-DEMO-DRAFT", status: "pending_payment", currentVersionId: 1001 } as T;
+    return { id: 101, serialNumber: "SCP-2026-00001", status: "pending_payment", currentVersionId: 1001 } as T;
   }
   if (pathname.match(/^\/api\/v1\/contracts\/\d+\/finalize$/)) return { status: "issued" } as T;
   if (pathname.match(/^\/api\/v1\/contracts\/\d+\/shares$/)) {
@@ -302,10 +302,10 @@ export async function demoApiRequest<T>(path: string, init: RequestInit = {}): P
   }
   if (pathname === "/api/v1/service-requests/my") return requests as T;
   if (pathname.match(/^\/api\/v1\/service-requests\/\d+$/)) return requestDetails(pathname.split("/").pop() || "501") as T;
-  if (pathname === "/api/v1/service-requests") return { id: 501, serialNumber: "REQ-2026-DEMO01" } as T;
+  if (pathname === "/api/v1/service-requests") return { id: 501, serialNumber: "REQ-2026-00001" } as T;
   if (pathname.startsWith("/api/v1/service-requests/")) return { ok: true } as T;
-  if (pathname === "/api/v1/attachments") return { id: Math.floor(Math.random() * 10000), fileName: "demo-upload.png" } as T;
-  if (pathname === "/api/v1/payments/receipts") return { id: 701, serialNumber: "PAY-2026-DEMO01", status: "pending_verification" } as T;
+  if (pathname === "/api/v1/attachments") return { id: Math.floor(Math.random() * 10000), fileName: "document.pdf" } as T;
+  if (pathname === "/api/v1/payments/receipts") return { id: 701, serialNumber: "PAY-2026-00001", status: "pending_verification" } as T;
   if (pathname === "/api/v1/payments/my") return [] as T;
   if (pathname === "/api/v1/notifications") return { items: notifications, unreadCount: notifications.filter((item) => !item.readAt).length } as T;
   if (pathname.startsWith("/api/v1/notifications/")) return { ok: true } as T;
@@ -327,12 +327,12 @@ function demoDocuments(): ContractDocumentFile[] {
   return [
     {
       id: 1,
-      fileKey: "demo-main",
+      fileKey: "doc-main",
       documentType: "main",
       optionalClauseKey: null,
-      titleAr: "نسخة PDF تجريبية",
+      titleAr: "نسخة العقد المعتمدة (PDF)",
       fileSizeBytes: 184000,
-      sha256: "demo",
+      sha256: "doc",
       createdAt: iso(-1),
     },
   ];

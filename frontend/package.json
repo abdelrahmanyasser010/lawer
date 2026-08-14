@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@fontsource/alexandria": "^5.3.0",
     "@fontsource/cairo": "^5.3.0",
+    "@fontsource/noto-sans-arabic": "^5.3.0",
     "@hookform/resolvers": "^5.4.0",
     "@tanstack/react-query": "^5.101.2",
     "@zdraft/template-engine": "file:../packages/template-engine",

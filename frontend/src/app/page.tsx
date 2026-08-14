@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, FileText, Scale, ShieldCheck, QrCode, Lock, Shield, Zap, FileBadge2, Building2, Headset, FolderLock, BarChart3, Database, Users } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FileText, Scale, ShieldCheck, Lock, Shield, Zap, FileBadge2, Building2, Headset, FolderLock, BarChart3, Database, Users, LayoutDashboard } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
@@ -10,7 +10,7 @@ import AnimatedCounter from "@/components/ui/AnimatedCounter";
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col font-sans text-right" dir="rtl">
-      
+
       {/* Top Banner */}
       <div className="bg-[#fffdf5] py-2 text-center border-b border-[#f0e8d9]">
         <p className="text-[11px] font-black text-[#986410]">
@@ -19,32 +19,32 @@ export default function HomePage() {
       </div>
 
       <Navbar />
-      
+
       <main className="flex-1">
-        
-        {/* 
-          1. HERO SECTION 
-          - Math notebook grid background 
+
+        {/*
+          1. HERO SECTION
+          - Math notebook grid background
           - Gold underline under "منظمة."
           - Overlapping cards
         */}
         <section className="relative overflow-hidden bg-[#fdfcf9]">
           {/* Grid Background */}
           <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
-          
+
           <div className="relative z-10 mx-auto max-w-7xl px-4 pt-20 sm:px-6 lg:pt-24 pb-48">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              
+
               {/* Text Side (Right) */}
               <div className="text-right z-30">
                 <h1 className="text-[32px] font-black leading-[1.4] text-[#00102e] sm:text-[40px] lg:text-[48px] tracking-tight">
-                  صياغة قانونية موثوقة، 
+                  صياغة قانونية موثوقة،
                   <br />
                   <span className="bg-gradient-to-l from-[#986410] via-[#d9a84e] to-[#986410] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x">
                     بذكاء واحترافية
                   </span>
                 </h1>
-                
+
                 <p className="mt-6 max-w-lg text-[14px] font-bold leading-[1.8] text-slate-500">
                   المنصة الأولى لإعداد العقود الذكية وتقديم الاستشارات القانونية. احصل على عقودك جاهزة في دقائق، أو اعتمد على نخبة من المحامين المختصين لضمان حماية حقوقك بأعلى المعايير.
                 </p>
@@ -70,10 +70,10 @@ export default function HomePage() {
                 {/* Decorative background shape */}
                 <div className="absolute -inset-4 z-0 rounded-[3rem] bg-[#00102e] transform rotate-[-3deg] shadow-2xl" />
                 <div className="absolute -inset-4 z-0 rounded-[3rem] bg-[#001a42] transform rotate-[3deg] opacity-50" />
-                
+
                 {/* Contract Mockup Card */}
                 <div className="relative z-10 flex flex-col rounded-[2rem] bg-white p-6 shadow-xl border border-slate-100 min-h-[340px]">
-                  
+
                   {/* Centered Logo at top */}
                   <div className="flex justify-center mb-6 pb-6 border-b border-slate-100 overflow-visible">
                     <Image src="/logo.png" alt="Z draft" width={240} height={80} className="h-16 w-auto object-contain scale-125" />
@@ -119,7 +119,7 @@ export default function HomePage() {
                     <Zap className="h-4 w-4" />
                   </div>
                 </div>
-                
+
                 <div className="absolute -left-16 top-32 z-20 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-xl border border-slate-100">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-[#00102e]">آمن</span>
@@ -129,7 +129,7 @@ export default function HomePage() {
                     <ShieldCheck className="h-4 w-4" />
                   </div>
                 </div>
-                
+
                 <div className="absolute -left-12 top-56 z-20 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-xl border border-slate-100">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-[#00102e]">احترافي</span>
@@ -145,12 +145,12 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 
-          2. OVERLAPPING MODE CARDS 
+        {/*
+          2. OVERLAPPING MODE CARDS
         */}
         <section className="relative z-20 mx-auto max-w-6xl px-4 sm:px-6 -mt-36 animate-fade-in-up delay-300">
           <div className="grid gap-6 lg:grid-cols-3">
-            
+
             {/* Card 1: Self Service */}
             <div className="flex flex-col rounded-[2rem] bg-[#00102e] p-8 text-white shadow-2xl shadow-[#00102e]/20 transition-transform hover:-translate-y-2">
               <div className="flex items-start justify-between">
@@ -211,7 +211,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 
+        {/*
           3. STATISTICS SECTION
         */}
         <section className="bg-white py-20 border-t border-slate-100">
@@ -237,10 +237,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 
-          SERVICES GRID + TRUST — unified section, light-to-dark gradient background 
+        {/*
+          SERVICES GRID + TRUST — unified section, light-to-dark gradient background
         */}
-        <section className="bg-gradient-to-b from-[#f8f9fc] to-[#00102e] py-24 relative overflow-hidden">
+        <section id="services" className="bg-gradient-to-b from-[#f8f9fc] to-[#00102e] py-24 relative overflow-hidden">
           {/* decorative grid lines */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
 
@@ -321,12 +321,12 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 
+        {/*
           4. LAWYERS (SPECIALISTS) SECTION — Slider
         */}
         <section className="bg-[#00102e] py-24 relative overflow-hidden">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 relative z-10">
-            
+
             <div className="text-center animate-fade-in-up mb-16">
               <span className="inline-block rounded-full bg-[#d9a84e]/10 px-4 py-1.5 text-[11px] font-black text-[#d9a84e] mb-4">فريقنا القانوني</span>
               <h2 className="text-[32px] font-black text-white sm:text-[36px]">محامون مختصون حسب نوع الطلب</h2>
@@ -338,7 +338,7 @@ export default function HomePage() {
             {/* Slider — horizontal scroll snap */}
             <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory scroll-smooth no-scrollbar animate-fade-in-up delay-200">
               {[
-                { 
+                {
                   name: "أ. أحمد محمود",
                   title: "محامي بالنقض والإدارية العليا",
                   desc: "خبير في صياغة عقود الشركات والنزاعات التجارية المعقدة والتحكيم الدولي.",
@@ -346,7 +346,7 @@ export default function HomePage() {
                   tags: ["تجاري", "نزاعات", "شركات"],
                   image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&h=820&q=80"
                 },
-                { 
+                {
                   name: "أ. كريم فؤاد",
                   title: "مستشار قانوني تجاري",
                   desc: "متخصص في تأسيس الشركات، صياغة لوائح الحوكمة، ومراجعة عقود الشراكة.",
@@ -354,7 +354,7 @@ export default function HomePage() {
                   tags: ["حوكمة", "تأسيس", "عقود"],
                   image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=600&h=820&q=80"
                 },
-                { 
+                {
                   name: "أ. طارق إبراهيم",
                   title: "محامي مدني وعقاري",
                   desc: "خبرة واسعة في عقود البيع، الإيجارات، الاستثمار العقاري، والنزاعات المدنية.",
@@ -362,25 +362,25 @@ export default function HomePage() {
                   tags: ["عقاري", "مدني", "استثمار"],
                   image: "https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&w=600&h=820&q=80"
                 },
-                { 
+                {
                   name: "أ. مصطفى كمال",
                   title: "محامي عمالي وتأمينات",
                   desc: "متخصص في صياغة عقود العمل، لوائح تنظيم العمل، وتسوية النزاعات العمالية.",
                   cases: "280", exp: "10",
                   tags: ["عمالي", "تأمينات", "لوائح"],
-                  image: "https://images.unsplash.com/photo-1583900985737-6d0425556126?auto=format&fit=crop&w=600&h=820&q=80"
+                  image: "https://images.unsplash.com/photo-1558203728-00f45181b84e?auto=format&fit=crop&w=600&h=820&q=80"
                 },
               ].map((p) => (
                 <div key={p.name} className="group relative shrink-0 w-[280px] sm:w-[300px] snap-start overflow-hidden rounded-[1.5rem] border border-white/8 bg-white/[0.03] hover:border-[#d9a84e]/30 transition-all duration-500 hover:-translate-y-2">
                   {/* Gold top border */}
                   <div className="h-[2px] w-full bg-gradient-to-l from-[#986410] to-[#d9a84e]" />
-                  
+
                   {/* Full photo — no crop, full height with contain */}
                   <div className="relative bg-[#000d20]" style={{height: "340px"}}>
-                    <img 
-                      src={p.image} 
-                      alt={p.name} 
-                      className="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]" 
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]"
                     />
                     {/* Bottom gradient for text readability */}
                     <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#00102e] to-transparent" />
@@ -425,32 +425,15 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 
+        {/*
           5. HOW IT WORKS SECTION (Navy background)
         */}
-        <section className="bg-[#00102e] py-24 text-white">
-          <div className="mx-auto grid max-w-6xl gap-16 px-4 sm:px-6 lg:grid-cols-[1fr_1fr] lg:items-center">
-            
-            {/* Steps on the right (RTL, so it's the first div in source) */}
-            <div className="space-y-6">
-              {[
-                { n: "1", title: "حدد المسار المناسب لطلبك", text: "سواء كنت تريد إعداد عقد بنفسك، أو ترغب في توكيل محام، أو حتى مراجعة عقد مكتوب مسبقاً." },
-                { n: "2", title: "أدخل البيانات وارفع المستندات", text: "نظامنا الذكي يوجهك خطوة بخطوة لإدخال التفاصيل الأساسية للمستندات المطلوبة بطريقة سلسة ومحمية." },
-                { n: "3", title: "راجع واستلم نسختك النهائية", text: "بمجرد الانتهاء ستجد النسخة النهائية جاهزة للمراجعة أو التحميل ومحفوظة بأمان في حسابك." },
-              ].map((step) => (
-                <div key={step.n} className="relative rounded-[2rem] bg-white/5 p-8 pr-16 transition hover:bg-white/10">
-                  <span className="absolute right-0 top-1/2 flex h-8 w-8 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-[#d9a84e] text-[13px] font-black text-[#00102e] shadow-lg">
-                    {step.n}
-                  </span>
-                  <h3 className="text-[17px] font-black">{step.title}</h3>
-                  <p className="mt-3 text-[13px] font-medium leading-[1.8] text-slate-400">{step.text}</p>
-                </div>
-              ))}
-            </div>
+        <section className="bg-[#00102e] py-16 text-white relative overflow-hidden">
+          <div className="mx-auto grid max-w-6xl gap-16 px-4 sm:px-6 lg:grid-cols-[1fr_1fr] lg:items-center relative z-10">
 
-            {/* Text on the left */}
+            {/* Text on the right (RTL: right is the text) */}
             <div className="text-right">
-              <span className="inline-flex rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-black text-[#d9a84e]">
+              <span className="inline-flex rounded-full bg-white/10 px-4 py-1.5 text-[11px] font-black text-[#d9a84e]">
                 آلية العمل
               </span>
               <h2 className="mt-6 text-[32px] font-black leading-[1.3] sm:text-[40px]">
@@ -458,15 +441,48 @@ export default function HomePage() {
                 <br />
                 <span className="text-[#d9a84e]">في ٣ خطوات فقط</span>
               </h2>
-              <p className="mt-6 text-[14px] font-medium leading-[1.8] text-slate-300">
-                صممنا المنصة لتختصر عليك الوقت والجهد. لا حاجة لزيارات ميدانية أو اجتماعات طويلة. اختر المسار، أدخل بياناتك، واترك الباقي لتقنياتنا وفريقنا القانوني لضمان حماية حقوقك بالكامل.
+              <p className="mt-6 text-[14px] font-bold leading-[1.8] text-slate-400">
+                لا حاجة لزيارات ميدانية أو اجتماعات طويلة. اختر المسار المناسب لك، أدخل بياناتك، واترك الباقي لتقنياتنا وفريقنا القانوني لضمان حماية حقوقك.
               </p>
-              <Link href="/create-contract?mode=self_service" className="mt-10 inline-flex h-14 items-center justify-center gap-3 rounded-[1rem] bg-white px-8 text-[14px] font-black text-[#00102e] transition hover:bg-slate-200">
-                تصفح قوالب العقود
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
             </div>
 
+            {/* Steps on the left */}
+            <div className="relative space-y-8 before:absolute before:right-[31px] before:top-4 before:bottom-4 before:w-[2px] before:bg-white/10">
+              {[
+                { icon: LayoutDashboard, title: "حدد المسار", text: "اختر نوع العقد أو طلب المراجعة المناسب لك." },
+                { icon: FileText, title: "أدخل البيانات", text: "أجب عن الأسئلة وأرفق المستندات المطلوبة عبر النظام." },
+                { icon: ShieldCheck, title: "راجع واستلم", text: "استلم نسختك النهائية الموثقة والمحفوظة في حسابك." },
+              ].map((step, i) => (
+                <div key={i} className="relative pl-4 pr-24 py-2">
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#001a42] border-2 border-[#00102e] shadow-xl text-[#d9a84e] z-10">
+                    <step.icon className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-[17px] font-black">{step.title}</h3>
+                  <p className="mt-2 text-[12px] font-bold leading-[1.8] text-slate-400">{step.text}</p>
+                </div>
+              ))}
+            </div>
+
+          </div>
+        </section>
+
+        {/*
+          6. FINAL CTA
+        */}
+        <section className="bg-[#00102e] border-t border-white/10 py-20 relative overflow-hidden">
+          <div className="mx-auto max-w-4xl px-4 sm:px-6 relative z-10 text-center">
+            <h2 className="text-[32px] font-black text-white">جاهز لبدء عقدك؟</h2>
+            <p className="mt-4 text-[14px] font-bold text-slate-400 mb-10">
+              ابدأ الآن مجاناً، وادفع فقط عند إصدار النسخة النهائية واعتمادها.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <Link href="/#services" className="inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-[#d9a84e] px-8 text-[14px] font-bold text-[#00102e] transition hover:bg-white shadow-lg shadow-[#d9a84e]/20">
+                <FileText className="h-5 w-5" /> ابدأ إعداد عقد
+              </Link>
+              <Link href="/create-contract?mode=review" className="inline-flex h-14 items-center justify-center gap-2 rounded-xl border border-white/20 bg-transparent px-8 text-[14px] font-bold text-white transition hover:bg-white/5">
+                <Scale className="h-5 w-5" /> اطلب مراجعة
+              </Link>
+            </div>
           </div>
         </section>
 
