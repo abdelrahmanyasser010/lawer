@@ -11,13 +11,6 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col font-sans text-right" dir="rtl">
 
-      {/* Top Banner */}
-      <div className="bg-[#fffdf5] py-2 text-center border-b border-[#f0e8d9]">
-        <p className="text-[11px] font-black text-[#986410]">
-          نسخة تجريبية للمعاينة — عمليات التسجيل والدفع والإرسال هنا وهمية تماماً
-        </p>
-      </div>
-
       <Navbar />
 
       <main className="flex-1">
@@ -203,7 +196,7 @@ export default function HomePage() {
               <p className="mt-4 text-[13px] font-medium leading-[1.8] text-slate-500">
                 لا توقع قبل المراجعة. ارفع العقد واحصل على تقرير قانوني بالمخاطر والبنود المجحفة التي تحتاج تعديل.
               </p>
-              <Link href="/create-contract?mode=review" className="mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-[13px] font-black text-[#00102e] transition hover:bg-slate-50">
+              <Link href="/request-review" className="mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-[13px] font-black text-[#00102e] transition hover:bg-slate-50">
                 اطلب مراجعة <ArrowLeft className="h-4 w-4" />
               </Link>
             </div>
@@ -479,7 +472,7 @@ export default function HomePage() {
               <Link href="/#services" className="inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-[#d9a84e] px-8 text-[14px] font-bold text-[#00102e] transition hover:bg-white shadow-lg shadow-[#d9a84e]/20">
                 <FileText className="h-5 w-5" /> ابدأ إعداد عقد
               </Link>
-              <Link href="/create-contract?mode=review" className="inline-flex h-14 items-center justify-center gap-2 rounded-xl border border-white/20 bg-transparent px-8 text-[14px] font-bold text-white transition hover:bg-white/5">
+              <Link href="/request-review" className="inline-flex h-14 items-center justify-center gap-2 rounded-xl border border-white/20 bg-transparent px-8 text-[14px] font-bold text-white transition hover:bg-white/5">
                 <Scale className="h-5 w-5" /> اطلب مراجعة
               </Link>
             </div>
