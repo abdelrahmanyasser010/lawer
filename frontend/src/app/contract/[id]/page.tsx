@@ -276,8 +276,7 @@ export default function ContractPage() {
                       <span>تعديل البيانات المتاحة</span>
                     </Link>
                   )}
-                  {item.permissions.canFinalize && (
-                    <button
+                  {item.permissions.canFinalize && <button
                       type="button"
                       disabled={busy}
                       onClick={() => setFinalizeConfirmOpen(true)}
@@ -286,8 +285,35 @@ export default function ContractPage() {
                       <LockKeyhole className="h-3.5 w-3.5 text-[#d9a84e]" />
                       <span>اعتماد النسخة الحالية الآن</span>
                     </button>
-                  )}
+                  }
                 </div>
+              </div>
+            </div>
+          )}
+
+          {isSelfService && item.status === "client_review" && item.permissions.canFinalize && !item.editWindow.active && (
+            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50/90 p-4 text-blue-950">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-md bg-blue-700 px-2 py-0.5 text-[10px] font-black text-white">
+                      جاهز للاعتماد
+                    </span>
+                    <h2 className="text-sm font-black text-blue-950">انتهت مهلة التعديل ويمكن اعتماد النسخة</h2>
+                  </div>
+                  <p className="text-xs leading-5 text-blue-900">
+                    يمكنك تثبيت النسخة الحالية وتجهيز ملف PDF النهائي من حسابك.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setFinalizeConfirmOpen(true)}
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#00102e] px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-[#00102e]/90 disabled:opacity-50"
+                >
+                  <LockKeyhole className="h-3.5 w-3.5 text-[#d9a84e]" />
+                  <span>اعتماد النسخة وتجهيز PDF</span>
+                </button>
               </div>
             </div>
           )}
