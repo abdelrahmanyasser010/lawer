@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { frontendApi } from "@/lib/apiClient";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { demoMode } from "@/lib/demoApi";
 
 interface NavItem {
   href: string;
@@ -144,14 +143,6 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100">
-      
-      {/* Premium Top Banner */}
-      <div className="bg-[#00102e] py-2 text-center">
-        <p className="text-[10px] font-bold text-[#d9a84e] tracking-widest uppercase">
-          نسخة تجريبية للمعاينة — عمليات التسجيل والدفع والإرسال هنا وهمية تماماً
-        </p>
-      </div>
-
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         
         {/* Right side: Logo & Mobile Menu */}
