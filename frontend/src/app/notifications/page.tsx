@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
@@ -47,7 +48,7 @@ export default function NotificationsPage() {
           <button type="button" onClick={() => void readAll()} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700"><CheckCheck className="h-4 w-4" /> تعليم الكل كمقروء</button>
         </header>
 
-        {loading ? <div className="mt-8 rounded-2xl border bg-white p-14"><Loader2 className="mx-auto h-7 w-7 animate-spin text-blue-700" /></div> : error ? <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center font-bold text-amber-900">{error}</div> : items.length === 0 ? <div className="mt-8 rounded-2xl border border-dashed bg-white p-14 text-center"><Bell className="mx-auto h-9 w-9 text-slate-300" /><p className="mt-3 font-black text-slate-500">لا توجد إشعارات.</p></div> : (
+        {loading ? <div className="mt-8 rounded-2xl border bg-white p-14"><Loader2 className="mx-auto h-7 w-7 animate-spin text-blue-700" /></div> : error ? <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center font-bold text-amber-900">{error}</div> : items.length === 0 ? <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm"><div className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-slate-50 mb-6"><Image src="/images/empty_notifications.jpg" alt="No notifications" width={100} height={100} className="opacity-80 mix-blend-multiply" /></div><p className="text-base font-black text-[#00102e]">لا توجد إشعارات.</p></div> : (
           <div className="mt-8 space-y-3">
             {items.map((item) => (
               <article key={item.id} className={`rounded-2xl border p-5 ${item.readAt ? "border-slate-200 bg-white" : "border-blue-200 bg-blue-50"}`}>

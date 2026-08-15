@@ -175,7 +175,7 @@ function CreateContractContent() {
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#00102e] text-[#d9a84e]"><Icon className="h-4 w-4" /></div>
                   <div><h2 className="text-xl font-black text-[#00102e]">{meta.title}</h2><p className="mt-1 text-xs leading-6 text-slate-500">{meta.subtitle}</p></div>
                 </header>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="flex snap-x snap-mandatory overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 hide-scrollbar">
                   {variants.map((variant) => (
                     <VariantCard key={variant.key} mode={mode} template={template} variant={variant} onChoose={() => choose(template, variant)} />
                   ))}
@@ -199,7 +199,7 @@ function VariantCard({ mode, template, variant, onChoose }: { mode: CatalogMode;
   const remaining = total > 0 ? Math.max(0, total - deposit) : 0;
   const disabled = mode === "lawyer_assisted" ? total <= 0 : selfPrice <= 0;
   return (
-    <article className="flex min-h-[260px] flex-col rounded-2xl border border-slate-200 bg-white p-[24px] transition hover:border-[#d9a84e]">
+    <article className="flex min-h-[240px] w-[260px] sm:min-h-[260px] shrink-0 snap-center sm:w-auto sm:shrink sm:snap-align-none flex-col rounded-2xl border border-slate-200 bg-white p-5 sm:p-[24px] transition hover:border-[#d9a84e]">
       <div className="flex items-start justify-between gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-[#00102e]"><FileText className="h-5 w-5" /></div>
         {mode === "self_service" ? (

@@ -74,7 +74,7 @@ export default function HomePage() {
 
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="text-[22px] font-black text-[#00102e]">عقد اتفاقية شراكة</h3>
+                      <h3 className="text-xl sm:text-[22px] font-black text-[#00102e]">وثيقة قانونية معتمدة</h3>
                       <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-600">
                         <CheckCircle2 className="h-3 w-3" /> تم إنشاؤه بنجاح
                       </div>
@@ -103,32 +103,32 @@ export default function HomePage() {
                 </div>
 
                 {/* Floating Badges */}
-                <div className="absolute -left-12 top-6 z-20 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-xl border border-slate-100 animate-pulse">
+                <div className="absolute -left-2 sm:-left-12 top-6 z-20 flex items-center gap-2 sm:gap-3 rounded-2xl bg-white p-2.5 sm:p-3 shadow-xl border border-slate-100 animate-pulse">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-[#00102e]">أسرع</span>
-                    <span className="text-[8px] font-bold text-slate-500">في دقائق معدودة</span>
+                    <span className="hidden sm:block text-[8px] font-bold text-slate-500">في دقائق معدودة</span>
                   </div>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
+                  <div className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
                     <Zap className="h-4 w-4" />
                   </div>
                 </div>
 
-                <div className="absolute -left-16 top-32 z-20 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-xl border border-slate-100">
+                <div className="absolute -left-4 sm:-left-16 top-32 z-20 flex items-center gap-2 sm:gap-3 rounded-2xl bg-white p-2.5 sm:p-3 shadow-xl border border-slate-100">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-[#00102e]">آمن</span>
-                    <span className="text-[8px] font-bold text-slate-500">موثق بتقنية Blockchain</span>
+                    <span className="hidden sm:block text-[8px] font-bold text-slate-500">موثق بتقنية Blockchain</span>
                   </div>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500">
+                  <div className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500">
                     <ShieldCheck className="h-4 w-4" />
                   </div>
                 </div>
 
-                <div className="absolute -left-12 top-56 z-20 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-xl border border-slate-100">
+                <div className="absolute -left-2 sm:-left-12 top-56 z-20 flex items-center gap-2 sm:gap-3 rounded-2xl bg-white p-2.5 sm:p-3 shadow-xl border border-slate-100">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-[#00102e]">احترافي</span>
-                    <span className="text-[8px] font-bold text-slate-500">معتمد وجاهز للاستخدام</span>
+                    <span className="hidden sm:block text-[8px] font-bold text-slate-500">معتمد وجاهز للاستخدام</span>
                   </div>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
+                  <div className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
                     <FileBadge2 className="h-4 w-4" />
                   </div>
                 </div>
@@ -141,11 +141,11 @@ export default function HomePage() {
         {/*
           2. OVERLAPPING MODE CARDS
         */}
-        <section className="relative z-20 mx-auto max-w-6xl px-4 sm:px-6 -mt-36 animate-fade-in-up delay-300">
-          <div className="grid gap-6 lg:grid-cols-3">
+        <section className="relative z-20 mx-auto max-w-6xl px-4 sm:px-6 -mt-32 sm:-mt-36 animate-fade-in-up delay-300">
+          <div className="flex snap-x snap-mandatory overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-3 gap-4 lg:gap-6 hide-scrollbar">
 
             {/* Card 1: Self Service */}
-            <div className="flex flex-col rounded-[2rem] bg-[#00102e] p-8 text-white shadow-2xl shadow-[#00102e]/20 transition-transform hover:-translate-y-2">
+            <div className="flex flex-col min-w-[280px] sm:min-w-[320px] lg:min-w-0 snap-center shrink-0 rounded-[2rem] bg-[#00102e] p-6 sm:p-8 text-white shadow-2xl shadow-[#00102e]/20 transition-transform hover:-translate-y-2">
               <div className="flex items-start justify-between">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
                   <FileText className="h-6 w-6" strokeWidth={1.5} />
@@ -164,7 +164,7 @@ export default function HomePage() {
             </div>
 
             {/* Card 2: Lawyer Assisted */}
-            <div className="flex flex-col rounded-[2rem] bg-[#fffbf2] border border-[#d9a84e]/30 p-8 text-[#00102e] shadow-xl shadow-[#d9a84e]/5 transition-transform hover:-translate-y-2">
+            <div className="flex flex-col min-w-[280px] sm:min-w-[320px] lg:min-w-0 snap-center shrink-0 rounded-[2rem] bg-[#fffbf2] border border-[#d9a84e]/30 p-6 sm:p-8 text-[#00102e] shadow-xl shadow-[#d9a84e]/5 transition-transform hover:-translate-y-2">
               <div className="flex items-start justify-between">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#986410] text-white">
                   <Scale className="h-6 w-6" strokeWidth={1.5} />
@@ -183,7 +183,7 @@ export default function HomePage() {
             </div>
 
             {/* Card 3: Review */}
-            <div className="flex flex-col rounded-[2rem] bg-white border border-slate-200 p-8 text-[#00102e] shadow-xl shadow-slate-200/50 transition-transform hover:-translate-y-2">
+            <div className="flex flex-col min-w-[280px] sm:min-w-[320px] lg:min-w-0 snap-center shrink-0 rounded-[2rem] bg-white border border-slate-200 p-6 sm:p-8 text-[#00102e] shadow-xl shadow-slate-200/50 transition-transform hover:-translate-y-2">
               <div className="flex items-start justify-between">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-[#00102e]">
                   <CheckCircle2 className="h-6 w-6" strokeWidth={1.5} />
@@ -247,7 +247,7 @@ export default function HomePage() {
             </div>
 
             {/* Services 3+3 grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 animate-fade-in-up delay-200">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 animate-fade-in-up delay-200">
               {[
                 { icon: FileText, title: "صياغة فورية بنفسك", desc: "اختر القالب، أجب عن الأسئلة، واستلم عقدك في دقائق.", link: "/create-contract?mode=self_service", cta: "ابدأ الآن" },
                 { icon: Users, title: "صياغة بواسطة محام", desc: "محامٍ مختص يصوغ لك عقداً احترافياً مخصصاً.", link: "/create-contract?mode=lawyer_assisted", cta: "اطلب الآن" },
@@ -256,14 +256,14 @@ export default function HomePage() {
                 { icon: FolderLock, title: "Z Draft Vault", desc: "خزنة عقودك الآمنة — احفظ وشارك وتحقق بسهولة.", link: "/contracts", cta: "اكتشف الآن" },
                 { icon: BarChart3, title: "عقود جاهزة للاستخدام", desc: "أكثر من 25 قالب عقد محدّث ومعتمد من خبرائنا.", link: "/create-contract?mode=self_service", cta: "تصفح القوالب" },
               ].map(({ icon: Icon, title, desc, link, cta }) => (
-                <Link key={title} href={link} className="group flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-lg hover:border-[#d9a84e]/40 hover:-translate-y-1 transition-all duration-300">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-500 group-hover:bg-[#fdf5e4] group-hover:text-[#986410] transition">
+                <Link key={title} href={link} className="group flex flex-col sm:flex-row items-start gap-3 sm:gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm hover:shadow-lg hover:border-[#d9a84e]/40 hover:-translate-y-1 transition-all duration-300">
+                  <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-500 group-hover:bg-[#fdf5e4] group-hover:text-[#986410] transition">
                     <Icon className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-[14px] font-black text-[#00102e]">{title}</h3>
-                    <p className="mt-1 text-[11px] font-medium text-slate-500 leading-relaxed">{desc}</p>
-                    <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-black text-[#986410]">
+                    <h3 className="text-xs sm:text-[14px] font-black text-[#00102e]">{title}</h3>
+                    <p className="mt-1 hidden sm:block text-[11px] font-medium text-slate-500 leading-relaxed">{desc}</p>
+                    <span className="mt-2 sm:mt-3 inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-[#986410]">
                       {cta} <ArrowLeft className="h-3 w-3" />
                     </span>
                   </div>

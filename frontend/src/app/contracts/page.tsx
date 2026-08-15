@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Clock3, FilePlus2, FileText, Loader2 } from "lucide-react";
@@ -122,10 +123,12 @@ export default function ContractsPage() {
               </Link>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
-              <FileText className="mx-auto h-9 w-9 text-slate-300" />
-              <p className="mt-3 text-sm font-black text-slate-600">لا توجد عقود في هذا القسم.</p>
-              <p className="mt-1 text-xs text-slate-400">يمكنك البدء في صياغة عقد جديد عبر الضغط على زر إنشاء عقد جديد.</p>
+            <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+              <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-slate-50 mb-6">
+                <Image src="/images/empty_contracts.jpg" alt="No contracts" width={100} height={100} className="opacity-80 mix-blend-multiply" />
+              </div>
+              <p className="text-base font-black text-[#00102e]">لا توجد عقود في هذا القسم.</p>
+              <p className="mt-2 text-sm text-slate-500">يمكنك البدء في صياغة عقد جديد عبر الضغط على زر إنشاء عقد جديد.</p>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
@@ -165,7 +168,7 @@ export default function ContractsPage() {
                     </div>
 
                     {/* Card Footer: Date & Contextual CTA */}
-                    <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-100 pt-3">
                       <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                         <Clock3 className="h-3.5 w-3.5 text-slate-400" />
                         <span>آخر تحديث: {formatDate(item.updatedAt)}</span>

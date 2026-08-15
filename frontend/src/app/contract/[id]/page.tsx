@@ -151,6 +151,33 @@ export default function ContractPage() {
 
   const platformFee = Number(item.original_price_egp || item.payment_amount_egp || 100);
 
+  let primaryMobileAction = null;
+  if (item.status === "pending_payment" && item.payment_status !== "pending_verification") {
+    primaryMobileAction = (
+      <button type="button" onClick={() => setPaymentOpen(true)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-4 py-3.5 text-sm font-black text-white shadow-md active:scale-95 transition">
+        <Upload className="h-4 w-4 text-[#d9a84e]" /> إرفاق إيصال الدفع
+      </button>
+    );
+  } else if (isSelfService && item.status === "client_review" && item.permissions.canFinalize) {
+    primaryMobileAction = (
+      <button type="button" disabled={busy} onClick={() => setFinalizeConfirmOpen(true)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-4 py-3.5 text-sm font-black text-white shadow-md active:scale-95 transition disabled:opacity-50">
+        <LockKeyhole className="h-4 w-4 text-[#d9a84e]" /> اعتماد النسخة النهائية
+      </button>
+    );
+  } else if (item.permissions.canDownloadPdf && item.pdf_status === "ready") {
+    primaryMobileAction = (
+      <a href={apiUrl(`/api/v1/contracts/${item.id}/pdf`)} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-4 py-3.5 text-sm font-black text-white shadow-md active:scale-95 transition">
+        <Download className="h-4 w-4 text-[#d9a84e]" /> تحميل ملف الـ PDF
+      </a>
+    );
+  } else if (item.status === "draft" && item.permissions.canEdit) {
+    primaryMobileAction = (
+      <Link href={`/wizard/${item.template_slug}?contractId=${item.id}`} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-4 py-3.5 text-sm font-black text-white shadow-md active:scale-95 transition">
+        <FilePenLine className="h-4 w-4 text-[#d9a84e]" /> متابعة الصياغة
+      </Link>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-[#f8fafc] text-right font-sans" dir="rtl">
       <Navbar />
@@ -617,6 +644,13 @@ export default function ContractPage() {
           </aside>
 
         </div>
+
+        {/* Mobile Sticky Action Bar */}
+        {primaryMobileAction && (
+          <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/80 p-4 border-t border-slate-200 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur-md sm:hidden pb-6">
+            {primaryMobileAction}
+          </div>
+        )}
       </main>
 
       <ActionDialog

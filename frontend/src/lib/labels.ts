@@ -134,7 +134,17 @@ export function getRequestNextAction(status: string): { label: string; actionTex
 
 export function formatDate(value?: string | null, withTime = true) {
   if (!value) return "غير محدد";
-  const date = new Date(value);
+  let date = new Date(value);
+
+  // Fallback for malformed demo API dates like '14T17:45:50.426Z-08-2026'
+  if (Number.isNaN(date.getTime())) {
+    const weirdMatch = value.match(/^(\d{1,2})T(.*?)-(\d{1,2})-(\d{4})$/);
+    if (weirdMatch) {
+      const [, d, t, m, y] = weirdMatch;
+      date = new Date(`${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T${t}`);
+    }
+  }
+
   if (Number.isNaN(date.getTime())) return value;
 
   const months = [

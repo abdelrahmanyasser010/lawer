@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Clock3, FileText, Loader2, Scale } from "lucide-react";
@@ -113,10 +114,12 @@ export default function RequestsPage() {
               </Link>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
-              <Scale className="mx-auto h-9 w-9 text-slate-300" />
-              <p className="mt-3 text-sm font-black text-slate-600">لا توجد طلبات في هذا القسم.</p>
-              <p className="mt-1 text-xs text-slate-400">يمكنك طلب مراجعة عقد جديد أو استشارة من القائمة العلوية.</p>
+            <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+              <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-slate-50 mb-6">
+                <Image src="/images/empty_requests.jpg" alt="No requests" width={100} height={100} className="opacity-80 mix-blend-multiply" />
+              </div>
+              <p className="text-base font-black text-[#00102e]">لا توجد طلبات في هذا القسم.</p>
+              <p className="mt-2 text-sm text-slate-500">يمكنك طلب مراجعة عقد جديد أو استشارة من القائمة العلوية.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -184,14 +187,14 @@ export default function RequestsPage() {
                     </div>
 
                     {/* Bottom Details Row */}
-                    <div className="mt-4 flex flex-wrap items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
+                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
                       <div className="flex items-center gap-1.5 text-slate-500 font-medium">
                         <Clock3 className="h-3.5 w-3.5 text-slate-400" />
                         <span>آخر تحديث: {formatDate(item.updatedAt || item.lastUpdate)}</span>
                       </div>
 
                       {item.deliverablesCount > 0 && (
-                        <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-black text-emerald-700">
+                        <span className="inline-flex w-fit items-center justify-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-black text-emerald-700">
                           {item.deliverablesCount} ملف متاح للتحميل
                         </span>
                       )}
