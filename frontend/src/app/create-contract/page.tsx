@@ -175,7 +175,7 @@ function CreateContractContent() {
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#00102e] text-[#d9a84e]"><Icon className="h-4 w-4" /></div>
                   <div><h2 className="text-xl font-black text-[#00102e]">{meta.title}</h2><p className="mt-1 text-xs leading-6 text-slate-500">{meta.subtitle}</p></div>
                 </header>
-                <div className="flex snap-x snap-mandatory overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 hide-scrollbar">
+                <div className="flex snap-x snap-mandatory overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 hide-scrollbar after:content-[''] after:w-px after:shrink-0">
                   {variants.map((variant) => (
                     <VariantCard key={variant.key} mode={mode} template={template} variant={variant} onChoose={() => choose(template, variant)} />
                   ))}
@@ -199,28 +199,28 @@ function VariantCard({ mode, template, variant, onChoose }: { mode: CatalogMode;
   const remaining = total > 0 ? Math.max(0, total - deposit) : 0;
   const disabled = mode === "lawyer_assisted" ? total <= 0 : selfPrice <= 0;
   return (
-    <article className="flex min-h-[240px] w-[260px] sm:min-h-[260px] shrink-0 snap-center sm:w-auto sm:shrink sm:snap-align-none flex-col rounded-2xl border border-slate-200 bg-white p-5 sm:p-[24px] transition hover:border-[#d9a84e]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-[#00102e]"><FileText className="h-5 w-5" /></div>
+    <article className="flex min-h-[220px] w-[200px] sm:min-h-[260px] shrink-0 snap-center sm:w-auto sm:shrink sm:snap-align-none flex-col rounded-2xl border border-slate-200 bg-white p-4 sm:p-[24px] transition hover:border-[#d9a84e]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-slate-100 text-[#00102e]"><FileText className="h-4 w-4 sm:h-5 sm:w-5" /></div>
         {mode === "self_service" ? (
-          selfPrice > 0 ? <div className="text-left"><span className="block text-[10px] font-bold text-slate-400">السعر</span><strong className="text-lg font-black text-[#00102e]">{selfPrice.toLocaleString("ar-EG")} ج.م</strong></div> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700">السعر غير محدد</span>
+          selfPrice > 0 ? <div className="text-left"><span className="block text-[9px] sm:text-[10px] font-bold text-slate-400">السعر</span><strong className="text-sm sm:text-lg font-black text-[#00102e]">{selfPrice.toLocaleString("ar-EG")} ج.م</strong></div> : <span className="rounded-full bg-amber-50 px-2 py-1 text-[9px] font-black text-amber-700">السعر غير محدد</span>
         ) : total > 0 ? (
-          <div className="text-left"><span className="block text-[10px] font-bold text-slate-400">السعر الكامل</span><strong className="text-lg font-black text-[#00102e]">{total.toLocaleString("ar-EG")} ج.م</strong></div>
-        ) : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700">السعر غير محدد</span>}
+          <div className="text-left"><span className="block text-[9px] sm:text-[10px] font-bold text-slate-400">السعر الكامل</span><strong className="text-sm sm:text-lg font-black text-[#00102e]">{total.toLocaleString("ar-EG")} ج.م</strong></div>
+        ) : <span className="rounded-full bg-amber-50 px-2 py-1 text-[9px] font-black text-amber-700">السعر غير محدد</span>}
       </div>
-      <h3 className="mt-4 text-lg font-black text-[#00102e]">{variant.nameAr}</h3>
-      <p className="mt-2 text-xs leading-6 text-slate-600">{meta.help || variant.description}</p>
-      <div className="mt-3 flex flex-wrap gap-1.5">{meta.tags.map((tag) => <span key={tag} className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">{tag}</span>)}</div>
+      <h3 className="mt-3 sm:mt-4 text-sm sm:text-lg font-black text-[#00102e]">{variant.nameAr}</h3>
+      <p className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs leading-5 sm:leading-6 text-slate-600">{meta.help || variant.description}</p>
+      <div className="mt-2.5 sm:mt-3 flex flex-wrap gap-1.5">{meta.tags.map((tag) => <span key={tag} className="rounded-full bg-slate-100 px-2 py-1 text-[9px] sm:text-[10px] font-bold text-slate-600">{tag}</span>)}</div>
       {mode === "lawyer_assisted" && total > 0 && (
-        <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-[#986410]/15 bg-[#986410]/5 p-3 text-[10px]">
-          <div><span className="block text-slate-500">العربون الآن</span><strong className="mt-0.5 block text-sm font-black text-[#986410]">{deposit.toLocaleString("ar-EG")} ج.م</strong></div>
-          <div><span className="block text-slate-500">المتبقي</span><strong className="mt-0.5 block text-sm font-black text-[#00102e]">{remaining.toLocaleString("ar-EG")} ج.م</strong></div>
+        <div className="mt-3 sm:mt-4 grid grid-cols-2 gap-2 rounded-xl border border-[#986410]/15 bg-[#986410]/5 p-2 sm:p-3 text-[9px] sm:text-[10px]">
+          <div><span className="block text-slate-500">العربون الآن</span><strong className="mt-0.5 block text-xs sm:text-sm font-black text-[#986410]">{deposit.toLocaleString("ar-EG")} ج.م</strong></div>
+          <div><span className="block text-slate-500">المتبقي</span><strong className="mt-0.5 block text-xs sm:text-sm font-black text-[#00102e]">{remaining.toLocaleString("ar-EG")} ج.م</strong></div>
         </div>
       )}
-      <button type="button" disabled={disabled} onClick={onChoose} className="mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-4 py-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300">
-        {disabled ? "انتظر تحديد السعر" : mode === "self_service" ? "ابدأ إعداد العقد" : "اطلب إعداد العقد"}<ArrowLeft className="h-4 w-4" />
+      <button type="button" disabled={disabled} onClick={onChoose} className="mt-4 sm:mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-3 py-2.5 sm:px-4 sm:py-3 text-[11px] sm:text-xs font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300">
+        {disabled ? "انتظر تحديد السعر" : mode === "self_service" ? "ابدأ إعداد العقد" : "اطلب إعداد العقد"}<ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
       </button>
-      {mode === "lawyer_assisted" && <p className="mt-2 text-center text-[9px] leading-4 text-slate-400">ترفع مستندات العقد أولًا، ثم يبدأ المكتب المراجعة بعد اعتماد العربون.</p>}
+      {mode === "lawyer_assisted" && <p className="mt-2 text-center text-[8px] sm:text-[9px] leading-4 text-slate-400">ترفع مستندات العقد أولًا، ثم يبدأ المكتب المراجعة بعد اعتماد العربون.</p>}
     </article>
   );
 }

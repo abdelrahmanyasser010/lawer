@@ -105,7 +105,7 @@ function renderScalarControl(
       min={field.validation?.min}
       max={field.validation?.max}
       className={inputClass}
-      dir={type === "number" || type === "date" ? "ltr" : undefined}
+      dir={type === "number" ? "ltr" : undefined}
     />
   );
 }
@@ -170,7 +170,7 @@ function RepeaterRenderer({
                     value={String(row[column.key] ?? "")}
                     onChange={(event: ChangeEvent<HTMLInputElement>) => updateRow(index, column.key, event.target.value)}
                     placeholder={column.placeholder}
-                    dir={column.type === "date" || column.type === "number" || column.type === "money" ? "ltr" : undefined}
+                    dir={column.type === "number" || column.type === "money" ? "ltr" : undefined}
                     className={inputClass}
                   />
                 )}

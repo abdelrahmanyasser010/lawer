@@ -30,7 +30,7 @@ export default function HomePage() {
 
               {/* Text Side (Right) */}
               <div className="text-right z-30">
-                <h1 className="text-[32px] font-black leading-[1.4] text-[#00102e] sm:text-[40px] lg:text-[48px] tracking-tight">
+                <h1 className="text-[26px] font-black leading-[1.4] text-[#00102e] sm:text-[40px] lg:text-[48px] tracking-tight">
                   صياغة قانونية موثوقة،
                   <br />
                   <span className="bg-gradient-to-l from-[#986410] via-[#d9a84e] to-[#986410] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x">
@@ -38,7 +38,7 @@ export default function HomePage() {
                   </span>
                 </h1>
 
-                <p className="mt-6 max-w-lg text-[14px] font-bold leading-[1.8] text-slate-500">
+                <p className="mt-4 sm:mt-6 max-w-lg text-[12px] sm:text-[14px] font-bold leading-[1.8] text-slate-500">
                   المنصة الأولى لإعداد العقود الذكية وتقديم الاستشارات القانونية. احصل على عقودك جاهزة في دقائق، أو اعتمد على نخبة من المحامين المختصين لضمان حماية حقوقك بأعلى المعايير.
                 </p>
 
@@ -59,7 +59,7 @@ export default function HomePage() {
               </div>
 
               {/* Mockup Side (Left) */}
-              <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-none animate-fade-in-up delay-200">
+              <div className="relative mx-auto w-[75%] max-w-[260px] sm:w-full sm:max-w-md lg:mx-0 lg:max-w-none animate-fade-in-up delay-200 mt-12 lg:mt-0">
                 {/* Decorative background shape */}
                 <div className="absolute -inset-4 z-0 rounded-[3rem] bg-[#00102e] transform rotate-[-3deg] shadow-2xl" />
                 <div className="absolute -inset-4 z-0 rounded-[3rem] bg-[#001a42] transform rotate-[3deg] opacity-50" />
@@ -142,62 +142,62 @@ export default function HomePage() {
           2. OVERLAPPING MODE CARDS
         */}
         <section className="relative z-20 mx-auto max-w-6xl px-4 sm:px-6 -mt-32 sm:-mt-36 animate-fade-in-up delay-300">
-          <div className="flex snap-x snap-mandatory overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-3 gap-4 lg:gap-6 hide-scrollbar">
+          <div className="flex snap-x snap-mandatory overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-3 gap-4 lg:gap-6 hide-scrollbar after:content-[''] after:w-px after:shrink-0">
 
             {/* Card 1: Self Service */}
-            <div className="flex flex-col min-w-[280px] sm:min-w-[320px] lg:min-w-0 snap-center shrink-0 rounded-[2rem] bg-[#00102e] p-6 sm:p-8 text-white shadow-2xl shadow-[#00102e]/20 transition-transform hover:-translate-y-2">
+            <div className="flex flex-col w-[170px] min-w-[170px] sm:min-w-[320px] lg:min-w-0 snap-center shrink-0 rounded-2xl sm:rounded-[2rem] bg-[#00102e] p-5 sm:p-8 text-white shadow-2xl shadow-[#00102e]/20 transition-transform hover:-translate-y-2">
               <div className="flex items-start justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
-                  <FileText className="h-6 w-6" strokeWidth={1.5} />
+                <div className="flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-white/10 text-white">
+                  <FileText className="h-4 w-4 sm:h-6 sm:w-6" strokeWidth={1.5} />
                 </div>
-                <span className="rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-black text-white uppercase">
+                <span className="rounded-full bg-white/10 px-2 sm:px-3 py-1 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-white uppercase">
                   الأسرع والأوفر
                 </span>
               </div>
-              <h3 className="mt-8 text-[22px] font-black">صياغة فورية بنفسي</h3>
-              <p className="mt-4 text-[13px] font-medium leading-[1.8] text-slate-300">
+              <h3 className="mt-4 sm:mt-8 text-sm sm:text-[22px] font-black">صياغة فورية بنفسي</h3>
+              <p className="mt-2 sm:mt-4 text-[9px] sm:text-[13px] font-medium leading-[1.6] sm:leading-[1.8] text-slate-300">
                 اختر القالب، املأ البيانات بنفسك، وشاهد العقد يتكون أمامك خطوة بخطوة قبل الاعتماد والتوقيع.
               </p>
-              <Link href="/create-contract?mode=self_service" className="mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#d9a84e] text-[13px] font-black text-[#00102e] transition hover:bg-white">
-                ابدأ الصياغة الآن <ArrowLeft className="h-4 w-4" />
+              <Link href="/create-contract?mode=self_service" className="mt-auto pt-4 sm:pt-8 flex h-10 sm:h-12 w-full items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-[#d9a84e] text-[10px] sm:text-[13px] font-black text-[#00102e] transition hover:bg-white">
+                ابدأ الصياغة <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
               </Link>
             </div>
 
             {/* Card 2: Lawyer Assisted */}
-            <div className="flex flex-col min-w-[280px] sm:min-w-[320px] lg:min-w-0 snap-center shrink-0 rounded-[2rem] bg-[#fffbf2] border border-[#d9a84e]/30 p-6 sm:p-8 text-[#00102e] shadow-xl shadow-[#d9a84e]/5 transition-transform hover:-translate-y-2">
+            <div className="flex flex-col w-[170px] min-w-[170px] sm:min-w-[320px] lg:min-w-0 snap-center shrink-0 rounded-2xl sm:rounded-[2rem] bg-[#fffbf2] border border-[#d9a84e]/30 p-5 sm:p-8 text-[#00102e] shadow-xl shadow-[#d9a84e]/5 transition-transform hover:-translate-y-2">
               <div className="flex items-start justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#986410] text-white">
-                  <Scale className="h-6 w-6" strokeWidth={1.5} />
+                <div className="flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-[#986410] text-white">
+                  <Scale className="h-4 w-4 sm:h-6 sm:w-6" strokeWidth={1.5} />
                 </div>
-                <span className="rounded-full bg-[#fdf5e4] px-3 py-1.5 text-[10px] font-black text-[#986410] uppercase border border-[#d9a84e]/30">
+                <span className="rounded-full bg-[#fdf5e4] px-2 sm:px-3 py-1 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-[#986410] uppercase border border-[#d9a84e]/30">
                   للحالات المعقدة
                 </span>
               </div>
-              <h3 className="mt-8 text-[22px] font-black">إعداد بواسطة محام</h3>
-              <p className="mt-4 text-[13px] font-medium leading-[1.8] text-slate-600">
+              <h3 className="mt-4 sm:mt-8 text-sm sm:text-[22px] font-black">إعداد بواسطة محام</h3>
+              <p className="mt-2 sm:mt-4 text-[9px] sm:text-[13px] font-medium leading-[1.6] sm:leading-[1.8] text-slate-600">
                 ارفع المستندات، واطلب من محامي متخصص إعداد عقد مفصل ومخصص يحمي كافة حقوقك القانونية.
               </p>
-              <Link href="/create-contract?mode=lawyer_assisted" className="mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] text-[13px] font-black text-white transition hover:bg-[#001a42]">
-                اطلب محامي <ArrowLeft className="h-4 w-4" />
+              <Link href="/create-contract?mode=lawyer_assisted" className="mt-auto pt-4 sm:pt-8 flex h-10 sm:h-12 w-full items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-[#00102e] text-[10px] sm:text-[13px] font-black text-white transition hover:bg-[#001a42]">
+                اطلب محامي <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
               </Link>
             </div>
 
             {/* Card 3: Review */}
-            <div className="flex flex-col min-w-[280px] sm:min-w-[320px] lg:min-w-0 snap-center shrink-0 rounded-[2rem] bg-white border border-slate-200 p-6 sm:p-8 text-[#00102e] shadow-xl shadow-slate-200/50 transition-transform hover:-translate-y-2">
+            <div className="flex flex-col w-[170px] min-w-[170px] sm:min-w-[320px] lg:min-w-0 snap-center shrink-0 rounded-2xl sm:rounded-[2rem] bg-white border border-slate-200 p-5 sm:p-8 text-[#00102e] shadow-xl shadow-slate-200/50 transition-transform hover:-translate-y-2">
               <div className="flex items-start justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-[#00102e]">
-                  <CheckCircle2 className="h-6 w-6" strokeWidth={1.5} />
+                <div className="flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-slate-50 text-[#00102e]">
+                  <CheckCircle2 className="h-4 w-4 sm:h-6 sm:w-6" strokeWidth={1.5} />
                 </div>
-                <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-black text-slate-500 uppercase">
+                <span className="rounded-full bg-slate-100 px-2 sm:px-3 py-1 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-slate-500 uppercase">
                   حماية قبل التوقيع
                 </span>
               </div>
-              <h3 className="mt-8 text-[22px] font-black">مراجعة عقد قائم</h3>
-              <p className="mt-4 text-[13px] font-medium leading-[1.8] text-slate-500">
+              <h3 className="mt-4 sm:mt-8 text-sm sm:text-[22px] font-black">مراجعة عقد قائم</h3>
+              <p className="mt-2 sm:mt-4 text-[9px] sm:text-[13px] font-medium leading-[1.6] sm:leading-[1.8] text-slate-500">
                 لا توقع قبل المراجعة. ارفع العقد واحصل على تقرير قانوني بالمخاطر والبنود المجحفة التي تحتاج تعديل.
               </p>
-              <Link href="/request-review" className="mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-[13px] font-black text-[#00102e] transition hover:bg-slate-50">
-                اطلب مراجعة <ArrowLeft className="h-4 w-4" />
+              <Link href="/request-review" className="mt-auto pt-4 sm:pt-8 flex h-10 sm:h-12 w-full items-center justify-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-white text-[10px] sm:text-[13px] font-black text-[#00102e] transition hover:bg-slate-50">
+                اطلب مراجعة <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
               </Link>
             </div>
 

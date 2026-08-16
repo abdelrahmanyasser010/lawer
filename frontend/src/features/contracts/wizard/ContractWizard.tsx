@@ -1139,12 +1139,12 @@ export default function WizardPage() {
         </div>
 
         {/* Steps Progress */}
-        <div className="flex items-center gap-1 mb-8 overflow-x-auto pb-2">
+        <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2 hide-scrollbar">
           {progressSteps.map((s, i) => (
             <React.Fragment key={s.step}>
               <button
                 onClick={() => setCurrentStep(s.step)}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-center transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex shrink-0 flex-col items-center gap-1 px-3 py-2 rounded-xl text-center transition-all cursor-pointer whitespace-nowrap ${
                   currentStep === s.step
                     ? "bg-[#00102e] text-white shadow-md"
                     : currentStep > s.step
@@ -1152,14 +1152,14 @@ export default function WizardPage() {
                     : "bg-white text-slate-400 border border-slate-200"
                 }`}
               >
-                <span className={`text-[10px] font-extrabold rounded-full w-5 h-5 flex items-center justify-center ${
+                <span className={`text-[10px] font-extrabold rounded-full w-5 h-5 shrink-0 flex items-center justify-center ${
                   currentStep === s.step ? "bg-[#986410] text-white" : currentStep > s.step ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-500"
                 }`}>{s.step}</span>
                 <span className="hidden text-[10px] font-bold leading-tight sm:block">{s.label}</span>
                 <span className="hidden text-[9px] opacity-70 sm:block">{s.articleRange}</span>
               </button>
               {i < progressSteps.length - 1 && (
-                <div className={`h-0.5 flex-1 min-w-[20px] rounded-full ${currentStep > s.step ? "bg-emerald-400" : "bg-slate-200"}`} />
+                <div className={`h-0.5 flex-1 min-w-[12px] shrink-0 rounded-full ${currentStep > s.step ? "bg-emerald-400" : "bg-slate-200"}`} />
               )}
             </React.Fragment>
           ))}
