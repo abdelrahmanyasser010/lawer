@@ -7,15 +7,15 @@
   "variantPricing": {
     "preliminary_sale": {
       "selfServicePriceEgp": 139,
-      "lawyerAssistedPriceEgp": 0
+      "lawyerAssistedPriceEgp": 999
     },
     "registrable_sale": {
       "selfServicePriceEgp": 139,
-      "lawyerAssistedPriceEgp": 0
+      "lawyerAssistedPriceEgp": 999
     },
     "inherited_sale": {
       "selfServicePriceEgp": 139,
-      "lawyerAssistedPriceEgp": 0
+      "lawyerAssistedPriceEgp": 999
     }
   },
   "variants": [

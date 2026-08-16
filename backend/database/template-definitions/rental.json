@@ -7,15 +7,15 @@
   "variantPricing": {
     "residential_lease": {
       "selfServicePriceEgp": 59,
-      "lawyerAssistedPriceEgp": 0
+      "lawyerAssistedPriceEgp": 599
     },
     "commercial_lease": {
       "selfServicePriceEgp": 59,
-      "lawyerAssistedPriceEgp": 0
+      "lawyerAssistedPriceEgp": 599
     },
     "administrative_lease": {
       "selfServicePriceEgp": 59,
-      "lawyerAssistedPriceEgp": 0
+      "lawyerAssistedPriceEgp": 599
     }
   },
   "variants": [

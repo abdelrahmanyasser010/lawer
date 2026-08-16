@@ -7,15 +7,15 @@
   "variantPricing": {
     "visual_identity_design": {
       "selfServicePriceEgp": 59,
-      "lawyerAssistedPriceEgp": 0
+      "lawyerAssistedPriceEgp": 499
     },
     "website_development": {
       "selfServicePriceEgp": 59,
-      "lawyerAssistedPriceEgp": 0
+      "lawyerAssistedPriceEgp": 499
     },
     "social_media_management": {
       "selfServicePriceEgp": 59,
-      "lawyerAssistedPriceEgp": 0
+      "lawyerAssistedPriceEgp": 499
     }
   },
   "variants": [

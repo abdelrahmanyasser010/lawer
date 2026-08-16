@@ -11,10 +11,9 @@ type Setting = { key:string; value:unknown; isSecret:boolean; updatedAt:string }
 type Toast = { kind:"success"|"error"; text:string } | null;
 
 const servicePriceDefs = [
-  { key:"services.consultation.fee_egp", label:"سعر الاستشارة القانونية (الإجمالي)", description:"المبلغ الكامل المطلوب لقيمة الاستشارة.", icon:MessageSquareText },
-  { key:"services.consultation.deposit_egp", label:"عربون حجز الاستشارة", description:"المبلغ المطلوب دفعه كعربون مبدئي لحجز موعد الاستشارة.", icon:MessageSquareText },
-  { key:"services.contract_review.deposit_egp", label:"عربون مراجعة العقد", description:"المبلغ المطلوب دفعه كعربون مبدئي عند طلب مراجعة عقد قائم.", icon:BriefcaseBusiness },
-  { key:"services.contract_drafting.deposit_egp", label:"العربون الموحد لإعداد عقد بواسطة المحامي", description:"العربون الذي يدفعه العميل عند طلب صياغة عقد بواسطة محامي المكتب.", icon:BriefcaseBusiness },
+  { key:"services.consultation.fee_egp", label:"إجمالي مراجعة العقد", description:"المبلغ الكامل المطلوب لقيمة مراجعة العقد.", icon:MessageSquareText },
+  { key:"services.consultation.deposit_egp", label:"عربون مراجعة العقد", description:"المبلغ المطلوب دفعه كعربون مبدئي لحجز موعد المراجعة.", icon:MessageSquareText },
+  { key:"services.contract_drafting.deposit_egp", label:"عربون إعداد عقد بواسطة محامي", description:"العربون الموحد الذي يدفعه العميل عند طلب صياغة عقد بواسطة محامي المكتب.", icon:BriefcaseBusiness },
 ] as const;
 
 function parseMoney(value:string) { const clean=value.replace(/[^0-9.]/g,""); const n=Number(clean); return Number.isFinite(n)&&n>=0?n:0; }
@@ -79,7 +78,7 @@ export default function PricingPage() {
   if(error&&!templates.length&&!settings.length)return <div className="p-8"><PageError message={error} onRetry={load}/></div>;
 
   return <div className="mx-auto max-w-7xl space-y-5 p-5 sm:p-7">
-    <header className="border-b border-slate-200 pb-4"><div className="flex items-center gap-2 text-[#986410]"><Tag className="h-4 w-4"/><span className="text-[11px] font-black">مركز التسعير</span></div><h1 className="mt-1 text-2xl font-black text-[#00102e]">أسعار العقود الفرعية</h1><p className="mt-1 text-xs text-slate-500">9 عقود فرعية × مسارين = 18 سعرًا مستقلًا. لا يوجد سعر عام للإيجار أو البيع أو العمل الحر؛ السعر مرتبط بالعقد الفرعي نفسه. العربون موحد لمسار المحامي ويُخصم من السعر الكامل.</p></header>
+    <header className="border-b border-slate-200 pb-4"><div className="flex items-center gap-2 text-[#986410]"><Tag className="h-4 w-4"/><span className="text-[11px] font-black">مركز التسعير</span></div><h1 className="mt-1 text-2xl font-black text-[#00102e]">أسعار العقود الفرعية</h1></header>
     {error&&<div className="rounded-xl bg-red-50 p-3 text-xs font-bold text-red-700">{error}</div>}
 
     <section className="grid gap-3 md:grid-cols-2">
@@ -94,7 +93,7 @@ export default function PricingPage() {
             const self=variantDraft[keyOf(template.id,variant.key,"self")]??"0";
             const lawyer=variantDraft[keyOf(template.id,variant.key,"lawyer")]??"0";
             const total=parseMoney(lawyer); const effectiveDeposit=Math.min(lawyerDeposit,total||lawyerDeposit); const remaining=total>0?Math.max(0,total-effectiveDeposit):0;
-            return <div key={variant.key} className="grid items-center gap-3 px-4 py-3 lg:grid-cols-[minmax(240px,1fr)_170px_170px_190px]">
+            return <div key={variant.key} className="grid items-center gap-4 px-4 py-3 lg:grid-cols-[minmax(200px,1fr)_120px_120px_180px]">
               <div><h3 className="text-xs font-black text-[#00102e]">{variant.nameAr}</h3><p className="mt-0.5 line-clamp-2 text-[9px] leading-4 text-slate-500">{variant.description}</p></div>
               <MoneyInput label="إعداد ذاتي" compact value={self} onChange={value=>setVariantDraft(old=>({...old,[keyOf(template.id,variant.key,"self")]:value}))}/>
               <MoneyInput label="بواسطة محامي" compact value={lawyer} onChange={value=>setVariantDraft(old=>({...old,[keyOf(template.id,variant.key,"lawyer")]:value}))}/>
@@ -110,4 +109,4 @@ export default function PricingPage() {
   </div>;
 }
 
-function MoneyInput({value,onChange,label="السعر",compact=false}:{value:string;onChange:(value:string)=>void;label?:string;compact?:boolean}){return <label className="block text-[9px] font-black text-slate-500">{label}<div className="relative mt-1"><input type="text" inputMode="decimal" value={value} onChange={e=>onChange(e.target.value.replace(/[^0-9.]/g,""))} className={`w-full rounded-xl border border-slate-200 bg-white pr-3 pl-12 font-black text-[#00102e] outline-none focus:border-[#986410] ${compact?"py-2 text-sm":"py-3 text-lg"}`}/><span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400">ج.م</span></div></label>;}
+function MoneyInput({value,onChange,label="السعر",compact=false}:{value:string;onChange:(value:string)=>void;label?:string;compact?:boolean}){return <label className="block text-[10px] font-black text-slate-500 text-center">{label}<div className="relative mt-2"><input type="text" inputMode="decimal" value={value} onChange={e=>onChange(e.target.value.replace(/[^0-9.]/g,""))} className={`w-full rounded-xl border border-slate-200 bg-white pr-3 pl-10 text-center font-black text-[#00102e] outline-none focus:border-[#986410] transition-colors ${compact?"py-2 text-sm":"py-3 text-lg"}`}/><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">ج.م</span></div></label>;}

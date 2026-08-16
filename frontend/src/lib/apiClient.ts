@@ -82,6 +82,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     if (token) headers.set("X-CSRF-Token", token);
   }
   const response = await fetch(apiUrl(path), {
+    cache: "no-store",
     ...init,
     headers,
     credentials: "include",
