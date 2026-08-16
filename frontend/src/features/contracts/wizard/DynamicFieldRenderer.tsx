@@ -88,7 +88,7 @@ function renderScalarControl(
           onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.checked)}
           className="mt-0.5 h-4 w-4 accent-[#986410]"
         />
-        <span className={`text-xs font-bold leading-6 ${field.required ? "text-[#c66b22]" : "text-slate-700"}`}>
+        <span className={`text-[10px] font-bold leading-6 ${field.required ? "text-[#c66b22]" : "text-slate-700"}`}>
           {field.labelAr} {field.required && <span aria-label="إلزامي">*</span>}
         </span>
       </label>
@@ -104,8 +104,8 @@ function renderScalarControl(
       placeholder={field.placeholder}
       min={field.validation?.min}
       max={field.validation?.max}
-      className={inputClass}
-      dir={type === "number" ? "ltr" : undefined}
+      className={`${inputClass} ${(type === "number" || type === "date") ? "text-right" : ""}`}
+      dir={type === "number" || type === "date" ? "ltr" : undefined}
     />
   );
 }

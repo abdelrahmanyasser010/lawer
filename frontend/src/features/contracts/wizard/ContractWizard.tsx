@@ -173,15 +173,15 @@ export default function WizardPage() {
       draft.selectedOptionalClauseKeys,
       draft.fieldValues,
     );
-  }, [draft?.fieldValues, draft?.selectedOptionalClauseKeys, draft?.variantKey, templateDefinition]);
+  }, [draft, templateDefinition]);
 
-  const activeSteps = resolvedWizard?.steps ?? [];
-  const progressSteps = activeSteps.map((step, index) => ({
+  const activeSteps = useMemo(() => resolvedWizard?.steps ?? [], [resolvedWizard]);
+  const progressSteps = useMemo(() => activeSteps.map((step, index) => ({
     step: index + 1,
     key: step.key,
     label: step.titleAr,
     articleRange: step.articleRange ?? "",
-  }));
+  })), [activeSteps]);
   const currentStepKey = draft?.currentStepKey ?? activeSteps[0]?.key ?? "";
   const currentStepIndex = Math.max(0, activeSteps.findIndex((step) => step.key === currentStepKey));
   const currentStep = activeSteps.length > 0 ? currentStepIndex + 1 : 1;
@@ -192,20 +192,8 @@ export default function WizardPage() {
     () => resolvedWizard?.steps.flatMap((step) => step.fields.filter((field) => field.required)) ?? [],
     [resolvedWizard],
   );
-  const completionCompletedCount = useMemo(() => {
-    if (!draft) return 0;
-    return progressRequiredFields.filter((item) => {
-      if (item.type === "attachment") return (draft.attachmentRefs?.[item.key]?.length ?? 0) > 0;
-      if (!touchedFieldKeys.has(item.key)) return false;
-      const value = draft.fieldValues[item.key];
-      if (Array.isArray(value)) return value.length > 0;
-      if (typeof value === "boolean") return true;
-      return value !== undefined && value !== null && String(value).trim() !== "";
-    }).length;
-  }, [draft, progressRequiredFields, touchedFieldKeys]);
-  const completionPercent = progressRequiredFields.length === 0
-    ? 0
-    : Math.round((completionCompletedCount / progressRequiredFields.length) * 100);
+
+
   const displaySerial = draft?.serialNumber || "رقم المسودة يظهر بعد الحفظ";
 
   const setCurrentStep = (next: number | ((previous: number) => number)) => {
@@ -222,9 +210,8 @@ export default function WizardPage() {
     }
   }, [activeSteps, contractSlug, draft, setStoredStepKey]);
 
-  const [uploads, setUploads] = useState<Record<string, string>>({});
-  const [uploadPreviews, setUploadPreviews] = useState<Record<string, string[]>>({});
-  const [uploadingField, setUploadingField] = useState<string | null>(null);
+
+
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
 
@@ -246,20 +233,7 @@ export default function WizardPage() {
     };
   }, [draft?.updatedAt]);
 
-  useEffect(() => {
-    if (!draft?.attachmentRefs) return;
-    setUploads(
-      Object.fromEntries(
-        Object.entries(draft.attachmentRefs as Record<string, string[]>).map(([key, refs]) => [key, refs.length ? `${refs.length} ملف مرفوع` : ""]),
-      ),
-    );
-  }, [draft?.attachmentRefs]);
 
-  useEffect(() => {
-    return () => {
-      (Object.values(uploadPreviews).flat() as string[]).forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [uploadPreviews]);
 
   const selectedVariantDefinition = templateDefinition?.variants.find((variant) => variant.key === draft?.variantKey);
   const contractTitle = selectedVariantDefinition?.documentTitleAr
@@ -277,15 +251,8 @@ export default function WizardPage() {
     return typeof v === "string" || typeof v === "number" ? v : "";
   };
 
-  const lockedCoreFieldKeys = new Set(backendContract?.coreIdentityFieldKeys ?? []);
+
   const coreIdentityLocked = Boolean(backendContract?.core_identity_locked || draft?.coreIdentityLocked);
-  const set = (key: string, value: WizardFormValue) => {
-    if (coreIdentityLocked && lockedCoreFieldKeys.has(key)) {
-      showNotice("هذه البيانات ثبتت بعد اعتماد الدفع. لطلب تصحيحها استخدم خدمة المراجعة أو تواصل مع المكتب.");
-      return;
-    }
-    setStoredFieldValue(contractSlug, key, value);
-  };
 
   const toggleOptionalClause = (clauseKey: string) => {
     if (coreIdentityLocked) {
@@ -296,55 +263,8 @@ export default function WizardPage() {
     toggleStoredOptionalClause(contractSlug, clauseKey, clauseDefinition?.defaultFieldValues);
   };
 
-  const salePaymentLabels: Record<string, string> = {
-    cash_full: "نقداً بالكامل",
-    bank_transfer: "تحويل بنكي",
-    down_payment_later: "دفعة مقدمة والباقي لاحقاً",
-    installments: "أقساط",
-  };
 
-  const registrationLabels: Record<string, string> = {
-    yes: "مسجل بالشهر العقاري",
-    no: "غير مسجل",
-    unknown: "لم يتم تحديد حالة التسجيل بعد",
-  };
 
-  const payerLabels: Record<string, string> = {
-    seller: "البائع",
-    buyer: "المشتري",
-    split: "مناصفة",
-    shared: "مناصفة",
-  };
-
-  const rentalSummaryArticles = draft?.variantKey === "commercial_lease"
-    ? [
-        "وصف الوحدة التجارية وملحقاتها وموقعها وواجهاتها والتجهيزات التابعة لها.",
-        "تحديد النشاط التجاري المرخص وعدم تغييره أو إضافة نشاط آخر دون موافقة.",
-        "مدة الإيجار والتجديد الكتابي والأجرة والتأمين وآلية السداد.",
-        "مسؤولية المستأجر عن التراخيص والدفاع المدني والسجل والبطاقة الضريبية.",
-        "تنظيم اللافتات والتجهيزات والمخزن والتحميل والتنزيل وساعات التشغيل.",
-        "المرافق والصيانة والتسليم والإخلاء والفسخ والإخطارات والاختصاص القضائي.",
-      ]
-    : draft?.variantKey === "administrative_lease"
-      ? [
-          "وصف المقر الإداري وموقعه داخل البرج أو المجمع وطبيعة استعماله.",
-          "تحديد النشاط الإداري أو المهني ومنع تحويله إلى نشاط تجاري أو سكني.",
-          "مدة الإيجار والأجرة والتأمين والزيادة وآلية السداد.",
-          "التراخيص ولوائح المبنى واستقبال الزوار واللافتات والتجهيزات.",
-          "المرافق والصيانة الجوهرية والبسيطة والتسليم والإخلاء.",
-          "الفسخ والقوة القاهرة والإخطارات والقانون والمحكمة المختصة.",
-        ]
-      : [
-          "وصف العين السكنية وملحقاتها وحالتها والغرض السكني المحدد.",
-          "مدة الإيجار والتجديد الكتابي والأجرة والتأمين وآلية السداد.",
-          "الصيانة البسيطة على المستأجر والصيانة الجوهرية على المؤجر.",
-          "المرافق والعدادات والخدمات المشتركة وتسوية المستحقات.",
-          "المحظورات والتأجير من الباطن والتسليم والإخلاء والفسخ.",
-          "القوة القاهرة والإخطارات والقانون والمحكمة والمرفقات.",
-        ];
-
-  const saleLabel = (value: WizardFormValue, labels: Record<string, string>, fallback = "لم يتم التحديد") =>
-    labels[String(value || "")] || fallback;
 
   const handleChangeVariant = () => {
     setActionDialog({
@@ -418,19 +338,7 @@ export default function WizardPage() {
   const dynamicValidationIssues = resolvedWizard && draft
     ? validateDynamicDefinition(resolvedWizard, draft)
     : [];
-  const freelancerDynamicIssues = contractSlug === "freelancer" ? dynamicValidationIssues : [];
-  const freelancerCompletionPercent = completionPercent;
-  const isFreelancerReadyForPayment = freelancerDynamicIssues.length === 0;
-  const rentalDynamicIssues = contractSlug === "rental" ? dynamicValidationIssues : [];
-  const missingRequiredItems = rentalDynamicIssues.map((item) => ({ key: item.fieldKey, label: item.labelAr, value: "" }));
-  const isContractReadyForPayment = missingRequiredItems.length === 0;
-  const rentalCompletionPercent = completionPercent;
-
-  const saleDynamicIssues = contractSlug === "apartment_sale" ? dynamicValidationIssues : [];
-  const saleMissingRequiredItems = saleDynamicIssues.map((item) => ({ key: item.fieldKey, label: item.labelAr, value: "" }));
-  const isSaleReadyForPayment = saleMissingRequiredItems.length === 0;
-  const saleCompletionPercent = completionPercent;
-
+  const isContractReadyForPayment = dynamicValidationIssues.length === 0;
 
   const persistDraft = async () => {
     if (!draft) throw new Error("لا توجد مسودة قابلة للحفظ");
@@ -442,55 +350,13 @@ export default function WizardPage() {
 
   const openCheckoutIfReady = async () => {
     if (!isContractReadyForPayment) {
-      showNotice(["يرجى استكمال البيانات المطلوبة قبل الدفع:", ...missingRequiredItems.map((item) => `- ${item.label}`)].join("\n"));
-      return;
-    }
-    if (!declarationAccepted) {
-      showNotice("يرجى الموافقة أولاً على إقرار صحة البيانات والمسؤولية القانونية ثم المتابعة للدفع.");
-      return;
-    }
-    try {
-      await persistDraft();
-      setIsCheckoutOpen(true);
-    } catch (caught) {
-      if (caught instanceof ApiClientError && caught.status === 401) {
-        router.push(`/login?next=/wizard/${contractSlug}`);
-        return;
-      }
-      showNotice(caught instanceof Error ? caught.message : "تعذر حفظ المسودة قبل الدفع");
-    }
-  };
-
-  const openSaleCheckoutIfReady = async () => {
-    if (!isSaleReadyForPayment) {
-      showNotice(["يرجى استكمال بيانات عقد البيع المطلوبة قبل الدفع:", ...saleMissingRequiredItems.map((item) => `- ${item.label}`)].join("\n"));
-      return;
-    }
-    if (!declarationAccepted) {
-      showNotice("يرجى الموافقة أولاً على إقرار صحة البيانات والمسؤولية القانونية ثم المتابعة للدفع.");
-      return;
-    }
-    try {
-      await persistDraft();
-      setIsCheckoutOpen(true);
-    } catch (caught) {
-      if (caught instanceof ApiClientError && caught.status === 401) {
-        router.push(`/login?next=/wizard/${contractSlug}`);
-        return;
-      }
-      showNotice(caught instanceof Error ? caught.message : "تعذر حفظ المسودة قبل الدفع");
-    }
-  };
-
-  const openFreelancerCheckoutIfReady = async () => {
-    if (!isFreelancerReadyForPayment) {
-      showNotice(["يرجى استكمال البيانات المطلوبة قبل الدفع:", ...freelancerDynamicIssues.map((item) => `- ${item.labelAr}`)].join("\n"));
-      const firstIssue = freelancerDynamicIssues[0];
+      showNotice(["يرجى استكمال البيانات المطلوبة قبل الدفع:", ...dynamicValidationIssues.map((item) => `- ${item.labelAr}`)].join("\n"));
+      const firstIssue = dynamicValidationIssues[0];
       if (firstIssue) setStoredStepKey(contractSlug, firstIssue.stepKey);
       return;
     }
     if (!declarationAccepted) {
-      showNotice("يرجى الموافقة على إقرار صحة البيانات قبل المتابعة للدفع.");
+      showNotice("يرجى الموافقة أولاً على إقرار صحة البيانات والمسؤولية القانونية ثم المتابعة للدفع.");
       return;
     }
     try {
@@ -505,115 +371,16 @@ export default function WizardPage() {
     }
   };
 
-  const uploadFilesForField = async (fieldKey: string, files: File[]) => {
-    if (files.length === 0) return;
-    setUploadingField(fieldKey);
-    setUploadPreviews((prev) => {
-      prev[fieldKey]?.forEach((url) => URL.revokeObjectURL(url));
-      return {
-        ...prev,
-        [fieldKey]: files
-          .filter((file) => file.type.startsWith("image/"))
-          .map((file) => URL.createObjectURL(file)),
-      };
-    });
-    try {
-      const uploaded = await Promise.all(
-        files.map(async (file) => {
-          const compressed = await compressUploadFile(file);
-          const body = new FormData();
-          body.append("file", compressed.file, compressed.file.name);
-          return apiRequest<{ id: number; fileName: string }>("/api/v1/attachments", { method: "POST", body });
-        }),
-      );
-      const fileNames = uploaded.map((item) => item.fileName);
-      setUploads((prev) => ({ ...prev, [fieldKey]: fileNames.join("، ") }));
-      setStoredAttachmentRefs(contractSlug, fieldKey, uploaded.map((item) => String(item.id)));
-      setStoredFieldValue(contractSlug, fieldKey, fileNames);
-    } catch (error) {
-      setUploads((prev) => ({ ...prev, [fieldKey]: "" }));
-      setStoredAttachmentRefs(contractSlug, fieldKey, []);
-      setStoredFieldValue(contractSlug, fieldKey, []);
-      showNotice(error instanceof Error ? error.message : "تعذر رفع الملفات. سجّل الدخول وتأكد من نوع الملف وحجمه ثم حاول مرة أخرى.");
-    } finally {
-      setUploadingField(null);
-    }
-  };
 
-  const handleFile = async (fieldKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    await uploadFilesForField(fieldKey, Array.from(e.target.files || []));
-  };
 
-  const renderDigitCounter = (val: string | number | undefined, expected: number) => {
-    const len = String(val || "").replace(/\D/g, "").length;
-    const isComplete = len === expected;
-    return (
-      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-mono font-bold mr-2 ${
-        isComplete
-          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-          : len > 0
-          ? "bg-amber-50 text-amber-700 border border-amber-200"
-          : "bg-slate-100 text-slate-500"
-      }`}>
-        {isComplete ? "✓ " : "⚠ "}
-        [{len}/{expected} رقماً]
-      </span>
-    );
-  };
 
-  const inputClass = "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-[#00102e] focus:outline-none focus:ring-1 focus:ring-[#986410]/30 transition-all";
-  const labelClass = "block text-xs font-bold text-slate-700 mb-1";
 
-  const uploadBox = (fieldKey: string, label: string, icon: React.ReactNode, optional = false, multiple = false) => {
-    const previews = uploadPreviews[fieldKey] || [];
-
-    return (
-    <label className={`cursor-pointer flex min-h-[118px] flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 text-center transition-all ${
-      uploads[fieldKey]
-        ? "border-emerald-300 bg-emerald-50"
-        : "border-slate-300 bg-slate-50 hover:bg-[#986410]/5 hover:border-[#986410]/40"
-    }`}>
-      <div className="mb-1">{icon}</div>
-      <span className="text-xs font-bold text-slate-800">{label}</span>
-      <span className="text-[10px] text-slate-500 mt-0.5">
-        {uploadingField === fieldKey ? "جاري الضغط والرفع..."
-          : uploads[fieldKey] ? <span className="text-emerald-700 font-bold">تم الرفع بنجاح</span>
-          : optional ? "اختياري — صورة أو PDF" : "إلزامي — صورة أو PDF"}
-      </span>
-      {uploads[fieldKey] && (
-        <span className="mt-2 max-w-full rounded-lg border border-emerald-200 bg-white px-2.5 py-1 text-[10px] font-bold text-emerald-800 break-all">
-          {uploads[fieldKey]}
-        </span>
-      )}
-      {previews.length > 0 && (
-        <div className={`mt-3 grid w-full gap-2 ${previews.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-          {previews.slice(0, 4).map((src, index) => (
-            <div key={src} className="relative overflow-hidden rounded-lg border border-emerald-200 bg-white">
-              <img
-                src={src}
-                alt={`${label} ${index + 1}`}
-                className="h-24 w-full object-cover"
-              />
-            </div>
-          ))}
-          {previews.length > 4 && (
-            <div className="flex h-24 items-center justify-center rounded-lg border border-emerald-200 bg-white text-[10px] font-black text-emerald-700">
-              +{previews.length - 4} صور أخرى
-            </div>
-          )}
-        </div>
-      )}
-      <input type="file" accept="image/*,.pdf" multiple={multiple} onChange={(e) => handleFile(fieldKey, e)} className="hidden" />
-    </label>
-    );
-  };
 
   const requiredAnnexKeys = new Set(selectedVariantDefinition?.requiredAnnexKeys ?? []);
   const selectedAnnexDefinitions = templateDefinition?.optionalClauses.filter(
     (clause) => (requiredAnnexKeys.has(clause.key) || Boolean(clause.requiredWhen && evaluateCondition(clause.requiredWhen, draft?.fieldValues ?? {})) || draft?.selectedOptionalClauseKeys.includes(clause.key)) && clause.outputMode === "separate_annex",
   ) ?? [];
 
-  const repeaterCount = (key: string) => Array.isArray(formData[key]) ? formData[key].length : 0;
 
   const renderSelectedAnnexCards = () => {
     if (selectedAnnexDefinitions.length === 0) return null;
@@ -646,47 +413,6 @@ export default function WizardPage() {
     <MobileWizardPreview open={isMobilePreviewOpen} onClose={() => setIsMobilePreviewOpen(false)} title={contractTitle} serial={displaySerial} contractDate={String(field("contract_date") || "")} court={String(field(mobileCourtKey) || "")} rows={mobilePreviewRows} annexes={selectedAnnexDefinitions.map((item) => item.documentTitleAr ?? item.nameAr)} />
   </>;
 
-
-  const renderPartyTypeSelector = (fieldKey: string, individualLabel: string, companyLabel: string) => (
-    <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <label className={labelClass}>صفة الطرف في العقد</label>
-      <div className="grid grid-cols-2 gap-2">
-        {[["individual", individualLabel], ["company", companyLabel]].map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => set(fieldKey, value)}
-            className={`rounded-xl border px-3 py-2 text-xs font-black transition-colors ${
-              field(fieldKey) === value
-                ? "border-[#986410] bg-[#986410]/10 text-[#986410]"
-                : "border-slate-200 bg-white text-slate-600"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderCompanyFields = (prefix: string, partyTypeField: string, representativeRole: string) => {
-    if (field(partyTypeField) !== "company") return null;
-    return (
-      <div className="mt-5 rounded-xl border border-[#986410]/20 bg-[#986410]/5 p-4">
-        <h4 className="mb-3 text-xs font-black text-[#00102e]">بيانات الشركة/المنشأة</h4>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <input className={inputClass} value={field(`${prefix}_company_name`)} onChange={e => set(`${prefix}_company_name`, e.target.value)} placeholder="اسم الشركة / المنشأة *" />
-          <input className={inputClass} value={field(`${prefix}_company_legal_form`)} onChange={e => set(`${prefix}_company_legal_form`, e.target.value)} placeholder="الشكل القانوني *" />
-          <input className={`${inputClass} text-left font-mono`} dir="ltr" value={field(`${prefix}_commercial_registry`)} onChange={e => set(`${prefix}_commercial_registry`, e.target.value)} placeholder="رقم السجل التجاري *" />
-          <input className={`${inputClass} text-left font-mono`} dir="ltr" value={field(`${prefix}_tax_card_number`)} onChange={e => set(`${prefix}_tax_card_number`, e.target.value)} placeholder="رقم البطاقة الضريبية *" />
-          <input className={inputClass} value={field(`${prefix}_legal_representative_name`)} onChange={e => set(`${prefix}_legal_representative_name`, e.target.value)} placeholder={`اسم ${representativeRole} القانوني *`} />
-          <input className={inputClass} value={field(`${prefix}_legal_representative_capacity`)} onChange={e => set(`${prefix}_legal_representative_capacity`, e.target.value)} placeholder="الصفة / المسمى *" />
-          <input className={inputClass} value={field(`${prefix}_company_headquarters`)} onChange={e => set(`${prefix}_company_headquarters`, e.target.value)} placeholder="مقر الشركة *" />
-          <input className={`${inputClass} text-left`} dir="ltr" value={field(`${prefix}_company_email`)} onChange={e => set(`${prefix}_company_email`, e.target.value)} placeholder="البريد الإلكتروني للشركة" />
-        </div>
-      </div>
-    );
-  };
 
   if (templateError) {
     return (
@@ -754,350 +480,9 @@ export default function WizardPage() {
     );
   }
 
-  if (slug === "freelancer") {
     const isReviewStep = activeStep?.fields.length === 0;
-    const reviewIssuesByStep = new Map<string, typeof freelancerDynamicIssues>();
-    freelancerDynamicIssues.forEach((issue) => {
-      const current = reviewIssuesByStep.get(issue.stepKey) ?? [];
-      current.push(issue);
-      reviewIssuesByStep.set(issue.stepKey, current);
-    });
 
-    return (
-      <div className="flex min-h-screen flex-col bg-[#f8fafc]">
-        <Navbar />
-        <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 pb-16 pt-10 sm:px-6 lg:px-8">
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-[#986410]/10 px-3 py-1 text-xs font-black text-[#986410]">
-                    {selectedVariantDefinition?.nameAr ?? "عقد خدمات"}
-                  </span>
-                  <span className="text-[10px] font-mono font-bold text-slate-400">{displaySerial}</span>
-                </div>
-                <h1 className="mt-3 text-2xl font-black text-[#00102e]">{contractTitle}</h1>
-                <p className="mt-1 max-w-3xl text-xs font-semibold leading-6 text-slate-500">
-                  أدخل بيانات الطرفين والمشروع، واختر الملاحق التي تحتاجها. يصدر العقد الأساسي والملاحق المختارة في ملف PDF واحد، وتأتي الملاحق بعد العقد كقوالب جاهزة للتعبئة اليدوية.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleChangeVariant}
-                  className="mt-3 inline-flex rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-black text-slate-600 hover:border-[#986410]/40 hover:text-[#986410]"
-                >
-                  تغيير نوع عقد الخدمات
-                </button>
-              </div>
-              <div className="w-full space-y-2 lg:w-72">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black text-emerald-700">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> {autoSaveStatus}
-                  </span>
-                  <span className="rounded-xl bg-[#00102e] px-3.5 py-2 text-xs font-black text-[#986410]">{priceEgp} ج.م</span>
-                </div>
-                <div>
-                  <div className="mb-1 flex items-center justify-between text-[10px] font-black text-slate-500">
-                    <span>اكتمال البيانات المطلوبة</span>
-                    <span>{freelancerCompletionPercent}%</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${freelancerCompletionPercent}%` }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <div className="mb-6 rounded-xl border border-[#986410]/30 bg-[#986410]/5 p-3.5 text-xs font-semibold leading-6 text-[#00102e]">
-            <div className="flex items-start gap-3">
-              <Lock className="mt-0.5 h-4 w-4 shrink-0 text-[#986410]" />
-              <div>
-                <strong className="block font-black">حماية بيانات الأطراف</strong>
-                بعد اعتماد الدفع تُثبت البيانات الأساسية للطرفين. أي تصحيح جوهري بعد ذلك يتم بطلب مراجعة وإصدار نسخة جديدة، وليس بتغيير النسخة الصادرة.
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-4 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 xl:hidden"><div><span className="text-[9px] font-black text-slate-400">الخطوة {currentStep} من {progressSteps.length}</span><strong className="mt-0.5 block text-xs text-[#00102e]">{activeStep?.titleAr}</strong></div><span className="rounded-full bg-[#986410]/10 px-2.5 py-1 text-[10px] font-black text-[#986410]">{freelancerCompletionPercent}%</span></div>
-
-          <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)_300px]">
-            <aside className="hidden h-fit rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:block">
-              <div className="mb-3 text-[11px] font-black text-[#00102e]">خطوات إعداد العقد</div>
-              <div className="space-y-2">
-                {progressSteps.map((item, index) => {
-                  const selected = item.key === currentStepKey;
-                  const complete = index < currentStepIndex;
-                  const issueCount = reviewIssuesByStep.get(item.key)?.length ?? 0;
-                  return (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => setStoredStepKey(contractSlug, item.key)}
-                      className={`flex w-full items-start gap-2 rounded-xl border px-3 py-2.5 text-right transition ${
-                        selected
-                          ? "border-[#986410] bg-[#986410]/10 text-[#00102e]"
-                          : "border-slate-200 bg-slate-50 text-slate-600 hover:border-[#986410]/40"
-                      }`}
-                    >
-                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-black ${complete ? "bg-emerald-500 text-white" : selected ? "bg-[#986410] text-white" : "bg-white text-slate-500"}`}>
-                        {complete ? "✓" : index + 1}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[10px] font-black leading-5">{item.label}</span>
-                        {issueCount > 0 && <span className="block text-[9px] font-bold text-rose-600">{issueCount} حقل مطلوب</span>}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </aside>
-
-            <section className="min-w-0 space-y-4">
-              {!isReviewStep && activeStep && (
-                <DynamicOptionalStep
-                  step={activeStep}
-                  fieldValues={formData}
-                  onFieldChange={(key, value) => set(key, value)}
-                  onFilesSelected={uploadFilesForField}
-                  uploadingField={uploadingField}
-                />
-              )}
-
-              {isReviewStep && (
-                <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="border-b border-slate-100 pb-4">
-                    <span className="rounded-full bg-[#986410]/10 px-3 py-1 text-[10px] font-black text-[#986410]">المراجعة النهائية</span>
-                    <h2 className="mt-3 text-xl font-black text-[#00102e]">راجع المستندات قبل الدفع والإصدار</h2>
-                    <p className="mt-1 text-xs font-semibold leading-6 text-slate-500">
-                      سيستخدم النظام البيانات التي أدخلتها والنصوص القانونية المعتمدة لتكوين العقد وملاحقه الأساسية وأي ملاحق اختيارية أضفتها.
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <h3 className="text-xs font-black text-[#00102e]">ملاحق العقد</h3>
-                    <p className="mt-1 text-[10px] leading-5 text-slate-500">الملاحق الأساسية ستصدر تلقائيًا، ويمكنك إضافة الملاحق الاختيارية. كل ملحق يصدر كقالب فارغ لتعبئته يدويًا بعد الطباعة.</p>
-                    <div className="mt-3"><OptionalClauseSelector template={templateDefinition} variantKey={draft.variantKey!} selectedClauseKeys={draft.selectedOptionalClauseKeys} fieldValues={draft.fieldValues} onToggle={toggleOptionalClause} /></div>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <span className="text-[10px] font-black text-slate-500">نوع العقد</span>
-                      <strong className="mt-1 block text-xs leading-6 text-[#00102e]">{selectedVariantDefinition?.nameAr}</strong>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <span className="text-[10px] font-black text-slate-500">البيانات المكتملة</span>
-                      <strong className="mt-1 block text-xl text-[#00102e]">{completionCompletedCount} / {progressRequiredFields.length}</strong>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <span className="text-[10px] font-black text-slate-500">الملاحق المختارة</span>
-                      <strong className="mt-1 block text-xl text-[#00102e]">{selectedAnnexDefinitions.length}</strong>
-                    </div>
-                  </div>
-
-                  {freelancerDynamicIssues.length > 0 ? (
-                    <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs leading-6 text-rose-900">
-                      <strong className="block font-black">البيانات التالية ما زالت مطلوبة:</strong>
-                      <div className="mt-2 grid gap-1 sm:grid-cols-2">
-                        {freelancerDynamicIssues.map((issue) => (
-                          <button
-                            key={`${issue.stepKey}-${issue.fieldKey}`}
-                            type="button"
-                            onClick={() => setStoredStepKey(contractSlug, issue.stepKey)}
-                            className="rounded-lg border border-rose-200 bg-white px-3 py-2 text-right text-[10px] font-bold hover:border-rose-400"
-                          >
-                            {issue.labelAr}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold leading-6 text-emerald-900">
-                      <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
-                      البيانات الإلزامية مكتملة، ويمكن حفظ المسودة والانتقال إلى الدفع.
-                    </div>
-                  )}
-
-                  {renderSelectedAnnexCards()}
-
-                  {renderReviewLifecycleAndShare()}
-
-                  {renderDeclarationConsent()}
-
-                  <button
-                    type="button"
-                    onClick={openFreelancerCheckoutIfReady}
-                    disabled={!declarationAccepted || !isFreelancerReadyForPayment || !selfServicePriceConfigured}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-sm font-black text-[#986410] transition hover:bg-[#001b4d] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Receipt className="h-4 w-4" /> {selfServicePriceConfigured ? `حفظ المسودة والمتابعة للدفع — ${priceEgp} ج.م` : "السعر غير محدد من الإدارة"}
-                  </button>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => setCurrentStep((previous) => previous - 1)}
-                  disabled={currentStep <= 1}
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ArrowRight className="h-4 w-4" /> السابق
-                </button>
-                {!isReviewStep && (
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep((previous) => previous + 1)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-5 py-2.5 text-xs font-black text-[#986410]"
-                  >
-                    التالي <ArrowLeft className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </section>
-
-            <aside className="hidden h-fit space-y-4 xl:sticky xl:top-24 xl:block">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                  <FileText className="h-4 w-4 text-[#986410]" />
-                  <h3 className="text-xs font-black text-[#00102e]">ملخص المسودة</h3>
-                </div>
-                <div className="mt-4 space-y-3 text-[11px] leading-6 text-slate-600">
-                  <div><span className="block text-[9px] font-black text-slate-400">المستند</span><strong className="text-[#00102e]">{contractTitle}</strong></div>
-                  <div><span className="block text-[9px] font-black text-slate-400">المرحلة الحالية</span><strong className="text-[#00102e]">{activeStep?.titleAr}</strong></div>
-                  <div><span className="block text-[9px] font-black text-slate-400">رقم المسودة</span><span className="font-mono">{displaySerial}</span></div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-black text-[#00102e]">الملاحق</h3>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-600">{selectedAnnexDefinitions.length}</span>
-                </div>
-                {selectedAnnexDefinitions.length === 0 ? (
-                  <p className="text-[10px] font-semibold leading-5 text-slate-500">لم يتم اختيار ملاحق. يمكنك إضافتها من أعلى الصفحة.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {selectedAnnexDefinitions.map((annex) => (
-                      <div key={annex.key} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold leading-5 text-emerald-900">
-                        {annex.documentTitleAr ?? annex.nameAr}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-2xl border border-[#986410]/30 bg-[#986410]/5 p-4 text-[10px] font-semibold leading-5 text-[#00102e]">
-                <div className="mb-1 flex items-center gap-2 font-black"><Sparkles className="h-3.5 w-3.5 text-[#986410]" /> كيف يعمل؟</div>
-                أنت تدخل الوقائع والاختيارات فقط، والنظام يركب النص القانوني والملاحق المعتمدة دون أن يطلب منك كتابة البنود القانونية.
-              </div>
-            </aside>
-          </div>
-        </main>
-        {mobilePreviewControls}
-        <Footer />
-        <VodafoneCashModal
-          isOpen={isCheckoutOpen}
-          onClose={() => setIsCheckoutOpen(false)}
-          orderTitle={contractTitle}
-          amountEgp={priceEgp}
-          contractId={checkoutContract?.id ?? draft.backendContractId}
-          serialNumber={checkoutContract?.serialNumber ?? draft.serialNumber}
-        />
-      </div>
-    );
-  }
-
-  if (slug === "apartment_sale") {
-    const isSaleReviewStep = activeStep?.fields.length === 0;
-    const saleIssuesByStep = new Map<string, typeof saleDynamicIssues>();
-    saleDynamicIssues.forEach((issue) => {
-      const current = saleIssuesByStep.get(issue.stepKey) ?? [];
-      current.push(issue);
-      saleIssuesByStep.set(issue.stepKey, current);
-    });
-
-    return (
-      <div className="flex min-h-screen flex-col bg-[#f8fafc]">
-        <Navbar />
-        <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 pb-16 pt-10 sm:px-6 lg:px-8">
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-[#986410]/10 px-3 py-1 text-xs font-black text-[#986410]">{selectedVariantDefinition?.nameAr ?? "عقد بيع وحدة سكنية"}</span>
-                  <span className="text-[10px] font-mono font-bold text-slate-400">{displaySerial}</span>
-                </div>
-                <h1 className="mt-3 text-2xl font-black text-[#00102e]">{contractTitle}</h1>
-                <p className="mt-1 max-w-3xl text-xs font-semibold leading-6 text-slate-500">
-                  أدخل الوقائع والبيانات المطلوبة فقط. الحقول البرتقالية إلزامية، والحقول الاختيارية لا تصبح إلزامية إلا عند تفعيل البند المرتبط بها.
-                </p>
-                <button type="button" onClick={handleChangeVariant} className="mt-3 inline-flex rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-black text-slate-600 hover:border-[#986410]/40 hover:text-[#986410]">تغيير نوع عقد البيع</button>
-              </div>
-              <div className="w-full space-y-2 lg:w-72">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> {autoSaveStatus}</span>
-                  <span className="rounded-xl bg-[#00102e] px-3.5 py-2 text-xs font-black text-[#986410]">{selfServicePriceConfigured ? `${priceEgp} ج.م` : "السعر غير محدد"}</span>
-                </div>
-                <div><div className="mb-1 flex items-center justify-between text-[10px] font-black text-slate-500"><span>اكتمال البيانات المطلوبة</span><span>{saleCompletionPercent}%</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${saleCompletionPercent}%` }} /></div></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-6 rounded-xl border border-[#986410]/30 bg-[#986410]/5 p-3.5 text-xs font-semibold leading-6 text-[#00102e]">
-            <div className="flex items-start gap-3"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-[#986410]" /><div><strong className="block font-black">الملاحق لا تُملأ من بياناتك</strong>إذا اخترت التقسيط، يُضاف «جدول سداد الأقساط» تلقائيًا بعد العقد كقالب فارغ للطباعة والتعبئة اليدوية والتوقيع عليه، ولا ينقل النظام إليه أي بيانات من الـWizard.</div></div>
-          </div>
-
-          <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)_300px]">
-            <aside className="hidden h-fit rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:block">
-              <div className="mb-3 text-[11px] font-black text-[#00102e]">خطوات إعداد عقد البيع</div>
-              <div className="space-y-2">
-                {progressSteps.map((item, index) => {
-                  const selected = item.key === currentStepKey;
-                  const complete = index < currentStepIndex;
-                  const issueCount = saleIssuesByStep.get(item.key)?.length ?? 0;
-                  return <button key={item.key} type="button" onClick={() => setStoredStepKey(contractSlug, item.key)} className={`flex w-full items-start gap-2 rounded-xl border px-3 py-2.5 text-right transition ${selected ? "border-[#986410] bg-[#986410]/10 text-[#00102e]" : "border-slate-200 bg-slate-50 text-slate-600 hover:border-[#986410]/40"}`}><span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-black ${complete ? "bg-emerald-500 text-white" : selected ? "bg-[#986410] text-white" : "bg-white text-slate-500"}`}>{complete ? "✓" : index + 1}</span><span className="min-w-0 flex-1"><span className="block text-[10px] font-black leading-5">{item.label}</span>{issueCount > 0 && <span className="block text-[9px] font-bold text-orange-600">{issueCount} مطلوب</span>}</span></button>;
-                })}
-              </div>
-            </aside>
-
-            <section className="min-w-0 space-y-4">
-              {!isSaleReviewStep && activeStep && (
-                <DynamicOptionalStep step={activeStep} fieldValues={formData} onFieldChange={(key, value) => set(key, value)} onFilesSelected={uploadFilesForField} uploadingField={uploadingField} />
-              )}
-
-              {isSaleReviewStep && (
-                <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="border-b border-slate-100 pb-4"><span className="rounded-full bg-[#986410]/10 px-3 py-1 text-[10px] font-black text-[#986410]">المراجعة النهائية</span><h2 className="mt-3 text-xl font-black text-[#00102e]">راجع البيانات قبل الدفع والإصدار</h2><p className="mt-1 text-xs font-semibold leading-6 text-slate-500">يُبنى العقد من الـSchema الذي راجعناه مع المصدر، ويطبق الباك نفس شروط الإلزام الشرطي.</p></div>
-
-                  <OptionalClauseSelector template={templateDefinition} variantKey={draft.variantKey!} selectedClauseKeys={draft.selectedOptionalClauseKeys} fieldValues={draft.fieldValues} onToggle={toggleOptionalClause} />
-                  {selectedAnnexDefinitions.length > 0 && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><div className="text-[10px] font-black text-emerald-800">ملاحق ستظهر بعد العقد</div><div className="mt-2 space-y-2">{selectedAnnexDefinitions.map((annex) => <div key={annex.key} className="rounded-lg bg-white px-3 py-2 text-[10px] font-bold text-emerald-900"><strong>{annex.documentTitleAr ?? annex.nameAr}</strong><span className="mr-2 rounded-full border border-emerald-200 px-2 py-0.5 text-[9px]">قالب فارغ — تعبئة يدوية</span></div>)}</div></div>}
-
-                  {saleDynamicIssues.length > 0 ? <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 text-xs leading-6 text-orange-950"><strong className="block font-black">البيانات التالية ما زالت مطلوبة:</strong><div className="mt-2 grid gap-1 sm:grid-cols-2">{saleDynamicIssues.map((issue) => <button key={`${issue.stepKey}-${issue.fieldKey}`} type="button" onClick={() => setStoredStepKey(contractSlug, issue.stepKey)} className="rounded-lg border border-orange-200 bg-white px-3 py-2 text-right text-[10px] font-bold hover:border-orange-400">{issue.labelAr}</button>)}</div></div> : <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800">البيانات الإلزامية وشروطها مكتملة.</div>}
-
-                  {renderReviewLifecycleAndShare()}
-                  {renderDeclarationConsent()}
-                  <button type="button" onClick={() => void openSaleCheckoutIfReady()} disabled={!declarationAccepted || !isSaleReadyForPayment || !selfServicePriceConfigured} className={`w-full rounded-xl px-5 py-3 text-xs font-black ${declarationAccepted && isSaleReadyForPayment && selfServicePriceConfigured ? "bg-[#00102e] text-[#986410]" : "bg-slate-200 text-slate-400"}`}>{!selfServicePriceConfigured ? "السعر غير محدد من الإدارة" : isSaleReadyForPayment ? `حفظ المسودة والمتابعة للدفع — ${priceEgp} ج.م` : "استكمل البيانات المطلوبة"}</button>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-1">
-                <button disabled={currentStepIndex === 0} onClick={() => currentStepIndex > 0 && setStoredStepKey(contractSlug, activeSteps[currentStepIndex - 1].key)} className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs font-bold text-slate-700 shadow-xs disabled:opacity-40"><ArrowRight className="h-4 w-4" />خطوة سابقة</button>
-                {currentStepIndex < activeSteps.length - 1 && <button onClick={() => setStoredStepKey(contractSlug, activeSteps[currentStepIndex + 1].key)} className="flex items-center gap-1.5 rounded-xl bg-[#00102e] px-6 py-2.5 text-xs font-bold text-white shadow-sm">خطوة تالية<ArrowLeft className="h-4 w-4 text-[#986410]" /></button>}
-              </div>
-            </section>
-
-            <aside className="hidden h-fit space-y-4 xl:sticky xl:top-24 xl:block">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="text-[10px] font-black text-slate-500">نوع العقد</div><div className="mt-1 text-xs font-black leading-6 text-[#00102e]">{selectedVariantDefinition?.nameAr}</div><div className="mt-3 border-t border-slate-100 pt-3 text-[10px] font-semibold leading-5 text-slate-500">المحكمة المختصة لا تُختار من قائمة؛ العقد يربط الاختصاص بالمحكمة المختصة في دائرة العقار وفق نص النوع المختار.</div></div>
-              {renderSelectedAnnexCards()}
-            </aside>
-          </div>
-        </main>
-        {mobilePreviewControls}
-        <Footer />
-        <VodafoneCashModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} orderTitle={contractTitle} amountEgp={priceEgp} contractId={checkoutContract?.id ?? draft?.backendContractId} serialNumber={checkoutContract?.serialNumber ?? draft?.serialNumber} />
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f8fafc]">
@@ -1170,7 +555,7 @@ export default function WizardPage() {
 
           {/* ─── RIGHT: FORM ─── */}
           <div id="wizard-form" className="xl:col-span-5 space-y-5 scroll-mt-24">
-            {activeStep && (contractSlug === "rental" || activeStep.sourceClauseKey || activeStep.fields.some((item) => item.key === "contract_date")) && (
+            {activeStep && !isReviewStep && (
               <DynamicOptionalStep
                 step={activeStep}
                 fieldValues={formData}
@@ -1181,7 +566,7 @@ export default function WizardPage() {
                 This keeps required/optional/conditional rules identical to the backend definition. */}
 
             {/* REVIEW STEP */}
-            {currentStepKey === "rental_review" && (
+            {isReviewStep && (
               <div className="rounded-2xl border border-[#986410]/30 bg-[#986410]/5 p-6 space-y-5">
                 <div className="flex items-center gap-3 border-b border-[#986410]/20 pb-3">
                   <ShieldCheck className="h-6 w-6 text-[#00102e]" />
@@ -1287,13 +672,13 @@ export default function WizardPage() {
                 {renderSelectedAnnexCards()}
                 <div className="pt-4 border-t-2 border-[#00102e] grid grid-cols-2 gap-4 text-center text-[10px]">
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
-                    <div className="font-extrabold text-[#00102e] mb-1">الطرف الأول (المؤجر)</div>
-                    <div className="text-slate-500 text-[9px] mb-4"><LiveField value={field("landlord_name")} placeholder="________________________" /></div>
+                    <div className="font-extrabold text-[#00102e] mb-1">الطرف الأول</div>
+                    <div className="text-slate-500 text-[9px] mb-4"><span className="text-slate-300">________________________</span></div>
                     <div className="border-b border-slate-400 w-3/4 mx-auto" /><div className="text-slate-400 mt-1 text-[9px]">التوقيع والبصمة</div>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
-                    <div className="font-extrabold text-[#00102e] mb-1">الطرف الثاني (المستأجر)</div>
-                    <div className="text-slate-500 text-[9px] mb-4"><LiveField value={field("tenant_name")} placeholder="________________________" /></div>
+                    <div className="font-extrabold text-[#00102e] mb-1">الطرف الثاني</div>
+                    <div className="text-slate-500 text-[9px] mb-4"><span className="text-slate-300">________________________</span></div>
                     <div className="border-b border-slate-400 w-3/4 mx-auto" /><div className="text-slate-400 mt-1 text-[9px]">التوقيع والبصمة</div>
                   </div>
                 </div>

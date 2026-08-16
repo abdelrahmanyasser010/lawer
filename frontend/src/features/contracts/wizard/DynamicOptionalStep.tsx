@@ -35,7 +35,7 @@ export default function DynamicOptionalStep({ step, fieldValues, onFieldChange, 
             {step.description ??
               (isAnnex
                 ? "البيانات التالية تخص الملحق فقط، ولن تُدمج كصفحات طويلة داخل العقد الأساسي."
-                : "هذه الحقول مرتبطة بنوع العقد المختار وتتحكم في الصياغة القانونية تلقائيًا.")}
+                : null)}
           </p>
         </div>
       </div>
