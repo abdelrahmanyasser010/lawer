@@ -531,64 +531,61 @@ export default function WizardPage() {
   return (
     <div className="flex min-h-screen flex-col bg-[#f8fafc]">
       <Navbar />
-      <main className="flex-1 mx-auto max-w-[1400px] w-full px-4 sm:px-6 lg:px-8 pt-10 pb-16 sm:pt-12">
+      <main className="flex-1 mx-auto max-w-[1400px] w-full px-4 sm:px-6 lg:px-8 pt-4 pb-16">
 
-        {/* Header Box with clean top spacing */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-5 border border-slate-200 bg-white p-6 rounded-2xl shadow-sm">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="rounded-full bg-[#00102e]/10 px-2.5 py-0.5 text-xs font-bold text-[#00102e] border border-[#00102e]/20">
-                إعداد العقد خطوة بخطوة
+        {/* Compact Contract Context Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-xs">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="font-black text-sm text-[#00102e]">{contractTitle}</span>
+              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 font-mono">
+                {displaySerial}
               </span>
-              <span className="text-xs text-slate-400 font-mono">{displaySerial}</span>
+              <span className="rounded-md bg-amber-50 text-[#986410] border border-amber-200/60 px-2 py-0.5 text-[10px] font-bold">
+                مسودة
+              </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-[#00102e]">{contractTitle}</h1>
-            <button type="button" onClick={handleChangeVariant} className="mt-2 inline-flex rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-black text-slate-600 hover:border-[#986410]/40 hover:text-[#986410]">
-              تغيير نوع عقد الإيجار
+            <button
+              type="button"
+              onClick={handleChangeVariant}
+              className="text-[11px] font-bold text-slate-500 hover:text-[#986410] underline underline-offset-2 transition"
+            >
+              تغيير نوع العقد
             </button>
           </div>
+
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
               <CheckCircle2 className="h-3.5 w-3.5" />
               {autoSaveStatus}
             </span>
-            <span className="rounded-xl bg-[#00102e] px-3.5 py-1.5 text-xs font-bold text-[#986410]">
+            <span className="rounded-xl bg-[#00102e] px-3 py-1 text-xs font-black text-[#d9a84e]">
               {priceEgp} ج.م
             </span>
           </div>
         </div>
 
-        {/* Immutability Notice */}
-        <div className="rounded-xl border border-[#986410]/30 bg-[#986410]/5 p-3.5 mb-6 flex items-start gap-3">
-          <Lock className="h-4 w-4 text-[#986410] shrink-0 mt-0.5" />
-          <div className="text-xs text-[#00102e] leading-relaxed">
-            <strong className="block font-bold mb-0.5">تنبيه حماية البيانات الأساسية</strong>
-            بيانات الأطراف الأساسية والعين المؤجرة تُقفل نهائياً بعد اعتماد العقد ودفع رسوم Z draft.
-          </div>
-        </div>
-
-        {/* Steps Progress */}
-        <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2 hide-scrollbar">
+        {/* Steps Progress - Sleek and Compact */}
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 hide-scrollbar">
           {progressSteps.map((s, i) => (
             <React.Fragment key={s.step}>
               <button
                 onClick={() => setCurrentStep(s.step)}
-                className={`flex shrink-0 flex-col items-center gap-1 px-3 py-2 rounded-xl text-center transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex shrink-0 items-center gap-2 px-3 py-2 rounded-xl text-center transition-all cursor-pointer whitespace-nowrap ${
                   currentStep === s.step
-                    ? "bg-[#00102e] text-white shadow-md"
+                    ? "bg-[#00102e] text-white shadow-sm"
                     : currentStep > s.step
                     ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                    : "bg-white text-slate-400 border border-slate-200"
+                    : "bg-white text-slate-500 border border-slate-200 hover:border-slate-300"
                 }`}
               >
-                <span className={`text-[10px] font-extrabold rounded-full w-5 h-5 shrink-0 flex items-center justify-center ${
-                  currentStep === s.step ? "bg-[#986410] text-white" : currentStep > s.step ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-500"
+                <span className={`text-[10px] font-black rounded-full w-5 h-5 shrink-0 flex items-center justify-center ${
+                  currentStep === s.step ? "bg-[#986410] text-white" : currentStep > s.step ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-600"
                 }`}>{s.step}</span>
-                <span className="hidden text-[10px] font-bold leading-tight sm:block">{s.label}</span>
-                <span className="hidden text-[9px] opacity-70 sm:block">{s.articleRange}</span>
+                <span className="text-[11px] font-bold">{s.label}</span>
               </button>
               {i < progressSteps.length - 1 && (
-                <div className={`h-0.5 flex-1 min-w-[12px] shrink-0 rounded-full ${currentStep > s.step ? "bg-emerald-400" : "bg-slate-200"}`} />
+                <div className={`h-0.5 flex-1 min-w-[8px] shrink-0 rounded-full ${currentStep > s.step ? "bg-emerald-400" : "bg-slate-200"}`} />
               )}
             </React.Fragment>
           ))}

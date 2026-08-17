@@ -139,8 +139,12 @@ export default function LegalDocumentSheet({
 
   const governorate = fieldValues.sale_unit_governorate || fieldValues.property_governorate || "القاهرة";
   const city = fieldValues.sale_unit_city || fieldValues.property_city || "مدينة نصر";
-  const street = fieldValues.sale_unit_street || fieldValues.property_street || "شارع رئيسي";
+  const street = fieldValues.sale_unit_street || fieldValues.property_street || "";
+  const buildingNumber = fieldValues.property_building_number || fieldValues.sale_unit_building_number || "";
+  const floorNumber = fieldValues.property_floor || fieldValues.sale_unit_floor || "";
+  const unitNumber = fieldValues.property_unit_number || fieldValues.sale_unit_number || "";
   const area = fieldValues.sale_unit_area_sqm || fieldValues.property_area_sqm || "";
+  const activityType = fieldValues.commercial_activity_type || fieldValues.property_usage_purpose || "";
 
   const priceOrRent = fieldValues.sale_total_price || fieldValues.rent_monthly_amount || fieldValues.salary_amount || 0;
   const formattedFinancial = formatLegalValue("sale_total_price", priceOrRent);
@@ -168,26 +172,32 @@ export default function LegalDocumentSheet({
   const docTitle = templateNameAr || (isRental ? "عقد إيجار خاضع لأحكام القانون المدني" : isEmployment ? "عقد عمل فردي محدد المدة" : "عقد بيع ابتدائي لوحدة سكنية");
 
   return (
-    <div className="relative mx-auto w-full max-w-[820px] rounded-2xl border border-slate-300 bg-white p-6 sm:p-10 shadow-lg print:shadow-none print:border-none font-sans select-text">
+    <div className="relative mx-auto w-full max-w-[820px] rounded-2xl border border-slate-300 bg-white p-6 sm:p-10 shadow-lg print:shadow-none print:border-none font-sans select-text overflow-hidden">
 
-      {/* Watermark for Draft Mode */}
+      {/* Repeating Diagonal Watermark for Draft Mode */}
       {status !== "issued" && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden opacity-5 z-0">
-          <span className="text-6xl sm:text-8xl font-black text-[#00102e] rotate-[-30deg] select-none whitespace-nowrap">
-            مسودة معاينة Z DRAFT
-          </span>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-around overflow-hidden opacity-5 select-none z-0 rotate-[-25deg] scale-125">
+          <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-widest whitespace-nowrap">
+            مسودة معاينة غير مخصصة للتداول • Z DRAFT
+          </div>
+          <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-widest whitespace-nowrap">
+            نسخة للمعاينة فقط • DRAFT PREVIEW
+          </div>
+          <div className="text-4xl sm:text-5xl font-black text-slate-900 tracking-widest whitespace-nowrap">
+            مسودة معاينة غير مخصصة للتداول • Z DRAFT
+          </div>
         </div>
       )}
 
-      {/* Official Top Seal & Islamic Header */}
-      <div className="relative z-10 text-center pb-5 border-b-2 border-[#00102e]">
+      {/* Official Top Seal & Header */}
+      <div className="relative z-10 text-center pb-4 border-b-2 border-[#00102e]">
         <p className="text-xs font-serif font-bold text-slate-600 tracking-widest">
           بِسْمِ اللَّـهِ الرَّحْمَـٰنِ الرَّحِيمِ
         </p>
-        <h1 className="mt-3 text-xl sm:text-2xl font-black text-[#00102e] tracking-tight">
+        <h1 className="mt-2.5 text-lg sm:text-2xl font-black text-[#00102e] tracking-tight">
           {docTitle}
         </h1>
-        <div className="mt-2 flex items-center justify-center gap-3 text-xs text-slate-500 font-mono">
+        <div className="mt-1.5 flex items-center justify-center gap-3 text-[11px] text-slate-500 font-mono">
           <span>رقم الوثيقة: {serialNumber}</span>
           <span>•</span>
           <span className="font-sans font-bold text-[#986410]">
@@ -197,16 +207,16 @@ export default function LegalDocumentSheet({
       </div>
 
       {/* Contract Body with Formal Arabic Legal Layout */}
-      <div className="relative z-10 mt-6 space-y-6 text-xs sm:text-[13px] leading-8 text-slate-800 text-justify">
+      <div className="relative z-10 mt-5 space-y-5 text-xs sm:text-[12.5px] leading-7 text-slate-800 text-justify">
 
         {/* Preamble / Introduction */}
-        <p className="font-bold text-slate-900 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <p className="font-bold text-slate-900 leading-relaxed bg-slate-50/90 p-3 rounded-xl border border-slate-200">
           إنه في يوم الموافق <strong className="text-[#00102e] font-black underline decoration-[#986410] underline-offset-4">{formattedContractDate}</strong>، بجمهورية مصر العربية، تم الاتفاق والتراضي بين كل من:
         </p>
 
         {/* Parties Block */}
-        <div className="space-y-4 rounded-xl bg-slate-50 p-4 sm:p-5 border border-slate-200">
-          <div className="space-y-1 border-b border-slate-200 pb-3">
+        <div className="space-y-3 rounded-xl bg-slate-50/90 p-4 border border-slate-200">
+          <div className="space-y-1 border-b border-slate-200 pb-2.5">
             <div className="flex items-center justify-between">
               <strong className="text-xs sm:text-sm font-black text-[#00102e]">
                 أولاً: {isRental ? "السيد / المؤجر" : isEmployment ? "السيد / صاحب العمل" : "السيد / البائع"} (الطرف الأول):
@@ -236,8 +246,8 @@ export default function LegalDocumentSheet({
         </div>
 
         {/* Contract Recitals / Tamheed */}
-        <div className="space-y-2">
-          <h3 className="font-black text-slate-900 text-xs sm:text-sm border-r-4 border-[#986410] pr-2">تمهيد:</h3>
+        <div className="space-y-1.5">
+          <h3 className="font-black text-slate-900 text-xs sm:text-[13px] border-r-3 border-[#986410] pr-2">تمهيد:</h3>
           <p className="leading-7 text-slate-700">
             {isRental ? (
               <>حيث يمتلك الطرف الأول العين الكائنة في ({city}، بمحافظة {governorate})، ورغب الطرف الثاني في استئجارها للانتفاع بها، وبعد أن أقر الطرفان بأهليتهما القانونية المعتبرة شرعاً وقانوناً للتصرف والتعاقد وخلوهما من كافة الموانع، فقد اتفقا على البنود الآتية:</>
@@ -250,29 +260,29 @@ export default function LegalDocumentSheet({
         </div>
 
         {/* Articles / Clauses */}
-        <div className="space-y-4 pt-2">
+        <div className="space-y-3.5 pt-1">
           <div className="space-y-1">
-            <h4 className="font-black text-slate-900 text-xs sm:text-sm text-[#00102e]">البند الأول (التمهيد):</h4>
-            <p className="text-slate-700">
+            <h4 className="font-black text-slate-900 text-xs sm:text-[13px] text-[#00102e]">البند الأول (التمهيد):</h4>
+            <p className="text-slate-700 leading-6">
               يعتبر التمهيد السابق جزءاً لا يتجزأ من هذا العقد وبنداً من بنوده ومفسراً ومتمماً لكافة أحكامه والتزاماته.
             </p>
           </div>
 
           <div className="space-y-1">
-            <h4 className="font-black text-slate-900 text-xs sm:text-sm text-[#00102e]">البند الثاني (محل التعاقد والمواصفات):</h4>
-            <p className="text-slate-700 leading-7">
+            <h4 className="font-black text-slate-900 text-xs sm:text-[13px] text-[#00102e]">البند الثاني (محل التعاقد والمواصفات):</h4>
+            <p className="text-slate-700 leading-6">
               {isRental ? (
-                <>أجر الطرف الأول للطرف الثاني القابل لذلك العين الكائنة في ({street}، {city}، محافظة {governorate}) {area ? `البالغ مساحتها حوالي ${area} متر مربع` : ""} بغرض الاستعمال المعتاد وفقاً للقوانين واللوائح السارية والشروط الواردة بهذا العقد.</>
+                <>أجر الطرف الأول للطرف الثاني القابل لذلك العين الكائنة في ({street ? `${street}، ` : ""}{city}، محافظة {governorate}) {buildingNumber ? `عقار رقم (${buildingNumber}) ` : ""}{floorNumber ? `بالدور (${floorNumber}) ` : ""}{unitNumber ? `وحدة رقم (${unitNumber}) ` : ""}{area ? `البالغ مساحتها حوالي (${area}) متر مربع ` : ""}{activityType ? `والمخصصة بغرض (${activityType}) ` : "بغرض الاستعمال المعتاد "}وفقاً للقوانين واللوائح السارية والشروط الواردة بهذا العقد.</>
               ) : (
-                <>باع وأسقط وتنازل الطرف الأول بكافة الضمانات القانونية والفعلية إلى الطرف الثاني القابل لذلك الوحدة السكنية الكائنة في ({street}، {city}، محافظة {governorate}) {area ? `والبالغ مساحتها الإجمالية ${area} متر مربع` : ""} شاملة كافة المرافق والحصص الشائعة في الأرض والأجزاء المشتركة.</>
+                <>باع وأسقط وتنازل الطرف الأول بكافة الضمانات القانونية والفعلية إلى الطرف الثاني القابل لذلك الوحدة السكنية الكائنة في ({street ? `${street}، ` : ""}{city}، محافظة {governorate}) {buildingNumber ? `عقار رقم (${buildingNumber}) ` : ""}{floorNumber ? `بالدور (${floorNumber}) ` : ""}{area ? `والبالغ مساحتها الإجمالية (${area}) متر مربع ` : ""}شاملة كافة المرافق والحصص الشائعة في الأرض والأجزاء المشتركة.</>
               )}
             </p>
           </div>
 
           {isRental && (durationText || formattedStartDate) && (
             <div className="space-y-1">
-              <h4 className="font-black text-slate-900 text-xs sm:text-sm text-[#00102e]">البند الثالث (مدة العقد):</h4>
-              <p className="text-slate-700 leading-7">
+              <h4 className="font-black text-slate-900 text-xs sm:text-[13px] text-[#00102e]">البند الثالث (مدة العقد):</h4>
+              <p className="text-slate-700 leading-6">
                 مدة هذا الإيجار هي {durationText ? <strong className="text-slate-900 font-black">({durationText})</strong> : "المدة المحددة بالعقد"}
                 {formattedStartDate && <> تبدأ من تاريخ <strong className="text-slate-900 font-black">{formattedStartDate}</strong></>}
                 {formattedEndDate && <> وتنتهي في <strong className="text-slate-900 font-black">{formattedEndDate}</strong></>}
@@ -282,10 +292,10 @@ export default function LegalDocumentSheet({
           )}
 
           <div className="space-y-1">
-            <h4 className="font-black text-slate-900 text-xs sm:text-sm text-[#00102e]">
+            <h4 className="font-black text-slate-900 text-xs sm:text-[13px] text-[#00102e]">
               {isRental ? "البند الرابع (القيمة الإيجارية والتأمين):" : "البند الثالث (الثمن المتفق عليه وآلية السداد):"}
             </h4>
-            <p className="text-slate-700 leading-7">
+            <p className="text-slate-700 leading-6">
               {isRental ? (
                 <>تم هذا الإيجار نظير أجرة شهرية متفق عليها قدرها <strong className="text-slate-900 font-black">({formattedFinancial})</strong> تُسدد مقدماً في الموعد المحدد، مع سداد مبلغ تأمين نقدي قدره <strong className="text-slate-900 font-black">({deposit || "مبلغ التأمين المحدد"})</strong> يُرد للمستأجر عند انتهاء العقد وتسليم العين بحالتها الأصلية وخلو طرفه من فواتير المرافق.</>
               ) : (
@@ -295,27 +305,27 @@ export default function LegalDocumentSheet({
           </div>
 
           <div className="space-y-1">
-            <h4 className="font-black text-slate-900 text-xs sm:text-sm text-[#00102e]">
+            <h4 className="font-black text-slate-900 text-xs sm:text-[13px] text-[#00102e]">
               {isRental ? "البند الخامس (المعاينة والمحافظة على العين):" : "البند الرابع (المعاينة والالتزامات):"}
             </h4>
-            <p className="text-slate-700 leading-7">
+            <p className="text-slate-700 leading-6">
               يقر الطرف الثاني بأنه قد عاين محل العقد المعاينة التامة النافية للجهالة شرعاً وقانوناً، وقبله بحالته الراهنة دون أي تحفظ، كما يلتزم الطرفان بكافة الالتزامات الجوهرية المنصوص عليها في القوانين السارية.
             </p>
           </div>
 
           <div className="space-y-1">
-            <h4 className="font-black text-slate-900 text-xs sm:text-sm text-[#00102e]">
+            <h4 className="font-black text-slate-900 text-xs sm:text-[13px] text-[#00102e]">
               {isRental ? "البند السادس (المحكمة المختصة):" : "البند الخامس (الاختصاص القضائي):"}
             </h4>
-            <p className="text-slate-700 leading-7">
+            <p className="text-slate-700 leading-6">
               تختص محاكم {governorate} الابتدائية وجزئياتها بنظر أي نزاع قد ينشأ لا قدر الله بشأن تفسير أو تنفيذ أي بند من بنود هذا العقد.
             </p>
           </div>
         </div>
 
         {/* Signatures Footer Block */}
-        <div className="mt-8 pt-6 border-t-2 border-slate-300 grid grid-cols-2 gap-6 text-center">
-          <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <div className="mt-7 pt-5 border-t-2 border-slate-300 grid grid-cols-2 gap-6 text-center">
+          <div className="space-y-2 bg-slate-50/90 p-3 rounded-xl border border-slate-200">
             <strong className="block text-xs font-black text-slate-900">
               توقيع وبصمة الطرف الأول ({isRental ? "المؤجر" : "البائع"})
             </strong>
@@ -323,7 +333,7 @@ export default function LegalDocumentSheet({
             <div className="h-10 border-b border-dashed border-slate-400 w-3/4 mx-auto" />
           </div>
 
-          <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div className="space-y-2 bg-slate-50/90 p-3 rounded-xl border border-slate-200">
             <strong className="block text-xs font-black text-slate-900">
               توقيع وبصمة الطرف الثاني ({isRental ? "المستأجر" : "المشتري"})
             </strong>
@@ -335,9 +345,9 @@ export default function LegalDocumentSheet({
       </div>
 
       {/* Security & Verification Footer Tag */}
-      <div className="mt-10 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-400">
+      <div className="mt-8 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-[10px] text-slate-400">
         <div className="flex items-center gap-1.5">
-          <ShieldCheck className="h-4 w-4 text-[#986410]" />
+          <ShieldCheck className="h-3.5 w-3.5 text-[#986410]" />
           <span>مُعد ومحفوظ إلكترونيًا ومحمي بسجل نسخ رقمي عبر منصة Z Draft</span>
         </div>
         <span className="font-mono font-bold text-slate-500">{serialNumber}</span>
