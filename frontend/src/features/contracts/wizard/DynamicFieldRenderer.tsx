@@ -2,6 +2,52 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import type { ChangeEvent } from "react";
+
+// ─── Arabic Date Picker ───────────────────────────────────────────────────────
+const ARABIC_MONTHS = [
+  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+];
+
+function ArabicDatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const parts = value ? value.split("-") : ["", "", ""];
+  const [year, month, day] = parts;
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 80 }, (_, i) => String(currentYear - 10 + i - 40)).reverse();
+  const monthNum = parseInt(month, 10);
+  const yearNum = parseInt(year, 10);
+  const daysInMonth = month && year ? new Date(yearNum, monthNum, 0).getDate() : 31;
+  const days = Array.from({ length: daysInMonth }, (_, i) => String(i + 1).padStart(2, "0"));
+
+  const update = (y: string, m: string, d: string) => {
+    if (y && m && d) onChange(`${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`);
+    else onChange("");
+  };
+
+  const sel = "w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-xs text-slate-900 transition-all focus:border-[#00102e] focus:outline-none focus:ring-1 focus:ring-[#986410]/30 appearance-none text-center";
+
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] text-slate-400 font-medium">اختر التاريخ</p>
+      <div className="grid grid-cols-3 gap-1.5" dir="rtl">
+        <select value={day} onChange={e => update(year, month, e.target.value)} className={sel}>
+          <option value="">اليوم</option>
+          {days.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select value={month} onChange={e => update(year, e.target.value, day)} className={sel}>
+          <option value="">الشهر</option>
+          {ARABIC_MONTHS.map((m, i) => <option key={i + 1} value={String(i + 1).padStart(2, "0")}>{m}</option>)}
+        </select>
+        <select value={year} onChange={e => update(e.target.value, month, day)} className={sel}>
+          <option value="">السنة</option>
+          {years.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { evaluateCondition } from "@zdraft/template-engine";
 import type {
   ContractFieldValue,
@@ -95,7 +141,11 @@ function renderScalarControl(
     );
   }
 
-  const type = field.type === "date" ? "date" : field.type === "number" || field.type === "money" ? "number" : "text";
+  if (field.type === "date") {
+    return <ArabicDatePicker value={String(value ?? "")} onChange={onChange} />;
+  }
+
+  const type = field.type === "number" || field.type === "money" ? "number" : "text";
   return (
     <input
       type={type}
@@ -104,8 +154,7 @@ function renderScalarControl(
       placeholder={field.placeholder}
       min={field.validation?.min}
       max={field.validation?.max}
-      className={`${inputClass} ${(type === "number" || type === "date") ? "text-right" : ""}`}
-      dir={type === "number" || type === "date" ? "ltr" : undefined}
+      className={inputClass}
     />
   );
 }
@@ -164,13 +213,17 @@ function RepeaterRenderer({
                       </option>
                     ))}
                   </select>
+                ) : column.type === "date" ? (
+                  <ArabicDatePicker
+                    value={String(row[column.key] ?? "")}
+                    onChange={(v) => updateRow(index, column.key, v)}
+                  />
                 ) : (
                   <input
-                    type={column.type === "date" ? "date" : column.type === "number" || column.type === "money" ? "number" : "text"}
+                    type={column.type === "number" || column.type === "money" ? "number" : "text"}
                     value={String(row[column.key] ?? "")}
                     onChange={(event: ChangeEvent<HTMLInputElement>) => updateRow(index, column.key, event.target.value)}
                     placeholder={column.placeholder}
-                    dir={column.type === "number" || column.type === "money" ? "ltr" : undefined}
                     className={inputClass}
                   />
                 )}

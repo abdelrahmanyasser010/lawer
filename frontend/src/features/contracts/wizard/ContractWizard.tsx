@@ -26,6 +26,7 @@ import { validateDynamicDefinition } from "@/features/contracts/validation/valid
 import { saveDraftSnapshot } from "@/features/contracts/data/draftRepository";
 import { usePublicCatalog } from "@/hooks/usePublicCatalog";
 import ActionDialog from "@/components/ui/ActionDialog";
+import LegalDocumentSheet from "@/components/contract/LegalDocumentSheet";
 import MobileWizardPreview from "./MobileWizardPreview";
 
 /* ── Admin-configurable help text + video per field (from backend/dashboard) ── */
@@ -102,6 +103,7 @@ export default function WizardPage() {
   const resetWizard = useWizardStore((state) => state.resetWizard);
 
   const [isMobilePreviewOpen, setIsMobilePreviewOpen] = useState(false);
+  const [previewTab, setPreviewTab] = useState<"document" | "summary">("document");
   const [actionDialog, setActionDialog] = useState<{ title: string; message: string; confirmOnly: boolean; confirmLabel?: string; onConfirm?: () => void } | null>(null);
   const showNotice = (message: string, title = "تنبيه") => setActionDialog({ title, message, confirmOnly: true });
   const [autoSaveStatus, setAutoSaveStatus] = useState("تم الحفظ التلقائي ✓");
@@ -401,16 +403,58 @@ export default function WizardPage() {
   };
 
   const mobileCourtKey = contractSlug === "rental" || contractSlug === "apartment_sale" ? "" : draft?.variantKey === "visual_identity_design" ? "visual_competent_court" : draft?.variantKey === "website_development" ? "website_competent_court" : "social_competent_court";
-  const mobilePreviewRows = activeSteps.flatMap((step) => step.fields).filter((item) => !["contract_date", mobileCourtKey].includes(item.key) && !["attachment", "repeater"].includes(item.type)).map((item) => {
+  // Translate known English field values to Arabic for preview display
+  const arabicValueMap: Record<string, string> = {
+    individual: "فرد",
+    company: "شركة / منشأة",
+    yes: "نعم",
+    no: "لا",
+    male: "ذكر",
+    female: "أنثى",
+    independent: "عداد مستقل",
+    shared: "عداد مشترك",
+    cash_full: "نقداً بالكامل",
+    bank_transfer: "تحويل بنكي",
+    down_payment_later: "دفعة مقدمة والباقي لاحقاً",
+    installments: "أقساط",
+    registered: "مسجل بالشهر العقاري",
+    unregistered: "غير مسجل",
+    seller: "البائع",
+    buyer: "المشتري",
+    split: "مناصفة",
+    zoom: "Zoom",
+    whatsapp: "واتساب",
+    monthly: "شهري",
+    quarterly: "ربع سنوي",
+    annual: "سنوي",
+    lump_sum: "دفعة واحدة",
+    egyptian: "مصري",
+    non_egyptian: "غير مصري",
+  };
+
+  const mobilePreviewRows = activeSteps.flatMap((step) => step.fields).filter((item) => !["attachment", "repeater"].includes(item.type)).map((item) => {
     const raw = formData[item.key];
-    const value = typeof raw === "boolean" ? (raw ? "نعم" : "لا") : typeof raw === "string" || typeof raw === "number" ? String(raw) : "";
+    let value = typeof raw === "boolean" ? (raw ? "نعم" : "لا") : typeof raw === "string" || typeof raw === "number" ? String(raw) : "";
+    // Translate if the value is an English key
+    if (value && arabicValueMap[value]) value = arabicValueMap[value];
+    // Format ISO date (YYYY-MM-DD) to Arabic DD/MM/YYYY
+    if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) value = value.split("-").reverse().join("/");
     return { label: item.labelAr, value };
   }).filter((item) => item.value.trim() !== "");
   const mobilePreviewControls = <>
     <div className="fixed bottom-5 right-4 z-40 xl:hidden">
       <button type="button" onClick={() => setIsMobilePreviewOpen(true)} className="inline-flex items-center gap-2 rounded-full border-2 border-[#986410] bg-[#00102e] px-5 py-3 text-xs font-black text-[#d9a84e] shadow-2xl"><FileText className="h-4 w-4"/>معاينة العقد</button>
     </div>
-    <MobileWizardPreview open={isMobilePreviewOpen} onClose={() => setIsMobilePreviewOpen(false)} title={contractTitle} serial={displaySerial} contractDate={String(field("contract_date") || "")} court={String(field(mobileCourtKey) || "")} rows={mobilePreviewRows} annexes={selectedAnnexDefinitions.map((item) => item.documentTitleAr ?? item.nameAr)} />
+    <MobileWizardPreview
+      open={isMobilePreviewOpen}
+      onClose={() => setIsMobilePreviewOpen(false)}
+      title={contractTitle}
+      serial={displaySerial}
+      contractSlug={contractSlug}
+      fieldValues={formData}
+      rows={mobilePreviewRows}
+      annexes={selectedAnnexDefinitions.map((item) => item.documentTitleAr ?? item.nameAr)}
+    />
   </>;
 
 
@@ -640,53 +684,88 @@ export default function WizardPage() {
           {/* ─── LEFT: LIVE CONTRACT PREVIEW ─── */}
           <div id="wizard-preview" className="hidden xl:col-span-6 xl:block sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto scroll-mt-24">
             <div className="rounded-2xl border border-slate-200 bg-white shadow-md overflow-hidden">
-              {/* Preview Header */}
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 bg-[#00102e]">
-                <span className="text-xs font-bold text-white flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-[#986410]" />
-                  معاينة حية ومباشرة للعقد — تحديث فوري
-                </span>
-                <span className="rounded-full bg-[#986410]/20 px-2.5 py-0.5 text-[10px] font-bold text-[#986410] border border-[#986410]/30">
-                  تحديث مباشر
+              {/* Preview Header with Dual Tabs */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-[#00102e]">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTab("document")}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-black transition-all ${
+                      previewTab === "document"
+                        ? "bg-[#986410] text-white shadow-sm"
+                        : "bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white"
+                    }`}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    معاينة العقد (A4)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTab("summary")}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-black transition-all ${
+                      previewTab === "summary"
+                        ? "bg-[#986410] text-white shadow-sm"
+                        : "bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white"
+                    }`}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    ملخص البيانات
+                  </button>
+                </div>
+                <span className="rounded-full bg-[#986410]/20 px-2.5 py-0.5 text-[10px] font-bold text-[#d9a84e] border border-[#986410]/30 flex items-center gap-1">
+                  <Zap className="h-3 w-3 text-[#d9a84e]" />
+                  تحديث فوري
                 </span>
               </div>
 
-              {/* Contract Document */}
-              <div className="p-5 sm:p-7 space-y-4 text-xs leading-relaxed text-[#00102e] font-sans" dir="rtl">
-                <div className="text-center pb-4 border-b-2 border-[#00102e]">
-                  <div className="text-[10px] text-[#986410] font-bold uppercase tracking-widest mb-1">منصة Z draft لإعداد العقود</div>
-                  <h2 className="text-lg font-extrabold text-[#00102e]">{contractTitle}</h2>
-                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">{displaySerial} — مسودة قيد الإعداد</p>
+              {/* Preview Content */}
+              {previewTab === "document" ? (
+                <div className="p-3 sm:p-5 bg-slate-100/70 overflow-x-auto">
+                  <LegalDocumentSheet
+                    serialNumber={displaySerial}
+                    templateSlug={contractSlug}
+                    templateNameAr={contractTitle}
+                    fieldValues={formData}
+                    status="draft"
+                  />
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="mb-3 text-[11px] font-black text-[#00102e]">ملخص البيانات المدخلة</div>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {mobilePreviewRows.length ? mobilePreviewRows.map((item) => (
-                      <div key={`${item.label}-${item.value}`} className="rounded-lg border border-slate-200 bg-white p-2.5">
-                        <div className="text-[9px] font-bold text-slate-500">{item.label}</div>
-                        <div className="mt-1 text-[11px] font-extrabold text-[#00102e] break-words">{item.value}</div>
-                      </div>
-                    )) : <div className="text-[10px] text-slate-400">ابدأ بإدخال بيانات العقد لتظهر هنا.</div>}
+              ) : (
+                <div className="p-5 sm:p-7 space-y-4 text-xs leading-relaxed text-[#00102e] font-sans" dir="rtl">
+                  <div className="text-center pb-4 border-b-2 border-[#00102e]">
+                    <div className="text-[10px] text-[#986410] font-bold uppercase tracking-widest mb-1">منصة Z draft لإعداد العقود</div>
+                    <h2 className="text-lg font-extrabold text-[#00102e]">{contractTitle}</h2>
+                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">{displaySerial} — مسودة قيد الإعداد</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="mb-3 text-[11px] font-black text-[#00102e]">ملخص البيانات المدخلة</div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {mobilePreviewRows.length ? mobilePreviewRows.map((item) => (
+                        <div key={`${item.label}-${item.value}`} className="rounded-lg border border-slate-200 bg-white p-2.5">
+                          <div className="text-[9px] font-bold text-slate-500">{item.label}</div>
+                          <div className="mt-1 text-[11px] font-extrabold text-[#00102e] break-words">{item.value}</div>
+                        </div>
+                      )) : <div className="text-[10px] text-slate-400">ابدأ بإدخال بيانات العقد لتظهر هنا.</div>}
+                    </div>
+                  </div>
+                  {renderSelectedAnnexCards()}
+                  <div className="pt-4 border-t-2 border-[#00102e] grid grid-cols-2 gap-4 text-center text-[10px]">
+                    <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                      <div className="font-extrabold text-[#00102e] mb-1">الطرف الأول</div>
+                      <div className="text-slate-500 text-[9px] mb-4"><span className="text-slate-300">________________________</span></div>
+                      <div className="border-b border-slate-400 w-3/4 mx-auto" /><div className="text-slate-400 mt-1 text-[9px]">التوقيع والبصمة</div>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                      <div className="font-extrabold text-[#00102e] mb-1">الطرف الثاني</div>
+                      <div className="text-slate-500 text-[9px] mb-4"><span className="text-slate-300">________________________</span></div>
+                      <div className="border-b border-slate-400 w-3/4 mx-auto" /><div className="text-slate-400 mt-1 text-[9px]">التوقيع والبصمة</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-200 text-[9px] text-slate-400">
+                    <span className="flex items-center gap-1"><Lock className="h-2.5 w-2.5 text-[#986410]" />Z draft — معاينة بيانات العقد قبل الإصدار</span>
+                    <span className="font-mono">{displaySerial}</span>
                   </div>
                 </div>
-                {renderSelectedAnnexCards()}
-                <div className="pt-4 border-t-2 border-[#00102e] grid grid-cols-2 gap-4 text-center text-[10px]">
-                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
-                    <div className="font-extrabold text-[#00102e] mb-1">الطرف الأول</div>
-                    <div className="text-slate-500 text-[9px] mb-4"><span className="text-slate-300">________________________</span></div>
-                    <div className="border-b border-slate-400 w-3/4 mx-auto" /><div className="text-slate-400 mt-1 text-[9px]">التوقيع والبصمة</div>
-                  </div>
-                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
-                    <div className="font-extrabold text-[#00102e] mb-1">الطرف الثاني</div>
-                    <div className="text-slate-500 text-[9px] mb-4"><span className="text-slate-300">________________________</span></div>
-                    <div className="border-b border-slate-400 w-3/4 mx-auto" /><div className="text-slate-400 mt-1 text-[9px]">التوقيع والبصمة</div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-3 border-t border-slate-200 text-[9px] text-slate-400">
-                  <span className="flex items-center gap-1"><Lock className="h-2.5 w-2.5 text-[#986410]" />Z draft — معاينة بيانات العقد قبل الإصدار</span>
-                  <span className="font-mono">{displaySerial}</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
