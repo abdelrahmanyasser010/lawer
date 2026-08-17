@@ -45,6 +45,7 @@ export default function DynamicOptionalStep({ step, fieldValues, onFieldChange, 
             <DynamicFieldRenderer
               field={field}
               value={fieldValues[field.key]}
+              allFormValues={fieldValues}
               onChange={(value) => onFieldChange(field.key, value)}
               onFilesSelected={onFilesSelected ? (files) => onFilesSelected(field.key, files) : undefined}
               uploading={uploadingField === field.key}

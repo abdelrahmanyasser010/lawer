@@ -78,7 +78,7 @@ export default function PricingPage() {
   if(error&&!templates.length&&!settings.length)return <div className="p-8"><PageError message={error} onRetry={load}/></div>;
 
   return <div className="mx-auto max-w-7xl space-y-5 p-5 sm:p-7">
-    <header className="border-b border-slate-200 pb-4"><div className="flex items-center gap-2 text-[#986410]"><Tag className="h-4 w-4"/><span className="text-[11px] font-black">مركز التسعير</span></div><h1 className="mt-1 text-2xl font-black text-[#00102e]">أسعار العقود الفرعية</h1></header>
+    <header className="border-b border-slate-200 pb-4"><div className="flex items-center gap-2 text-[#986410]"><Tag className="h-4 w-4"/><span className="text-[11px] font-black">مركز التسعير</span></div><h1 className="mt-1 text-2xl font-black text-[#00102e]">أسعار العقود الفرعية</h1><p className="mt-2 text-[11px] font-bold text-slate-500">9 عقود فرعية × مسارين = 18 سعرًا مستقلًا</p></header>
     {error&&<div className="rounded-xl bg-red-50 p-3 text-xs font-bold text-red-700">{error}</div>}
 
     <section className="grid gap-3 md:grid-cols-2">

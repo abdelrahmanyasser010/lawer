@@ -97,6 +97,8 @@ export const legalLabelDictionary: Record<string, string> = {
   deposit_amount: "مبلغ التأمين",
   deposit_amount_words: "مبلغ التأمين كتابةً",
   holdover_daily_compensation: "تعويض التأخير اليومي",
+  rental_jurisdiction_court: "المحكمة المختصة",
+  sale_jurisdiction_court: "المحكمة المختصة",
   sale_total_price: "الثمن الإجمالي المتفق عليه",
   sale_payment_plan: "آلية سداد الثمن",
   sale_deposit_amount: "مقدم التعاقد",
@@ -172,6 +174,8 @@ export default function LegalDocumentSheet({
   fieldValues = {},
   status,
 }: Props) {
+  const missingPreviewValue = "....................";
+
   const effectiveSlug =
     templateSlug ||
     (Boolean(fieldValues.landlord_name) || Boolean(fieldValues.rent_amount)
@@ -209,13 +213,14 @@ export default function LegalDocumentSheet({
   const p1Name = isPartyOneCompany
     ? (fieldValues.landlord_company_name || fieldValues.sale_seller_company_name || fieldValues.client_company_name || "الشركة (الطرف الأول)")
     : (fieldValues.landlord_name || fieldValues.sale_seller_name || fieldValues.client_name || "الطرف الأول");
-  const p1Nationality = fieldValues.landlord_nationality || fieldValues.sale_seller_nationality || fieldValues.client_nationality || "مصري الجنسية";
+  const p1Nationality = fieldValues.landlord_nationality || fieldValues.sale_seller_nationality || fieldValues.client_nationality || missingPreviewValue;
+  const isP1NonEgyptian = p1Nationality !== "مصري" && p1Nationality !== "مصري الجنسية" && p1Nationality !== "egyptian" && p1Nationality !== "مصرية" && p1Nationality !== missingPreviewValue;
   const p1NationalId = fieldValues.landlord_national_id || fieldValues.sale_seller_national_id || fieldValues.client_national_id || "";
   const p1IdIssuer = fieldValues.landlord_id_issuer || fieldValues.sale_seller_id_issuer || "";
   const p1IdIssueDate = fieldValues.landlord_id_issue_date ? formatLegalValue("date", fieldValues.landlord_id_issue_date) : "";
   const p1Address = isPartyOneCompany
-    ? (fieldValues.landlord_company_address || fieldValues.sale_seller_company_address || fieldValues.client_company_address || fieldValues.landlord_address || "جمهورية مصر العربية")
-    : (fieldValues.landlord_address || fieldValues.sale_seller_address || fieldValues.client_address || "جمهورية مصر العربية");
+    ? (fieldValues.landlord_company_address || fieldValues.sale_seller_company_address || fieldValues.client_company_address || fieldValues.landlord_address || missingPreviewValue)
+    : (fieldValues.landlord_address || fieldValues.sale_seller_address || fieldValues.client_address || missingPreviewValue);
   const p1Phone = fieldValues.landlord_phone || fieldValues.sale_seller_phone || fieldValues.client_phone || "";
   const p1Email = isPartyOneCompany
     ? (fieldValues.landlord_company_email || fieldValues.sale_seller_company_email || fieldValues.client_company_email || "")
@@ -231,13 +236,14 @@ export default function LegalDocumentSheet({
   const p2Name = isPartyTwoCompany
     ? (fieldValues.tenant_company_name || fieldValues.sale_buyer_company_name || fieldValues.provider_company_name || "الشركة (الطرف الثاني)")
     : (fieldValues.tenant_name || fieldValues.sale_buyer_name || fieldValues.provider_name || "الطرف الثاني");
-  const p2Nationality = fieldValues.tenant_nationality || fieldValues.sale_buyer_nationality || fieldValues.provider_nationality || "مصري الجنسية";
+  const p2Nationality = fieldValues.tenant_nationality || fieldValues.sale_buyer_nationality || fieldValues.provider_nationality || missingPreviewValue;
+  const isP2NonEgyptian = p2Nationality !== "مصري" && p2Nationality !== "مصري الجنسية" && p2Nationality !== "egyptian" && p2Nationality !== "مصرية" && p2Nationality !== missingPreviewValue;
   const p2NationalId = fieldValues.tenant_national_id || fieldValues.sale_buyer_national_id || fieldValues.provider_national_id || "";
   const p2IdIssuer = fieldValues.tenant_id_issuer || fieldValues.sale_buyer_id_issuer || "";
   const p2IdIssueDate = fieldValues.tenant_id_issue_date ? formatLegalValue("date", fieldValues.tenant_id_issue_date) : "";
   const p2Address = isPartyTwoCompany
-    ? (fieldValues.tenant_company_address || fieldValues.sale_buyer_company_address || fieldValues.provider_company_address || fieldValues.tenant_address || "جمهورية مصر العربية")
-    : (fieldValues.tenant_address || fieldValues.sale_buyer_address || fieldValues.provider_address || "جمهورية مصر العربية");
+    ? (fieldValues.tenant_company_address || fieldValues.sale_buyer_company_address || fieldValues.provider_company_address || fieldValues.tenant_address || missingPreviewValue)
+    : (fieldValues.tenant_address || fieldValues.sale_buyer_address || fieldValues.provider_address || missingPreviewValue);
   const p2Phone = fieldValues.tenant_phone || fieldValues.sale_buyer_phone || fieldValues.provider_phone || "";
   const p2Email = isPartyTwoCompany
     ? (fieldValues.tenant_company_email || fieldValues.sale_buyer_company_email || fieldValues.provider_company_email || "")
@@ -249,7 +255,7 @@ export default function LegalDocumentSheet({
   const p2LegalForm = isPartyTwoCompany ? (fieldValues.tenant_company_legal_form || fieldValues.sale_buyer_company_legal_form || "") : "";
 
   // ─── Real Estate & Subject Details ─────────────────────────────────────────
-  const governorate = fieldValues.property_governorate || fieldValues.sale_unit_governorate || "القاهرة";
+  const governorate = fieldValues.property_governorate || fieldValues.sale_unit_governorate || missingPreviewValue;
   const city = fieldValues.property_city || fieldValues.sale_unit_city || "";
   const district = fieldValues.property_district || fieldValues.sale_unit_district || "";
   const street = fieldValues.property_street || fieldValues.sale_unit_street || "";
@@ -292,7 +298,7 @@ export default function LegalDocumentSheet({
   const rawContractDate = String(fieldValues.contract_date || "");
   const formattedContractDate = rawContractDate && /^\d{4}-\d{2}-\d{2}$/.test(rawContractDate)
     ? rawContractDate.split("-").reverse().join("/")
-    : rawContractDate || "....................";
+    : rawContractDate || missingPreviewValue;
 
   // ─── Witnesses ────────────────────────────────────────────────────────────
   const witness1Name = fieldValues.rental_witness_1_name || fieldValues.sale_witness_1_name || "";
@@ -324,6 +330,8 @@ export default function LegalDocumentSheet({
       ? "عقد تقديم خدمات مستقلة"
       : "عقد رسمي معتمد");
 
+  const hasPropertyData = Boolean(governorate !== missingPreviewValue || street || area || unitNum || buildingNum);
+
   return (
     <div className="relative mx-auto w-full max-w-[840px] rounded-2xl border border-slate-300 bg-white p-6 sm:p-10 shadow-lg print:shadow-none print:border-none font-sans select-text overflow-hidden">
 
@@ -343,7 +351,7 @@ export default function LegalDocumentSheet({
       )}
 
       {/* Official Islamic Header & Seal */}
-      <div className="relative z-10 text-center pb-3 border-b-2 border-[#00102e]">
+      <div id="doc-preamble" className="relative z-10 text-center pb-3 border-b-2 border-[#00102e] scroll-mt-28">
         <p className="text-[11px] font-serif font-bold text-slate-600 tracking-widest">
           بِسْمِ اللَّـهِ الرَّحْمَـٰنِ الرَّحِيمِ
         </p>
@@ -370,7 +378,7 @@ export default function LegalDocumentSheet({
         {/* Parties Box */}
         <div className="space-y-2.5 rounded-xl bg-slate-50/90 p-3.5 border border-slate-200">
           {/* Party 1 */}
-          <div className="space-y-1 border-b border-slate-200 pb-2">
+          <div id="doc-party-1" className="space-y-1 border-b border-slate-200 pb-2 scroll-mt-28">
             <strong className="block text-xs font-black text-[#00102e]">
               أولاً: {isPartyOneCompany ? "السادة / " : "السيد / "}{isRental ? "المؤجر" : isSale ? "البائع" : "العميل"} (الطرف الأول):
             </strong>
@@ -387,7 +395,7 @@ export default function LegalDocumentSheet({
             ) : (
               <p className="text-[11px] text-slate-700 leading-5">
                 <b>الاسم:</b> {p1Name} — <b>الجنسية:</b> {p1Nationality}
-                {p1NationalId && <> — <b>الرقم القومي / جواز السفر:</b> <span dir="ltr" className="font-mono font-bold">{p1NationalId}</span></>}
+                {p1NationalId && <> — <b>{isP1NonEgyptian ? "رقم جواز السفر" : "الرقم القومي"}:</b> <span dir="ltr" className="font-mono font-bold">{p1NationalId}</span></>}
                 {p1IdIssuer && <> (صادر من: {p1IdIssuer}{p1IdIssueDate ? ` بتاريخ ${p1IdIssueDate}` : ""})</>}
                 {p1Address && <> — <b>المحل المختار / الإقامة:</b> {p1Address}</>}
                 {p1Phone && <> — <b>الهاتف:</b> <span dir="ltr" className="font-mono">{p1Phone}</span></>}
@@ -397,7 +405,7 @@ export default function LegalDocumentSheet({
           </div>
 
           {/* Party 2 */}
-          <div className="space-y-1">
+          <div id="doc-party-2" className="space-y-1 scroll-mt-28">
             <strong className="block text-xs font-black text-[#00102e]">
               ثانياً: {isPartyTwoCompany ? "السادة / " : "السيد / "}{isRental ? "المستأجر" : isSale ? "المشتري" : "مقدم الخدمة"} (الطرف الثاني):
             </strong>
@@ -414,7 +422,7 @@ export default function LegalDocumentSheet({
             ) : (
               <p className="text-[11px] text-slate-700 leading-5">
                 <b>الاسم:</b> {p2Name} — <b>الجنسية:</b> {p2Nationality}
-                {p2NationalId && <> — <b>الرقم القومي / جواز السفر:</b> <span dir="ltr" className="font-mono font-bold">{p2NationalId}</span></>}
+                {p2NationalId && <> — <b>{isP2NonEgyptian ? "رقم جواز السفر" : "الرقم القومي"}:</b> <span dir="ltr" className="font-mono font-bold">{p2NationalId}</span></>}
                 {p2IdIssuer && <> (صادر من: {p2IdIssuer}{p2IdIssueDate ? ` بتاريخ ${p2IdIssueDate}` : ""})</>}
                 {p2Address && <> — <b>المحل المختار / الإقامة:</b> {p2Address}</>}
                 {p2Phone && <> — <b>الهاتف:</b> <span dir="ltr" className="font-mono">{p2Phone}</span></>}
@@ -423,6 +431,89 @@ export default function LegalDocumentSheet({
             )}
           </div>
         </div>
+
+        {/* ─── DATA GRID SECTION (Matching PDF Structure Before Clauses) ─── */}
+        {(isRental || isSale) && hasPropertyData && (
+          <div id="doc-unit-specs" className="space-y-2 rounded-xl bg-slate-50/90 p-3.5 border border-slate-200 scroll-mt-28">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+              <strong className="text-xs font-black text-[#00102e]">
+                {isRental ? "بيانات العين المؤجرة ومواصفاتها (البيان المعتمد بصدر العقد)" : "بيانات الوحدة المبيعة ومواصفاتها"}
+              </strong>
+              {compoundName && <span className="text-[10px] text-slate-500 font-bold">{compoundName}</span>}
+            </div>
+            <table className="w-full text-[10.5px] text-slate-700 border-collapse">
+              <tbody>
+                <tr className="border-b border-slate-200/70">
+                  <td className="py-1.5 px-2 w-1/2 align-top">
+                    <span className="text-slate-500 text-[10px] block">المحافظة:</span>
+                    <span className="font-bold">{governorate}</span>
+                  </td>
+                  <td className="py-1.5 px-2 w-1/2 align-top">
+                    <span className="text-slate-500 text-[10px] block">المدينة / المركز:</span>
+                    <span className="font-bold">{city || "—"}</span>
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-200/70">
+                  <td className="py-1.5 px-2 w-1/2 align-top">
+                    <span className="text-slate-500 text-[10px] block">الحي / المنطقة:</span>
+                    <span className="font-bold">{district || "—"}</span>
+                  </td>
+                  <td className="py-1.5 px-2 w-1/2 align-top">
+                    <span className="text-slate-500 text-[10px] block">اسم الشارع:</span>
+                    <span className="font-bold">{street || "—"}</span>
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-200/70">
+                  <td className="py-1.5 px-2 w-1/2 align-top">
+                    <span className="text-slate-500 text-[10px] block">رقم العقار / المبنى:</span>
+                    <span className="font-bold">{buildingNum || "—"}</span>
+                  </td>
+                  <td className="py-1.5 px-2 w-1/2 align-top">
+                    <span className="text-slate-500 text-[10px] block">الدور / رقم الوحدة:</span>
+                    <span className="font-bold">{floorNum ? `الدور ${floorNum}` : ""} {unitNum ? `(رقم ${unitNum})` : "—"}</span>
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-200/70">
+                  <td className="py-1.5 px-2 w-1/2 align-top">
+                    <span className="text-slate-500 text-[10px] block">المساحة الإجمالية:</span>
+                    <span className="font-bold">{area ? `${area} م²` : "—"}</span>
+                  </td>
+                  <td className="py-1.5 px-2 w-1/2 align-top">
+                    <span className="text-slate-500 text-[10px] block">{isRental ? "النشاط / الغرض:" : "نوع الوحدة:"}</span>
+                    <span className="font-bold">{tradeName || resPropertyType || "—"}</span>
+                  </td>
+                </tr>
+                {isRental && (locationType || mezzanine || facadeMeters || hasStorage || hasLoading) && (
+                  <tr className="border-b border-slate-200/70">
+                    <td className="py-1.5 px-2 w-1/2 align-top">
+                      <span className="text-slate-500 text-[10px] block">نوع الموقع والواجهة:</span>
+                      <span className="font-bold">{locationType || "—"} {facadeMeters ? `(طول الواجهة: ${facadeMeters} م)` : ""}</span>
+                    </td>
+                    <td className="py-1.5 px-2 w-1/2 align-top">
+                      <span className="text-slate-500 text-[10px] block">الميزانين والملحقات التجارية:</span>
+                      <span className="font-bold">
+                        {mezzanine ? `ميزانين: ${formatLegalValue("mezzanine", mezzanine)}` : ""}
+                        {hasStorage ? ` • مخزن: ${formatLegalValue("storage", hasStorage)}` : ""}
+                        {hasLoading ? ` • تحميل: ${formatLegalValue("loading", hasLoading)}` : ""}
+                        {!mezzanine && !hasStorage && !hasLoading ? "—" : ""}
+                      </span>
+                    </td>
+                  </tr>
+                )}
+                {(electricityMeter || waterMeter || gasMeter) && (
+                  <tr>
+                    <td colSpan={2} className="py-1.5 px-2 text-[10px] text-slate-600 bg-slate-100/60 rounded-b-lg">
+                      <b>العدادات المعتمدة:</b>{" "}
+                      {electricityMeter && <>كهرباء (<span dir="ltr" className="font-mono font-bold">{electricityMeter}</span> - {electricityMeterType}) • </>}
+                      {waterMeter && <>مياه (<span dir="ltr" className="font-mono font-bold">{waterMeter}</span> - {waterMeterType}) • </>}
+                      {gasMeter && <>غاز (<span dir="ltr" className="font-mono font-bold">{gasMeter}</span> - {gasMeterType})</>}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* ─── FULL OFFICIAL LEGAL CLAUSES (المواد القانونية الرسمية الكاملة) ─── */}
         <div className="space-y-4 pt-2">
@@ -434,7 +525,7 @@ export default function LegalDocumentSheet({
               }
 
               return (
-                <div key={clause.key} className="space-y-1.5 pt-1.5">
+                <div key={clause.key} id={`doc-clause-${clause.key}`} className="space-y-1.5 pt-1.5 scroll-mt-28">
                   <h4 className="font-black text-[#00102e] text-xs sm:text-[12.5px] border-r-3 border-[#986410] pr-2">
                     {clause.titleAr}
                   </h4>
@@ -443,39 +534,6 @@ export default function LegalDocumentSheet({
                   <p className="text-slate-700 leading-6 text-justify whitespace-pre-line text-[11px] sm:text-[11.5px]">
                     {clause.bodyAr}
                   </p>
-
-                  {/* Highlight Specific Subject / Property Specs within Article 4 for complete clarity */}
-                  {(clause.key.includes("article_04") || clause.key.includes("article_4") || clause.key.includes("specs")) && isRental && (
-                    <div className="my-2 p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] leading-5 space-y-1.5 font-sans">
-                      <div className="font-bold text-[#00102e]">
-                        📍 <b>العين المؤجرة:</b> {resPropertyType ? `(${resPropertyType}) ` : ""}{[street ? `شارع ${street}` : "", buildingNum ? `عقار رقم ${buildingNum}` : "", floorNum ? `الدور ${floorNum}` : "", unitNum ? `رقم ${unitNum}` : "", district, city, governorate].filter(Boolean).join("، ")} {compoundName ? `داخل (${compoundName})` : ""} {area ? `— المساحة: (${area}) م²` : ""}.
-                      </div>
-                      {(tradeName || locationType || mezzanine || facadeMeters || facadeCount || hasStorage || hasLoading) && (
-                        <div className="text-slate-600">
-                          {tradeName && <><b>النشاط / الاسم:</b> {tradeName} • </>}
-                          {locationType && <><b>الموقع:</b> {locationType} • </>}
-                          {mezzanine && <><b>الميزانين:</b> {formatLegalValue("mezzanine", mezzanine)} • </>}
-                          {facadeMeters && <><b>طول الواجهة:</b> {facadeMeters} م • </>}
-                          {facadeCount && <><b>عدد الواجهات:</b> {facadeCount} • </>}
-                          {hasStorage && <><b>مخزن تابع:</b> {formatLegalValue("storage", hasStorage)} • </>}
-                          {hasLoading && <><b>مكان تحميل:</b> {formatLegalValue("loading", hasLoading)}</>}
-                        </div>
-                      )}
-                      {annexList.length > 0 && (
-                        <div className="text-slate-600">
-                          <b>الملحقات المشمولة:</b> {annexList.join("، ")}.
-                        </div>
-                      )}
-                      {(electricityMeter || waterMeter || gasMeter) && (
-                        <div className="text-slate-600">
-                          <b>العدادات:</b>{" "}
-                          {electricityMeter && <>كهرباء (<span dir="ltr" className="font-mono">{electricityMeter}</span> - {electricityMeterType}) • </>}
-                          {waterMeter && <>مياه (<span dir="ltr" className="font-mono">{waterMeter}</span> - {waterMeterType}) • </>}
-                          {gasMeter && <>غاز (<span dir="ltr" className="font-mono">{gasMeter}</span> - {gasMeterType})</>}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               );
             })
@@ -488,7 +546,7 @@ export default function LegalDocumentSheet({
         </div>
 
         {/* ─── SIGNATURES & WITNESSES BLOCK ─── */}
-        <div className="mt-8 pt-6 border-t-2 border-slate-300 space-y-6">
+        <div id="doc-signatures" className="mt-8 pt-6 border-t-2 border-slate-300 space-y-6 scroll-mt-28">
           <div className="grid grid-cols-2 gap-6 text-center">
             <div className="space-y-2 bg-slate-50/90 p-3.5 rounded-xl border border-slate-200">
               <strong className="block text-xs font-black text-slate-900">
@@ -511,14 +569,14 @@ export default function LegalDocumentSheet({
           <div className="grid grid-cols-2 gap-6 text-center pt-2">
             <div className="space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-[11px]">
               <strong className="block font-bold text-slate-900">الشاهد الأول:</strong>
-              <p className="text-slate-700">{witness1Name || "...................."}</p>
-              <p className="font-mono text-[10px] text-slate-500">الرقم القومي: {witness1Id || "...................."}</p>
+              <p className="text-slate-700">{witness1Name || missingPreviewValue}</p>
+              <p className="font-mono text-[10px] text-slate-500">الرقم القومي: {witness1Id || missingPreviewValue}</p>
               <div className="h-6 border-b border-dotted border-slate-400 w-1/2 mx-auto mt-2" />
             </div>
             <div className="space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-[11px]">
               <strong className="block font-bold text-slate-900">الشاهد الثاني:</strong>
-              <p className="text-slate-700">{witness2Name || "...................."}</p>
-              <p className="font-mono text-[10px] text-slate-500">الرقم القومي: {witness2Id || "...................."}</p>
+              <p className="text-slate-700">{witness2Name || missingPreviewValue}</p>
+              <p className="font-mono text-[10px] text-slate-500">الرقم القومي: {witness2Id || missingPreviewValue}</p>
               <div className="h-6 border-b border-dotted border-slate-400 w-1/2 mx-auto mt-2" />
             </div>
           </div>

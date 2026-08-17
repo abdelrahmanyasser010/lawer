@@ -21,7 +21,7 @@ def has(cond,key,op=None,val=None,with_val=False):
     return False
 
 d=json.loads(txt('backend/database/template-definitions/rental.json'))
-check('rental_version_7',d.get('version')==7)
+check('rental_version_8',d.get('version')==8)
 check('family_price_disabled',d.get('priceEgp')==0)
 check('three_variants_exact',[v.get('key') for v in d.get('variants',[])]==['residential_lease','commercial_lease','administrative_lease'])
 check('variant_pricing_exact_keys',set(d.get('variantPricing',{}))=={'residential_lease','commercial_lease','administrative_lease'})
@@ -170,10 +170,13 @@ for vkey,fields in all_fields.items():
         check(f'{vkey}_witness_{n}_optional',fields.get(f'rental_witness_{n}_enabled',{}).get('required') is not True)
         for suffix in ['name','national_id']:
             check(f'{vkey}_witness_{n}_{suffix}_conditional',has(fields.get(f'rental_witness_{n}_{suffix}',{}).get('requiredWhen'),f'rental_witness_{n}_enabled','truthy'))
-    check(f'{vkey}_no_court_dropdown',all('court' not in k for k in fields))
+    court=fields.get('rental_jurisdiction_court',{})
+    check(f'{vkey}_jurisdiction_court_required',court.get('required') is True)
+    check(f'{vkey}_jurisdiction_court_select',court.get('type')=='select' and any(o.get('value')=='القاهرة' for o in court.get('options',[])))
+    check(f'{vkey}_jurisdiction_clause_active','rental_jurisdiction_court_clause' in order(vkey))
     court_text=' '.join(clauses.get(k,{}).get('bodyAr','') for k in order(vkey) if k in clauses)
     court_text=re.sub(r'\s+',' ',court_text)
-    check(f'{vkey}_court_by_property','يقع في دائرتها' in court_text and ('العقار' in court_text or 'العين المؤجرة' in court_text))
+    check(f'{vkey}_court_clause_uses_selected_court','تختص محكمة {{rental_jurisdiction_court}}' in court_text)
 
 # Handover/inventory annex faithfully blank/manual and conditional.
 ann=annexes.get('rental_handover_inventory_report',{})
@@ -235,11 +238,15 @@ check('shared_payment_labels',all(x in shared for x in ['rental_payment_method:'
 # Migration publication safety.
 mig6=txt('backend/database/migrations/2026_08_12_000300_publish_rental_review_v6.php')
 mig7=txt('backend/database/migrations/2026_08_12_000400_publish_rental_payment_grace_v7.php')
+mig8=txt('backend/database/migrations/2026_08_17_000100_publish_rental_jurisdiction_v8.php')
 check('migration_v6_fresh_install_forward_compatible',"$canonicalVersion > 6" in mig6 and 'return;' in mig6)
-check('migration_v7_number',"version_number', 7" in mig7 and "version'] ?? 0) !== 7" in mig7)
+check('migration_v7_number',"version_number', 7" in mig7 and "$canonicalVersion !== 7" in mig7)
 check('migration_v7_immutable_guard','different immutable definition' in mig7)
 check('migration_v7_newer_guard',"> 7" in mig7 and 'return;' in mig7)
 check('migration_v7_no_rollback','rollback is intentionally disabled' in mig7)
+check('migration_v8_number',"version_number', 8" in mig8 and "template_version' => 8" in mig8)
+check('migration_v8_immutable_guard','different immutable definition' in mig8)
+check('migration_v8_no_rollback','rollback is intentionally disabled' in mig8)
 
 failed=[name for name,ok,_ in checks if not ok]
 print(f'RENTAL CONTRACT CHECKS {len(checks)-len(failed)}/{len(checks)}')

@@ -32,7 +32,7 @@ def has_not_company(cond,prefix):
     return False
 
 d=json.loads(txt('backend/database/template-definitions/apartment_sale.json'))
-check('sale_version_6',d.get('version')==6)
+check('sale_version_7',d.get('version')==7)
 check('sale_family_price_disabled',d.get('priceEgp')==0)
 expected_variants=['preliminary_sale','registrable_sale','inherited_sale']
 check('sale_three_variants_exact',[v.get('key') for v in d.get('variants',[])]==expected_variants)
@@ -57,7 +57,10 @@ legacy_keys={
 }
 for vkey,fields in all_fields.items():
     for key in sorted(legacy_keys): check(f'{vkey}_no_legacy_{key}',key not in fields)
-    check(f'{vkey}_no_court_field',all('court' not in k or k in {'inheritance_declaration_court','registered_judgment_court'} for k in fields))
+    check(f'{vkey}_no_unexpected_court_field',all('court' not in k or k in {'inheritance_declaration_court','registered_judgment_court','sale_jurisdiction_court'} for k in fields))
+    court=fields.get('sale_jurisdiction_court',{})
+    check(f'{vkey}_jurisdiction_court_required',court.get('required') is True)
+    check(f'{vkey}_jurisdiction_court_select',court.get('type')=='select' and any(o.get('value')=='القاهرة' for o in court.get('options',[])))
 
 # Party rules: source orange required, blue optional, companies only where source includes them.
 for vkey,fields in all_fields.items():
@@ -256,7 +259,8 @@ for vkey in expected_variants:
     for key in o:
         check(f'{vkey}_legal_clause_exists_{key}',key in clauses and bool(clauses[key].get('bodyAr')))
     source_text=' '.join(clauses[k].get('bodyAr','') for k in o if k in clauses)
-    check(f'{vkey}_court_fixed_by_property','المحكمة' in source_text and ('دائرتها العقار' in source_text or 'دائرة العقار' in source_text))
+    check(f'{vkey}_court_clause_active','sale_jurisdiction_court_clause' in o)
+    check(f'{vkey}_court_clause_uses_selected_court','تختص محكمة {{sale_jurisdiction_court}}' in source_text)
     for bad in ['البيان المثبت بجدول بيانات العقد','sale_competent_court','[ ]','][','....']:
         check(f'{vkey}_clean_source_{re.sub(r"\W+","_",bad)}',bad not in source_text)
     check(f'{vkey}_signature_source_removed',not any(k.endswith('_source_article_25') or (vkey!='preliminary_sale' and k.endswith('_source_article_24')) for k in o))
@@ -321,7 +325,15 @@ if mig.is_file():
     m=mig.read_text(encoding='utf-8')
     check('sale_migration_version6',"version_number', 6" in m and "template_version' => 6" in m)
     check('sale_migration_immutable_guard','already exists with a different immutable definition' in m)
+    check('sale_migration_v6_newer_guard',"> 6" in m and 'return;' in m)
     check('sale_migration_no_rollback','rollback is intentionally disabled' in m)
+new_mig=ROOT/'backend/database/migrations/2026_08_17_000200_publish_apartment_sale_jurisdiction_v7.php'
+check('sale_migration_v7_exists',new_mig.is_file())
+if new_mig.is_file():
+    m=new_mig.read_text(encoding='utf-8')
+    check('sale_migration_v7_number',"version_number', 7" in m and "template_version' => 7" in m)
+    check('sale_migration_v7_immutable_guard','already exists with a different immutable definition' in m)
+    check('sale_migration_v7_no_rollback','rollback is intentionally disabled' in m)
 try:
     out=subprocess.check_output(['node','-e',"const d=require('./packages/template-engine/dist').apartmentSaleTemplateDefinition;process.stdout.write(JSON.stringify(d))"],cwd=ROOT,text=True,encoding='utf-8')
     check('canonical_equals_compiled_engine',json.loads(out)==d)

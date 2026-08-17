@@ -266,9 +266,19 @@ function RepeaterRenderer({
   );
 }
 
+interface DynamicFieldRendererProps {
+  field: WizardFieldDefinition;
+  value: ContractFieldValue | undefined;
+  allFormValues?: Record<string, any>;
+  onChange: (value: ContractFieldValue) => void;
+  onFilesSelected?: (files: File[]) => Promise<void> | void;
+  uploading?: boolean;
+}
+
 export default function DynamicFieldRenderer({
   field,
   value,
+  allFormValues = {},
   onChange,
 }: DynamicFieldRendererProps) {
   if (field.type === "repeater") {
@@ -276,16 +286,41 @@ export default function DynamicFieldRenderer({
     return <RepeaterRenderer field={field} value={listValue} onChange={onChange} />;
   }
 
+  let label = field.labelAr;
+  let placeholder = field.placeholder;
+  let helpText = field.helpText;
+
+  if (field.key.endsWith("_national_id")) {
+    const natKey = field.key.replace(/_national_id$/, "_nationality");
+    const natVal = String(allFormValues[natKey] ?? "").trim();
+    const isNonEgyptian = natVal !== "" && natVal !== "مصري" && natVal !== "egyptian" && natVal !== "مصرية" && natVal !== "مصري الجنسية";
+    if (isNonEgyptian) {
+      label = "رقم جواز السفر";
+      placeholder = "أدخل رقم جواز السفر الساري";
+      helpText = "رقم جواز السفر للمتعاقد غير المصري";
+    } else {
+      label = "الرقم القومي";
+      placeholder = "14 رقمًا قوميًا";
+      helpText = "الرقم القومي المكون من 14 رقمًا للمواطن المصري";
+    }
+  }
+
+  const effectiveField: WizardFieldDefinition = {
+    ...field,
+    labelAr: label,
+    placeholder: placeholder || field.placeholder,
+  };
+
   return (
     <div className="space-y-1.5">
       {field.type !== "checkbox" && (
         <label className="block text-xs font-bold text-[#00102e]">
-          {field.labelAr} {field.required && <span className="text-[#c66b22]">*</span>}
+          {label} {field.required && <span className="text-[#c66b22]">*</span>}
         </label>
       )}
-      {renderScalarControl(field, scalarValue(value), (next) => onChange(next))}
-      {field.helpText && (
-        <p className="text-[10px] text-slate-400 leading-normal">{field.helpText}</p>
+      {renderScalarControl(effectiveField, scalarValue(value), (next) => onChange(next))}
+      {helpText && (
+        <p className="text-[10px] text-slate-400 leading-normal">{helpText}</p>
       )}
     </div>
   );

@@ -11,7 +11,7 @@ import {
   saleSourceClauseKeysByVariant,
   saleSourceLegalClauses,
 } from "../../legal-content/sourceClauses";
-import { contractDateField } from "../common";
+import { competentCourtField, contractDateField } from "../common";
 
 const partyTypeOptions = [
   { value: "individual", labelAr: "فرد" },
@@ -372,6 +372,13 @@ function witnessesStep(): WizardStepDefinition {
   };
 }
 
+const saleJurisdictionStep: WizardStepDefinition = {
+  key: "sale_jurisdiction",
+  titleAr: "المحكمة المختصة",
+  articleRange: "تسوية المنازعات",
+  fields: [competentCourtField("sale_jurisdiction_court")],
+};
+
 function attachmentStep(variant: "preliminary" | "registrable" | "inherited"): WizardStepDefinition {
   const common: WizardFieldDefinition[] = [
     { key: "sale_seller_identity_copy", type: "attachment", labelAr: "صورة بطاقة الرقم القومي أو جواز السفر للبائع / ممثله القانوني عند كون البائع شركة", required: true },
@@ -459,6 +466,7 @@ function createVariant(input: {
       noticesStep(),
       attachmentStep(input.taxVariant),
       witnessesStep(),
+      saleJurisdictionStep,
       saleReviewStep,
     ],
     requiredClauseKeys: orderedSaleClauseKeys(input.key),
@@ -579,6 +587,12 @@ const reviewedSourceClauses = saleSourceLegalClauses.map((item): LegalClauseDefi
 });
 
 const conditionalClauses: LegalClauseDefinition[] = [
+  customClause({
+    key: "sale_jurisdiction_court_clause",
+    titleAr: "المحكمة المختصة",
+    variables: ["sale_jurisdiction_court"],
+    bodyAr: "تختص محكمة {{sale_jurisdiction_court}} بنظر أي نزاع ينشأ عن هذا العقد أو يتعلق بتفسيره أو تنفيذه أو آثاره، وذلك مع عدم الإخلال بقواعد الاختصاص الولائي والنوعي الآمرة.",
+  }),
   customClause({ key: "sale_full_payment_clause", titleAr: "السداد الكامل في مجلس العقد", bodyAr: "يقر البائع بأنه تسلم من المشتري قبل التوقيع وفي مجلس العقد كامل ثمن البيع المبين في بيانات العقد، ويُعد توقيعه مخالصة نهائية باستلام كامل الثمن وإبراءً لذمة المشتري من الالتزام المالي الناشئ عن الثمن، دون إخلال بأي التزامات أخرى ناشئة عن العقد أو القانون.", visibleWhen: fullPaymentCondition }),
   customClause({ key: "sale_installment_payment_clause", titleAr: "السداد بالتقسيط أو على دفعات", variables: ["sale_down_payment", "sale_remaining_amount", "sale_installment_grace_days"], bodyAr: `يقر البائع باستلام مقدم قدره {{sale_down_payment}} جنيه مصري، ويلتزم المشتري بسداد باقي الثمن وقدره {{sale_remaining_amount}} جنيه مصري وفق ملحق جدول الأقساط المرفق بهذا العقد، ويُعد الملحق جزءًا لا يتجزأ من العقد وتكون بياناته ملزمة للطرفين.
 
@@ -636,6 +650,7 @@ function orderedSaleClauseKeys(variantKey: "preliminary_sale" | "registrable_sal
     result.push(key);
     result.push(...(after[key] ?? []));
   }
+  result.push("sale_jurisdiction_court_clause");
   return result;
 }
 
@@ -732,14 +747,14 @@ const installmentAnnexClause: LegalClauseDefinition = {
 
 export const apartmentSaleTemplateDefinition: ContractTemplateDefinition = {
   slug: "apartment_sale",
-  version: 6,
+  version: 7,
   nameAr: "عقود بيع الوحدات السكنية",
   description: "ثلاثة عقود بيع مستقلة مطابقة للنماذج: بيع ابتدائي، بيع قابل للتسجيل بالشهر العقاري، وبيع لوحدة آلت بالميراث، مع ملحق جدول أقساط فارغ للطباعة عند التقسيط.",
   priceEgp: 0,
   variantPricing: {
-    preliminary_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 0 },
-    registrable_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 0 },
-    inherited_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 0 },
+    preliminary_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 999 },
+    registrable_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 999 },
+    inherited_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 999 },
   },
   variants: [
     createVariant({

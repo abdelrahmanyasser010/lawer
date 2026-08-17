@@ -130,6 +130,25 @@ final class TemplateEngineService
                 $issues[] = 'إجمالي الثمن يجب أن يساوي الدفعة المقدمة + باقي الثمن';
             }
         }
+        foreach ($resolved['steps'] as $step) {
+            foreach ($step['fields'] ?? [] as $field) {
+                $fKey = (string)($field['key'] ?? '');
+                if (str_ends_with($fKey, '_national_id')) {
+                    $natKey = preg_replace('/_national_id$/', '_nationality', $fKey);
+                    $natVal = trim((string)($fieldValues[$natKey] ?? ''));
+                    $idVal = trim((string)($fieldValues[$fKey] ?? ''));
+                    if ($idVal !== '') {
+                        $isEgyptian = in_array(mb_strtolower($natVal), ['مصري', 'egyptian', 'مصرية', 'مصري الجنسية'], true);
+                        $digitsOnly = preg_replace('/\D/', '', $idVal);
+                        if ($isEgyptian && (strlen($digitsOnly) !== 14 || $digitsOnly !== $idVal)) {
+                            $issues[] = ($field['labelAr'] ?? $fKey) . ' — مطلوب 14 رقمًا قوميًا للمواطن المصري';
+                        } elseif (!$isEgyptian && $natVal !== '' && mb_strlen($idVal) < 5) {
+                            $issues[] = ($field['labelAr'] ?? $fKey) . ' — رقم جواز السفر يجب ألا يقل عن 5 خانات';
+                        }
+                    }
+                }
+            }
+        }
         // Separate annexes marked manualFillAnnex are printed as blank templates.
         // Their internal form fields are intentionally not validated in the customer wizard.
         return ['steps'=>$resolved['steps'],'issues'=>array_values(array_unique($issues))];

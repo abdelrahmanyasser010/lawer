@@ -13,7 +13,14 @@ return new class extends Migration {
 
         $raw = file_get_contents($path);
         $definition = json_decode($raw ?: '', true, 512, JSON_THROW_ON_ERROR);
-        if (($definition['slug'] ?? null) !== 'rental' || (int)($definition['version'] ?? 0) !== 7) {
+        if (($definition['slug'] ?? null) !== 'rental') {
+            throw new RuntimeException('Canonical rental template definition is required by this migration.');
+        }
+        $canonicalVersion = (int)($definition['version'] ?? 0);
+        if ($canonicalVersion > 7) {
+            return;
+        }
+        if ($canonicalVersion !== 7) {
             throw new RuntimeException('Canonical rental v7 definition is required by this migration.');
         }
 

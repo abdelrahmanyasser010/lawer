@@ -279,8 +279,8 @@ test("social media delay penalty uses exactly one source-backed calculation path
   assert.equal(Boolean(percentageFields.social_delay_penalty_amount), false);
 });
 
-test("rental v7 exposes the three reviewed lease variants without legacy fields", () => {
-  assert.equal(rentalTemplateDefinition.version, 7);
+test("rental v8 exposes the three reviewed lease variants without legacy fields", () => {
+  assert.equal(rentalTemplateDefinition.version, 8);
   assert.deepEqual(
     rentalTemplateDefinition.variants.map((variant) => variant.key),
     ["residential_lease", "commercial_lease", "administrative_lease"],
@@ -296,15 +296,18 @@ test("rental v7 exposes the three reviewed lease variants without legacy fields"
   }
 });
 
-test("rental v7 core finance, duration and source-specific payment fields are required with no fake defaults", () => {
+test("rental v8 core finance, duration and source-specific payment fields are required with no fake defaults", () => {
   const coreRequiredKeys = [
     "contract_date", "contract_copies_count", "lease_duration_text", "start_date", "end_date", "property_delivery_date",
     "deposit_amount", "deposit_amount_words", "rent_period", "rent_amount", "rent_amount_words", "rent_due_day",
-    "holdover_daily_compensation",
+    "holdover_daily_compensation", "rental_jurisdiction_court",
   ];
   for (const variant of rentalTemplateDefinition.variants) {
     const fields = Object.fromEntries(variant.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
     for (const key of coreRequiredKeys) assert.equal(fields[key]?.required, true, `${variant.key}:${key}`);
+    assert.equal(fields.rental_jurisdiction_court.type, "select");
+    assert.ok(fields.rental_jurisdiction_court.options.some((option) => option.value === "القاهرة"));
+    assert.ok(variant.requiredClauseKeys.includes("rental_jurisdiction_court_clause"));
     assert.equal(fields.contract_copies_count.validation.min, 2);
     for (const key of ["deposit_amount", "rent_amount", "annual_increase_rate", "rent_due_day", "late_payment_daily_compensation", "holdover_daily_compensation"]) {
       assert.equal(Object.hasOwn(variant.defaultFieldValues ?? {}, key), false, `${variant.key}:${key} must not have a fake default`);
@@ -408,12 +411,13 @@ test("rental annual increase follows each source: fixed 10% for residential/admi
   assert.match(clauses.rental_commercial_annual_increase_clause.bodyAr, /\{\{annual_increase_rate\}\}/);
 });
 
-test("rental jurisdiction is fixed by property location and is not a selectable court field", () => {
+test("rental jurisdiction uses an explicit selected court field and required clause", () => {
   for (const variant of rentalTemplateDefinition.variants) {
-    const keys = variant.steps.flatMap((step) => step.fields.map((field) => field.key));
-    assert.equal(keys.some((key) => key.includes("competent_court")), false, variant.key);
-    const legalText = variant.requiredClauseKeys.map((key) => rentalTemplateDefinition.legalClauses.find((clause) => clause.key === key)?.bodyAr ?? "").join("\n");
-    assert.match(legalText, /محكمة.+يقع.+دائرتها.+العقار/s, variant.key);
+    const fields = Object.fromEntries(variant.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
+    assert.equal(fields.rental_jurisdiction_court.required, true, `${variant.key}:rental_jurisdiction_court`);
+    assert.equal(fields.rental_jurisdiction_court.type, "select");
+    assert.ok(fields.rental_jurisdiction_court.options.some((option) => option.value === "القاهرة"));
+    assert.ok(variant.requiredClauseKeys.includes("rental_jurisdiction_court_clause"));
   }
 });
 
@@ -473,13 +477,18 @@ test("rental residential repeater makes other payment details required in the sa
   assert.equal(cashIssues.some((issue) => issue.fieldKey === "rental_payment_methods.0.details"), false);
 });
 
-test("sale v6 exposes three source-specific variants without legacy sale fields", () => {
-  assert.equal(apartmentSaleTemplateDefinition.version, 6);
+test("sale v7 exposes three source-specific variants without legacy sale fields", () => {
+  assert.equal(apartmentSaleTemplateDefinition.version, 7);
   assert.deepEqual(apartmentSaleTemplateDefinition.variants.map((item) => item.key), ["preliminary_sale", "registrable_sale", "inherited_sale"]);
   const legacy = new Set(["sale_competent_court", "sale_payment_method", "sale_installment_rows", "sale_seller_id_front", "sale_buyer_id_front"]);
   for (const variant of apartmentSaleTemplateDefinition.variants) {
     const fields = variant.steps.flatMap((step) => step.fields);
     for (const field of fields) assert.equal(legacy.has(field.key), false, `${variant.key}:${field.key}`);
+    const byKey = Object.fromEntries(fields.map((field) => [field.key, field]));
+    assert.equal(byKey.sale_jurisdiction_court.required, true, `${variant.key}:sale_jurisdiction_court`);
+    assert.equal(byKey.sale_jurisdiction_court.type, "select");
+    assert.ok(byKey.sale_jurisdiction_court.options.some((option) => option.value === "القاهرة"));
+    assert.ok(variant.requiredClauseKeys.includes("sale_jurisdiction_court_clause"));
   }
   const inherited = apartmentSaleTemplateDefinition.variants.find((item) => item.key === "inherited_sale");
   const inheritedFields = Object.fromEntries(inherited.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
@@ -539,4 +548,69 @@ test("sale conditional company, notices, inheritance and meter rules resolve in 
   for (const key of ["inheritance_poa_number", "inheritance_poa_year", "inheritance_poa_office", "inheritance_poa_date"]) assert.equal(inf[key].required, true, key);
   assert.equal(inf.sale_electricity_meter_type.required, true);
   assert.equal(inf.sale_electricity_meter_reading.required, true);
+});
+
+test("nationality rules enforce 14-digit national ID for Egyptians and valid passport for non-Egyptians", async () => {
+  const { validateDynamicDefinition } = await import("../dist/index.js");
+  const resolved = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], {});
+
+  // Case 1: Egyptian with invalid ID (10 digits instead of 14)
+  const draftInvalidEgyptian = {
+    templateSlug: "rental",
+    variantKey: "residential_lease",
+    selectedOptionalClauseKeys: [],
+    fieldValues: {
+      landlord_nationality: "مصري",
+      landlord_national_id: "1234567890", // 10 digits
+    },
+    touchedFieldKeys: [],
+    attachmentRefs: {},
+  };
+  const issues1 = validateDynamicDefinition(resolved, draftInvalidEgyptian);
+  assert.ok(issues1.some((issue) => issue.fieldKey === "landlord_national_id" && issue.labelAr.includes("14 رقمًا")));
+
+  // Case 2: Egyptian with valid 14-digit ID
+  const draftValidEgyptian = {
+    templateSlug: "rental",
+    variantKey: "residential_lease",
+    selectedOptionalClauseKeys: [],
+    fieldValues: {
+      landlord_nationality: "مصري",
+      landlord_national_id: "29501011234567", // 14 digits
+    },
+    touchedFieldKeys: [],
+    attachmentRefs: {},
+  };
+  const issues2 = validateDynamicDefinition(resolved, draftValidEgyptian);
+  assert.equal(issues2.some((issue) => issue.fieldKey === "landlord_national_id"), false);
+
+  // Case 3: Non-Egyptian with too short passport number
+  const draftInvalidForeigner = {
+    templateSlug: "rental",
+    variantKey: "residential_lease",
+    selectedOptionalClauseKeys: [],
+    fieldValues: {
+      landlord_nationality: "أجنبي",
+      landlord_national_id: "AB1", // only 3 chars
+    },
+    touchedFieldKeys: [],
+    attachmentRefs: {},
+  };
+  const issues3 = validateDynamicDefinition(resolved, draftInvalidForeigner);
+  assert.ok(issues3.some((issue) => issue.fieldKey === "landlord_national_id" && issue.labelAr.includes("جواز السفر")));
+
+  // Case 4: Non-Egyptian with valid passport number
+  const draftValidForeigner = {
+    templateSlug: "rental",
+    variantKey: "residential_lease",
+    selectedOptionalClauseKeys: [],
+    fieldValues: {
+      landlord_nationality: "سعودي",
+      landlord_national_id: "KSA9876543",
+    },
+    touchedFieldKeys: [],
+    attachmentRefs: {},
+  };
+  const issues4 = validateDynamicDefinition(resolved, draftValidForeigner);
+  assert.equal(issues4.some((issue) => issue.fieldKey === "landlord_national_id"), false);
 });

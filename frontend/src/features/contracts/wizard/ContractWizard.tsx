@@ -77,6 +77,12 @@ function contractDurationText(amountValue: WizardFormValue, unitValue: WizardFor
   return `${months.toLocaleString("ar-EG")} شهراً`;
 }
 
+function defaultContractTitle(slug: string) {
+  if (slug === "apartment_sale") return "عقد بيع وحدة سكنية";
+  if (slug === "rental") return "عقد إيجار";
+  return "عقود الخدمات والعمل الحر";
+}
+
 export default function WizardPage() {
   const params = useParams();
   const router = useRouter();
@@ -106,7 +112,7 @@ export default function WizardPage() {
   const [previewTab, setPreviewTab] = useState<"document" | "summary">("document");
   const [actionDialog, setActionDialog] = useState<{ title: string; message: string; confirmOnly: boolean; confirmLabel?: string; onConfirm?: () => void } | null>(null);
   const showNotice = (message: string, title = "تنبيه") => setActionDialog({ title, message, confirmOnly: true });
-  const [autoSaveStatus, setAutoSaveStatus] = useState("تم الحفظ التلقائي ✓");
+  const [autoSaveStatus, setAutoSaveStatus] = useState("محفوظ مؤقتًا في هذه الجلسة");
   const [backendContract, setBackendContract] = useState<ContractDetails | null>(null);
   const [checkoutContract, setCheckoutContract] = useState<{ id: number; serialNumber: string } | null>(null);
   const loadedContractId = useRef<number | null>(null);
@@ -216,6 +222,7 @@ export default function WizardPage() {
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
+  const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Privacy migration: old browser-persistent caches may contain identity data.
   // Delete them instead of importing them into the new short-lived session draft.
@@ -224,16 +231,58 @@ export default function WizardPage() {
     localStorage.removeItem(`zdraft_saved_draft_${slug}`);
   }, [slug]);
 
-  // Zustand persistence is the single source of truth; this status is only UX feedback.
+  // ─── AUTO-SCROLL LIVE PREVIEW ON STEP TRANSITION ──────────────────────────
   useEffect(() => {
-    if (!draft?.updatedAt) return;
-    const savingTimer = window.setTimeout(() => setAutoSaveStatus("جاري الحفظ..."), 0);
-    const savedTimer = window.setTimeout(() => setAutoSaveStatus("تم الحفظ التلقائي ✓"), 350);
-    return () => {
-      window.clearTimeout(savingTimer);
-      window.clearTimeout(savedTimer);
+    if (!currentStepKey) return;
+    const getTargetId = (key: string): string => {
+      if (key.includes("meta") || key.includes("start")) return "doc-preamble";
+      if (key.includes("landlord") || key.includes("seller") || key.includes("client")) return "doc-party-1";
+      if (key.includes("tenant") || key.includes("buyer") || key.includes("provider")) return "doc-party-2";
+      if (key.includes("property") || key.includes("unit") || key.includes("scope") || key.includes("overview")) return "doc-unit-specs";
+      if (key.includes("financial") || key.includes("price") || key.includes("payment")) return "doc-unit-specs";
+      if (key.includes("terms") || key.includes("duration") || key.includes("general")) return "doc-signatures";
+      if (key.includes("review") || key.includes("closing") || key.includes("signing")) return "doc-signatures";
+      return "doc-preamble";
     };
-  }, [draft?.updatedAt]);
+
+    const targetId = getTargetId(currentStepKey);
+    const element = document.getElementById(targetId);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [currentStepKey]);
+
+  // ─── DEBOUNCED BACKEND AUTOSAVE ──────────────────────────────────────────
+  useEffect(() => {
+    if (!draft || !draft.updatedAt) return;
+    const hasValues = Object.values(formData).some((v) => v !== "" && v !== null && v !== undefined);
+    if (!hasValues) return;
+
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+
+    setAutoSaveStatus("جاري المزامنة مع السيرفر...");
+    autosaveTimerRef.current = setTimeout(async () => {
+      try {
+        const saved = await saveDraftSnapshot(draft);
+        if (saved && saved.id) {
+          setBackendDraftReference(contractSlug, saved);
+          setAutoSaveStatus("تم الحفظ في السيرفر ✓");
+        } else {
+          setAutoSaveStatus("محفوظ مؤقتًا في الجلسة ✓");
+        }
+      } catch {
+        setAutoSaveStatus("محفوظ محليًا في المتصفح ✓");
+      }
+    }, 1800);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, [draft?.fieldValues, draft?.variantKey, draft?.selectedOptionalClauseKeys, draft?.currentStepKey, contractSlug, draft, formData, setBackendDraftReference]);
 
 
 
@@ -241,7 +290,7 @@ export default function WizardPage() {
   const contractTitle = selectedVariantDefinition?.documentTitleAr
     ?? selectedVariantDefinition?.nameAr
     ?? templateDefinition?.nameAr
-    ?? (slug === "rental" ? "عقد إيجار" : slug === "apartment_sale" ? "عقد بيع وحدة سكنية" : "عقود الخدمات والعمل الحر");
+    ?? defaultContractTitle(slug);
 
   const priceEgp = draft?.variantKey
     ? (templateDefinition?.variantPricing?.[draft.variantKey]?.selfServicePriceEgp ?? 0)
@@ -347,6 +396,7 @@ export default function WizardPage() {
     const saved = await saveDraftSnapshot(draft);
     setBackendDraftReference(contractSlug, saved);
     setCheckoutContract({ id: saved.id, serialNumber: saved.serialNumber });
+    setAutoSaveStatus("تم حفظ المسودة في حسابك ✓");
     return saved;
   };
 
@@ -395,7 +445,7 @@ export default function WizardPage() {
               <strong className="font-black">{annex.documentTitleAr ?? annex.nameAr}</strong>
               <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black text-emerald-800">قالب فارغ</span>
             </div>
-            <p className="mt-1 text-[10px] text-emerald-800">سيصدر هذا الملحق مع العقد كقالب جاهز للطباعة، ويُستكمل يدويًا بعد الطباعة. لا نطلب بياناته داخل المنصة.</p>
+            <p className="mt-1 text-[10px] text-emerald-800">الملاحق لا تُملأ من بياناتك تلقائيًا. سيصدر هذا الملحق مع العقد كقالب فارغ جاهز للطباعة، ويُستكمل يدويًا بعد الطباعة.</p>
           </div>
         ))}
       </div>

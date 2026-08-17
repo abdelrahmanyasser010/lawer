@@ -11,6 +11,6 @@ final class TemplateDefinitionsTest extends TestCase
         foreach($files as$file){$data=json_decode(file_get_contents($file),true,512,JSON_THROW_ON_ERROR);$slugs[]=$data['slug'];$this->assertCount(3,$data['variants']);$this->assertNotEmpty($data['legalClauses']);$clauses+=count($data['legalClauses']);}
         sort($slugs);
         $this->assertSame(['apartment_sale','freelancer','rental'],$slugs);
-        $this->assertSame(376,$clauses);
+        $this->assertSame(378,$clauses);
     }
 }

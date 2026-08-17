@@ -167,7 +167,7 @@ export function renderLegalClauses(
       const token = `{{${v}}}`;
       let val = fieldValues[v];
       if (val === undefined || val === null || val === "" || (typeof val === "boolean" && !val)) {
-        val = `....................`;
+        val = "بيان مطلوب";
       } else if (typeof val === "number") {
         val = val.toLocaleString("ar-EG");
       } else if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}$/.test(val)) {

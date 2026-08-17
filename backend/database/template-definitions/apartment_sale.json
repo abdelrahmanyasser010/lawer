@@ -1,6 +1,6 @@
 {
   "slug": "apartment_sale",
-  "version": 6,
+  "version": 7,
   "nameAr": "عقود بيع الوحدات السكنية",
   "description": "ثلاثة عقود بيع مستقلة مطابقة للنماذج: بيع ابتدائي، بيع قابل للتسجيل بالشهر العقاري، وبيع لوحدة آلت بالميراث، مع ملحق جدول أقساط فارغ للطباعة عند التقسيط.",
   "priceEgp": 0,
@@ -1396,6 +1396,141 @@
           ]
         },
         {
+          "key": "sale_jurisdiction",
+          "titleAr": "المحكمة المختصة",
+          "articleRange": "تسوية المنازعات",
+          "fields": [
+            {
+              "key": "sale_jurisdiction_court",
+              "type": "select",
+              "labelAr": "المحكمة المختصة",
+              "required": true,
+              "options": [
+                {
+                  "value": "القاهرة",
+                  "labelAr": "القاهرة"
+                },
+                {
+                  "value": "شمال القاهرة",
+                  "labelAr": "شمال القاهرة"
+                },
+                {
+                  "value": "جنوب القاهرة",
+                  "labelAr": "جنوب القاهرة"
+                },
+                {
+                  "value": "القاهرة الجديدة",
+                  "labelAr": "القاهرة الجديدة"
+                },
+                {
+                  "value": "شمال الجيزة",
+                  "labelAr": "شمال الجيزة"
+                },
+                {
+                  "value": "جنوب الجيزة",
+                  "labelAr": "جنوب الجيزة"
+                },
+                {
+                  "value": "الإسكندرية",
+                  "labelAr": "الإسكندرية"
+                },
+                {
+                  "value": "طنطا",
+                  "labelAr": "طنطا"
+                },
+                {
+                  "value": "دمنهور",
+                  "labelAr": "دمنهور"
+                },
+                {
+                  "value": "كفر الشيخ",
+                  "labelAr": "كفر الشيخ"
+                },
+                {
+                  "value": "المنصورة",
+                  "labelAr": "المنصورة"
+                },
+                {
+                  "value": "الزقازيق",
+                  "labelAr": "الزقازيق"
+                },
+                {
+                  "value": "بنها",
+                  "labelAr": "بنها"
+                },
+                {
+                  "value": "شبين الكوم",
+                  "labelAr": "شبين الكوم"
+                },
+                {
+                  "value": "بورسعيد",
+                  "labelAr": "بورسعيد"
+                },
+                {
+                  "value": "الإسماعيلية",
+                  "labelAr": "الإسماعيلية"
+                },
+                {
+                  "value": "السويس",
+                  "labelAr": "السويس"
+                },
+                {
+                  "value": "دمياط",
+                  "labelAr": "دمياط"
+                },
+                {
+                  "value": "بني سويف",
+                  "labelAr": "بني سويف"
+                },
+                {
+                  "value": "الفيوم",
+                  "labelAr": "الفيوم"
+                },
+                {
+                  "value": "أسيوط",
+                  "labelAr": "أسيوط"
+                },
+                {
+                  "value": "سوهاج",
+                  "labelAr": "سوهاج"
+                },
+                {
+                  "value": "قنا",
+                  "labelAr": "قنا"
+                },
+                {
+                  "value": "الأقصر",
+                  "labelAr": "الأقصر"
+                },
+                {
+                  "value": "أسوان",
+                  "labelAr": "أسوان"
+                },
+                {
+                  "value": "البحر الأحمر",
+                  "labelAr": "البحر الأحمر"
+                },
+                {
+                  "value": "الوادي الجديد",
+                  "labelAr": "الوادي الجديد"
+                },
+                {
+                  "value": "شمال سيناء",
+                  "labelAr": "شمال سيناء"
+                },
+                {
+                  "value": "جنوب سيناء",
+                  "labelAr": "جنوب سيناء"
+                },
+                {
+                  "value": "مرسى مطروح",
+                  "labelAr": "مرسى مطروح"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "key": "sale_review",
           "titleAr": "المراجعة والاعتماد",
           "articleRange": "مراجعة نهائية",
@@ -1441,7 +1576,8 @@
         "sale_messaging_clause",
         "preliminary_sale_source_article_22",
         "preliminary_sale_source_article_23",
-        "preliminary_sale_source_article_24"
+        "preliminary_sale_source_article_24",
+        "sale_jurisdiction_court_clause"
       ],
       "allowedOptionalClauseKeys": [
         "sale_installment_schedule"
@@ -2644,6 +2780,141 @@
           ]
         },
         {
+          "key": "sale_jurisdiction",
+          "titleAr": "المحكمة المختصة",
+          "articleRange": "تسوية المنازعات",
+          "fields": [
+            {
+              "key": "sale_jurisdiction_court",
+              "type": "select",
+              "labelAr": "المحكمة المختصة",
+              "required": true,
+              "options": [
+                {
+                  "value": "القاهرة",
+                  "labelAr": "القاهرة"
+                },
+                {
+                  "value": "شمال القاهرة",
+                  "labelAr": "شمال القاهرة"
+                },
+                {
+                  "value": "جنوب القاهرة",
+                  "labelAr": "جنوب القاهرة"
+                },
+                {
+                  "value": "القاهرة الجديدة",
+                  "labelAr": "القاهرة الجديدة"
+                },
+                {
+                  "value": "شمال الجيزة",
+                  "labelAr": "شمال الجيزة"
+                },
+                {
+                  "value": "جنوب الجيزة",
+                  "labelAr": "جنوب الجيزة"
+                },
+                {
+                  "value": "الإسكندرية",
+                  "labelAr": "الإسكندرية"
+                },
+                {
+                  "value": "طنطا",
+                  "labelAr": "طنطا"
+                },
+                {
+                  "value": "دمنهور",
+                  "labelAr": "دمنهور"
+                },
+                {
+                  "value": "كفر الشيخ",
+                  "labelAr": "كفر الشيخ"
+                },
+                {
+                  "value": "المنصورة",
+                  "labelAr": "المنصورة"
+                },
+                {
+                  "value": "الزقازيق",
+                  "labelAr": "الزقازيق"
+                },
+                {
+                  "value": "بنها",
+                  "labelAr": "بنها"
+                },
+                {
+                  "value": "شبين الكوم",
+                  "labelAr": "شبين الكوم"
+                },
+                {
+                  "value": "بورسعيد",
+                  "labelAr": "بورسعيد"
+                },
+                {
+                  "value": "الإسماعيلية",
+                  "labelAr": "الإسماعيلية"
+                },
+                {
+                  "value": "السويس",
+                  "labelAr": "السويس"
+                },
+                {
+                  "value": "دمياط",
+                  "labelAr": "دمياط"
+                },
+                {
+                  "value": "بني سويف",
+                  "labelAr": "بني سويف"
+                },
+                {
+                  "value": "الفيوم",
+                  "labelAr": "الفيوم"
+                },
+                {
+                  "value": "أسيوط",
+                  "labelAr": "أسيوط"
+                },
+                {
+                  "value": "سوهاج",
+                  "labelAr": "سوهاج"
+                },
+                {
+                  "value": "قنا",
+                  "labelAr": "قنا"
+                },
+                {
+                  "value": "الأقصر",
+                  "labelAr": "الأقصر"
+                },
+                {
+                  "value": "أسوان",
+                  "labelAr": "أسوان"
+                },
+                {
+                  "value": "البحر الأحمر",
+                  "labelAr": "البحر الأحمر"
+                },
+                {
+                  "value": "الوادي الجديد",
+                  "labelAr": "الوادي الجديد"
+                },
+                {
+                  "value": "شمال سيناء",
+                  "labelAr": "شمال سيناء"
+                },
+                {
+                  "value": "جنوب سيناء",
+                  "labelAr": "جنوب سيناء"
+                },
+                {
+                  "value": "مرسى مطروح",
+                  "labelAr": "مرسى مطروح"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "key": "sale_review",
           "titleAr": "المراجعة والاعتماد",
           "articleRange": "مراجعة نهائية",
@@ -2682,7 +2953,8 @@
         "registrable_sale_source_article_21",
         "registrable_sale_source_article_22",
         "registrable_negative_certificate_clause",
-        "registrable_sale_source_article_23"
+        "registrable_sale_source_article_23",
+        "sale_jurisdiction_court_clause"
       ],
       "allowedOptionalClauseKeys": [
         "sale_installment_schedule"
@@ -3835,6 +4107,141 @@
           ]
         },
         {
+          "key": "sale_jurisdiction",
+          "titleAr": "المحكمة المختصة",
+          "articleRange": "تسوية المنازعات",
+          "fields": [
+            {
+              "key": "sale_jurisdiction_court",
+              "type": "select",
+              "labelAr": "المحكمة المختصة",
+              "required": true,
+              "options": [
+                {
+                  "value": "القاهرة",
+                  "labelAr": "القاهرة"
+                },
+                {
+                  "value": "شمال القاهرة",
+                  "labelAr": "شمال القاهرة"
+                },
+                {
+                  "value": "جنوب القاهرة",
+                  "labelAr": "جنوب القاهرة"
+                },
+                {
+                  "value": "القاهرة الجديدة",
+                  "labelAr": "القاهرة الجديدة"
+                },
+                {
+                  "value": "شمال الجيزة",
+                  "labelAr": "شمال الجيزة"
+                },
+                {
+                  "value": "جنوب الجيزة",
+                  "labelAr": "جنوب الجيزة"
+                },
+                {
+                  "value": "الإسكندرية",
+                  "labelAr": "الإسكندرية"
+                },
+                {
+                  "value": "طنطا",
+                  "labelAr": "طنطا"
+                },
+                {
+                  "value": "دمنهور",
+                  "labelAr": "دمنهور"
+                },
+                {
+                  "value": "كفر الشيخ",
+                  "labelAr": "كفر الشيخ"
+                },
+                {
+                  "value": "المنصورة",
+                  "labelAr": "المنصورة"
+                },
+                {
+                  "value": "الزقازيق",
+                  "labelAr": "الزقازيق"
+                },
+                {
+                  "value": "بنها",
+                  "labelAr": "بنها"
+                },
+                {
+                  "value": "شبين الكوم",
+                  "labelAr": "شبين الكوم"
+                },
+                {
+                  "value": "بورسعيد",
+                  "labelAr": "بورسعيد"
+                },
+                {
+                  "value": "الإسماعيلية",
+                  "labelAr": "الإسماعيلية"
+                },
+                {
+                  "value": "السويس",
+                  "labelAr": "السويس"
+                },
+                {
+                  "value": "دمياط",
+                  "labelAr": "دمياط"
+                },
+                {
+                  "value": "بني سويف",
+                  "labelAr": "بني سويف"
+                },
+                {
+                  "value": "الفيوم",
+                  "labelAr": "الفيوم"
+                },
+                {
+                  "value": "أسيوط",
+                  "labelAr": "أسيوط"
+                },
+                {
+                  "value": "سوهاج",
+                  "labelAr": "سوهاج"
+                },
+                {
+                  "value": "قنا",
+                  "labelAr": "قنا"
+                },
+                {
+                  "value": "الأقصر",
+                  "labelAr": "الأقصر"
+                },
+                {
+                  "value": "أسوان",
+                  "labelAr": "أسوان"
+                },
+                {
+                  "value": "البحر الأحمر",
+                  "labelAr": "البحر الأحمر"
+                },
+                {
+                  "value": "الوادي الجديد",
+                  "labelAr": "الوادي الجديد"
+                },
+                {
+                  "value": "شمال سيناء",
+                  "labelAr": "شمال سيناء"
+                },
+                {
+                  "value": "جنوب سيناء",
+                  "labelAr": "جنوب سيناء"
+                },
+                {
+                  "value": "مرسى مطروح",
+                  "labelAr": "مرسى مطروح"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "key": "sale_review",
           "titleAr": "المراجعة والاعتماد",
           "articleRange": "مراجعة نهائية",
@@ -3872,7 +4279,8 @@
         "inherited_sale_source_article_20",
         "inherited_sale_source_article_21",
         "inherited_sale_source_article_22",
-        "inherited_sale_source_article_23"
+        "inherited_sale_source_article_23",
+        "sale_jurisdiction_court_clause"
       ],
       "allowedOptionalClauseKeys": [
         "sale_installment_schedule"
@@ -4843,6 +5251,14 @@
       "sourcePageEnd": 4,
       "enabled": true,
       "variables": []
+    },
+    {
+      "key": "sale_jurisdiction_court_clause",
+      "titleAr": "المحكمة المختصة",
+      "variables": [
+        "sale_jurisdiction_court"
+      ],
+      "bodyAr": "تختص محكمة {{sale_jurisdiction_court}} بنظر أي نزاع ينشأ عن هذا العقد أو يتعلق بتفسيره أو تنفيذه أو آثاره، وذلك مع عدم الإخلال بقواعد الاختصاص الولائي والنوعي الآمرة."
     },
     {
       "key": "sale_full_payment_clause",

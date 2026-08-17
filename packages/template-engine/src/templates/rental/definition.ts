@@ -8,7 +8,7 @@ import type {
   WizardStepDefinition,
 } from "../../types";
 import { rentalSourceClauseKeysByVariant, rentalSourceLegalClauses } from "../../legal-content/sourceClauses";
-import { contractDateField } from "../common";
+import { competentCourtField, contractDateField } from "../common";
 
 const yesNo = [
   { value: "yes", labelAr: "نعم" },
@@ -307,6 +307,13 @@ const administrativeVariantStep: WizardStepDefinition = {
   ],
 };
 
+const rentalJurisdictionStep: WizardStepDefinition = {
+  key: "rental_jurisdiction",
+  titleAr: "المحكمة المختصة",
+  articleRange: "الاختصاص القضائي وتسوية المنازعات",
+  fields: [competentCourtField("rental_jurisdiction_court")],
+};
+
 const rentalReviewStep: WizardStepDefinition = { key: "rental_review", titleAr: "المراجعة وإصدار العقد", articleRange: "المراجعة النهائية", fields: [] };
 
 const commonRentalDefaults = {
@@ -405,9 +412,10 @@ function createRentalVariant(input: {
     sourceDocumentName: input.sourceDocumentName,
     steps: [
       ...rentalCommonSteps.flatMap((step) => step.key === "rental_property" ? [step, input.step] : [step]),
+      rentalJurisdictionStep,
       rentalReviewStep,
     ],
-    requiredClauseKeys: orderedRentalClauseKeys(input.key, input.extraClauseKeys),
+    requiredClauseKeys: orderedRentalClauseKeys(input.key, [...input.extraClauseKeys, "rental_jurisdiction_court_clause"]),
     allowedOptionalClauseKeys: ["rental_handover_inventory_report"],
     defaultFieldValues: { ...commonRentalDefaults, ...(input.defaults ?? {}) },
   };
@@ -714,6 +722,12 @@ const reviewedSourceClauses = rentalSourceLegalClauses.map((item): LegalClauseDe
 function customClause(input: LegalClauseDefinition): LegalClauseDefinition { return input; }
 
 const conditionalClauses: LegalClauseDefinition[] = [
+  customClause({
+    key: "rental_jurisdiction_court_clause",
+    titleAr: "المحكمة المختصة",
+    variables: ["rental_jurisdiction_court"],
+    bodyAr: "تختص محكمة {{rental_jurisdiction_court}} بنظر المنازعات الناشئة عن هذا العقد أو المتعلقة بتنفيذه أو تفسيره، وذلك مع عدم الإخلال بقواعد الاختصاص الولائي والنوعي الآمرة.",
+  }),
   customClause({ key: "rental_residential_furnished_clause", titleAr: "فقرة العين المفروشة والمنقولات", bodyAr: sliceRange(sourceBody("residential_lease_source_article_04"), "(فقرة اختيارية – إذا كانت العين المؤجرة مفروشة", "هل يوجد ملحقات للعين المؤجرة؟"), visibleWhen: { fieldKey: "residential_is_furnished", operator: "truthy" }, sourceDocumentName: "عقد ايجار سكني (Z DRAFT).pdf", sourcePageStart: 4, sourcePageEnd: 4 }),
   customClause({ key: "rental_residential_annual_increase_clause", titleAr: "الزيادة الدورية في الأجرة (إن وجدت)", bodyAr: "إذا اتفق الطرفان على تطبيق الزيادة الدورية المنصوص عليها في العقد، تُزاد القيمة الإيجارية بنسبة عشرة بالمائة (10%) اعتبارًا من بداية كل سنة إيجارية جديدة، وتُحسب الزيادة على آخر أجرة مستحقة، وفقًا للنص الأصلي للعقد.", visibleWhen: { fieldKey: "annual_increase_enabled", operator: "truthy" }, sourceDocumentName: "عقد ايجار سكني (Z DRAFT).pdf", sourcePageStart: 5, sourcePageEnd: 5 }),
   customClause({ key: "rental_residential_article08_tail", titleAr: "ميعاد وآلية سداد الأجرة", variables: ["rent_due_day", "residential_payment_grace_days", "late_payment_daily_compensation"], bodyAr: ".3 ميعاد السداد: تستحق الأجرة مقدمًا، ويلتزم المستأجر بسدادها في موعد أقصاه يوم {{rent_due_day}} من كل فترة إيجارية، فإذا وافق هذا اليوم عطلة رسمية امتد ميعاد السداد إلى أول يوم عمل تالٍ لها. ويُمنح المستأجر بعد حلول ميعاد الاستحقاق مهلة سماح قدرها {{residential_payment_grace_days}} يومًا قبل بدء احتساب التعويض الاتفاقي عن التأخير.\n\n.4 طريقة السداد: يتم سداد القيمة الإيجارية بإحدى أو أكثر من وسائل السداد المتفق عليها والمثبتة في بيانات العقد، وتشمل السداد النقدي بموجب إيصال، أو التحويل البنكي، أو الإيداع بالحساب البنكي، أو المحافظ الإلكترونية، أو إنستاباي، أو أي وسيلة أخرى يتفق عليها الطرفان كتابةً.\n\n.5 التعويض الاتفاقي عن التأخير في السداد: إذا تأخر المستأجر عن سداد الأجرة أو أي جزء منها بعد حلول ميعاد استحقاقها وانقضاء مهلة السماح المحددة أعلاه دون تمام السداد، يلتزم بأداء تعويض اتفاقي قدره {{late_payment_daily_compensation}} جنيهًا مصريًا عن كل يوم تأخير، ويبدأ احتسابه من اليوم التالي لانتهاء مهلة السماح وحتى تمام السداد، دون إخلال بالحقوق الأخرى المقررة بالعقد والقانون.\n\n.6 الالتزام بسداد الأجرة: يلتزم المستأجر بسداد القيمة الإيجارية كاملة في مواعيد استحقاقها، ولا يجوز له الامتناع عن سدادها أو حبسها أو خصم أي جزء منها أو إجراء مقاصة عليها إلا بموافقة كتابية من المؤجر أو بحكم قضائي.", sourceDocumentName: "عقد ايجار سكني (Z DRAFT).pdf", sourcePageStart: 6, sourcePageEnd: 6 }),
@@ -750,14 +764,14 @@ const conditionalClauses: LegalClauseDefinition[] = [
 
 export const rentalTemplateDefinition: ContractTemplateDefinition = {
   slug: "rental",
-  version: 7,
+  version: 8,
   nameAr: "عقود إيجار الوحدات",
   description: "ثلاثة عقود إيجار مستقلة مطابقة للنماذج السكنية والتجارية والإدارية، مع محضر استلام وجرد فارغ يُضاف عند الحاجة.",
   priceEgp: 0,
   variantPricing: {
-    residential_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 0 },
-    commercial_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 0 },
-    administrative_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 0 },
+    residential_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 599 },
+    commercial_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 599 },
+    administrative_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 599 },
   },
   variants: [
     createRentalVariant({

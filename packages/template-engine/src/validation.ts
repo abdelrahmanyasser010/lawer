@@ -125,5 +125,35 @@ export function validateDynamicDefinition(
     }
   }
 
+  // Nationality vs Identity logic:
+  // If Egyptian -> National ID must be exactly 14 numeric digits.
+  // If Non-Egyptian -> Passport number required with valid length.
+  for (const step of definition.steps) {
+    for (const field of step.fields) {
+      if (field.key.endsWith("_national_id")) {
+        const natKey = field.key.replace(/_national_id$/, "_nationality");
+        const nationalityVal = String(draft.fieldValues[natKey] ?? "").trim();
+        const idVal = String(draft.fieldValues[field.key] ?? "").trim();
+        if (idVal) {
+          const isEgyptian = nationalityVal === "مصري" || nationalityVal === "egyptian" || nationalityVal === "مصرية" || nationalityVal === "مصري الجنسية";
+          const digitsOnly = idVal.replace(/\D/g, "");
+          if (isEgyptian && (digitsOnly.length !== 14 || digitsOnly !== idVal)) {
+            issues.push({
+              stepKey: step.key,
+              fieldKey: field.key,
+              labelAr: `${field.labelAr} — مطلوب 14 رقمًا قوميًا للمواطن المصري`,
+            });
+          } else if (!isEgyptian && nationalityVal && idVal.length < 5) {
+            issues.push({
+              stepKey: step.key,
+              fieldKey: field.key,
+              labelAr: `${field.labelAr} — رقم جواز السفر يجب ألا يقل عن 5 خانات`,
+            });
+          }
+        }
+      }
+    }
+  }
+
   return issues;
 }
