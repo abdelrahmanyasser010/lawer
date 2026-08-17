@@ -206,20 +206,6 @@ const visualSteps: WizardStepDefinition[] = [
       required: true,
       helpText: "اكتب قيمة المبلغ بالحروف فقط، مثال: خمسة آلاف. سيضيف العقد عبارة جنيه مصري تلقائيًا.",
     },
-    {
-      key: "visual_competent_court",
-      type: "select",
-      labelAr: "المحكمة المختصة (اختياري)",
-      options: visualIdentityCourtOptions,
-      helpText: "إذا لم تُحدد محكمة بعينها تُطبق قواعد الاختصاص النوعي والمكاني المقررة قانونًا.",
-    },
-    {
-      key: "visual_competent_court_other",
-      type: "text",
-      labelAr: "اسم المحكمة الأخرى",
-      visibleWhen: { fieldKey: "visual_competent_court", operator: "equals", value: "أخرى" },
-      requiredWhen: { fieldKey: "visual_competent_court", operator: "equals", value: "أخرى" },
-    },
   ] },
   { key: "visual_communications", titleAr: "الإخطارات والمراسلات", fields: [
     {
@@ -352,6 +338,22 @@ const visualSteps: WizardStepDefinition[] = [
       printInDocument: false,
     },
   ] },
+  { key: "visual_jurisdiction", titleAr: "المحكمة المختصة", articleRange: "الاختصاص القضائي وتسوية المنازعات", fields: [
+    {
+      key: "visual_competent_court",
+      type: "select",
+      labelAr: "المحكمة المختصة (اختياري)",
+      options: visualIdentityCourtOptions,
+      helpText: "إذا لم تُحدد محكمة بعينها تُطبق قواعد الاختصاص النوعي والمكاني المقررة قانونًا.",
+    },
+    {
+      key: "visual_competent_court_other",
+      type: "text",
+      labelAr: "اسم المحكمة الأخرى",
+      visibleWhen: { fieldKey: "visual_competent_court", operator: "equals", value: "أخرى" },
+      requiredWhen: { fieldKey: "visual_competent_court", operator: "equals", value: "أخرى" },
+    },
+  ] },
   reviewStep("visual_review"),
 ];
 
@@ -388,8 +390,6 @@ const websiteSteps: WizardStepDefinition[] = [
       { value: "يومًا", labelAr: "يوم" }, { value: "أسبوعًا", labelAr: "أسبوع" }, { value: "شهرًا", labelAr: "شهر" }, { value: "سنة", labelAr: "سنة" },
     ] },
     { key: "website_confidentiality_years", type: "number", labelAr: "مدة استمرار السرية بعد انتهاء العقد (بالسنوات)", required: true, validation: { min: 1 }, helpText: "النموذج الأصلي يذكر 3 سنوات كمدة مفضلة؛ يمكنك الاتفاق على مدة أخرى." },
-    { key: "website_competent_court", type: "select", labelAr: "المحكمة المختصة (اختياري)", options: visualIdentityCourtOptions, helpText: "إذا لم تُحدد محكمة بعينها تُطبق قواعد الاختصاص النوعي والمكاني المقررة قانونًا." },
-    { key: "website_competent_court_other", type: "text", labelAr: "اسم المحكمة الأخرى", visibleWhen: { fieldKey: "website_competent_court", operator: "equals", value: "أخرى" }, requiredWhen: { fieldKey: "website_competent_court", operator: "equals", value: "أخرى" } },
   ] },
   { key: "website_communications", titleAr: "الإخطارات ووسائل التواصل", fields: [
     { key: "website_email_notices_enabled", type: "checkbox", labelAr: "اعتماد البريد الإلكتروني للإخطارات والمراسلات", printInDocument: false },
@@ -420,6 +420,10 @@ const websiteSteps: WizardStepDefinition[] = [
     { key: "website_witness_2_name", type: "text", labelAr: "اسم الشاهد الثاني", visibleWhen: { fieldKey: "website_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_witness_2_enabled", operator: "truthy" }, printInDocument: false },
     { key: "website_witness_2_national_id", type: "text", labelAr: "الرقم القومي للشاهد الثاني", visibleWhen: { fieldKey: "website_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_witness_2_enabled", operator: "truthy" }, printInDocument: false },
   ] },
+  { key: "website_jurisdiction", titleAr: "المحكمة المختصة", articleRange: "الاختصاص القضائي وتسوية المنازعات", fields: [
+    { key: "website_competent_court", type: "select", labelAr: "المحكمة المختصة (اختياري)", options: visualIdentityCourtOptions, helpText: "إذا لم تُحدد محكمة بعينها تُطبق قواعد الاختصاص النوعي والمكاني المقررة قانونًا." },
+    { key: "website_competent_court_other", type: "text", labelAr: "اسم المحكمة الأخرى", visibleWhen: { fieldKey: "website_competent_court", operator: "equals", value: "أخرى" }, requiredWhen: { fieldKey: "website_competent_court", operator: "equals", value: "أخرى" } },
+  ] },
   reviewStep("website_review"),
 ];
 
@@ -446,8 +450,6 @@ const socialSteps: WizardStepDefinition[] = [
     ] },
     { key: "social_fee", type: "money", labelAr: "المقابل المالي المتفق عليه (جنيه مصري)", required: true, validation: { min: 1 }, helpText: "هذا هو المقابل بين العميل ومقدم الخدمة، وليس سعر شراء القالب من المنصة." },
     { key: "social_fee_words", type: "text", labelAr: "المقابل المالي كتابةً (بدون اسم العملة)", required: true, helpText: "مثال: عشرة آلاف. سيضيف العقد عبارة جنيه مصري تلقائيًا." },
-    { key: "social_competent_court", type: "select", labelAr: "المحكمة المختصة (اختياري)", options: visualIdentityCourtOptions, helpText: "إذا لم تُحدد محكمة بعينها تُطبق قواعد الاختصاص المقررة قانونًا." },
-    { key: "social_competent_court_other", type: "text", labelAr: "اسم المحكمة الأخرى", visibleWhen: { fieldKey: "social_competent_court", operator: "equals", value: "أخرى" }, requiredWhen: { fieldKey: "social_competent_court", operator: "equals", value: "أخرى" } },
   ] },
   { key: "social_delay_penalty", titleAr: "الجزاء الاتفاقي عن التأخير", fields: [
     { key: "social_delay_penalty_mode", type: "radio", labelAr: "طريقة احتساب الجزاء عن كل يوم تأخير", required: true, options: [
@@ -476,6 +478,10 @@ const socialSteps: WizardStepDefinition[] = [
     { key: "social_witness_2_enabled", type: "checkbox", labelAr: "إضافة الشاهد الثاني", printInDocument: false },
     { key: "social_witness_2_name", type: "text", labelAr: "اسم الشاهد الثاني", visibleWhen: { fieldKey: "social_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "social_witness_2_enabled", operator: "truthy" }, printInDocument: false },
     { key: "social_witness_2_national_id", type: "text", labelAr: "الرقم القومي للشاهد الثاني", visibleWhen: { fieldKey: "social_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "social_witness_2_enabled", operator: "truthy" }, printInDocument: false },
+  ] },
+  { key: "social_jurisdiction", titleAr: "المحكمة المختصة", articleRange: "الاختصاص القضائي وتسوية المنازعات", fields: [
+    { key: "social_competent_court", type: "select", labelAr: "المحكمة المختصة (اختياري)", options: visualIdentityCourtOptions, helpText: "إذا لم تُحدد محكمة بعينها تُطبق قواعد الاختصاص المقررة قانونًا." },
+    { key: "social_competent_court_other", type: "text", labelAr: "اسم المحكمة الأخرى", visibleWhen: { fieldKey: "social_competent_court", operator: "equals", value: "أخرى" }, requiredWhen: { fieldKey: "social_competent_court", operator: "equals", value: "أخرى" } },
   ] },
   reviewStep("social_review"),
 ];
