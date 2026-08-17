@@ -3,6 +3,7 @@ import type {
   ContractDraftData,
   ContractFieldValue,
   ContractTemplateDefinition,
+  LegalClauseDefinition,
   ResolvedWizardDefinition,
   WizardStepDefinition,
 } from "./types";
@@ -114,4 +115,76 @@ export function resolveWizardDefinition(
     }));
 
   return { template, variant, steps, activeClauseKeys: [...activeClauseKeys] };
+}
+
+export interface RenderedLegalClause {
+  key: string;
+  titleAr: string;
+  bodyAr: string;
+  sourceDocumentName?: string;
+  sourcePageStart?: number;
+  sourcePageEnd?: number;
+}
+
+export function renderLegalClauses(
+  template: ContractTemplateDefinition,
+  variantKey: string,
+  selectedOptionalClauseKeys: string[] = [],
+  fieldValues: Record<string, any> = {},
+): RenderedLegalClause[] {
+  const resolved = resolveWizardDefinition(template, variantKey, selectedOptionalClauseKeys, fieldValues);
+  const variant = resolved.variant;
+
+  const availableClauseMap = new Map<string, LegalClauseDefinition>();
+  for (const clause of template.legalClauses || []) {
+    if (clause.enabled !== false) {
+      availableClauseMap.set(clause.key, clause);
+    }
+  }
+
+  const manualClauseKeys = new Set<string>();
+  const effectiveClauseKeys = [...new Set([...(variant.requiredAnnexKeys ?? []), ...selectedOptionalClauseKeys])];
+  for (const optional of template.optionalClauses) {
+    if (effectiveClauseKeys.includes(optional.key) && optional.manualFillAnnex) {
+      for (const k of optional.legalClauseKeys) {
+        manualClauseKeys.add(k);
+      }
+    }
+  }
+
+  const rendered: RenderedLegalClause[] = [];
+
+  for (const key of resolved.activeClauseKeys) {
+    const clause = availableClauseMap.get(key);
+    if (!clause) continue;
+    if (clause.visibleWhen && !evaluateCondition(clause.visibleWhen, fieldValues)) continue;
+
+    let body = clause.bodyAr || "";
+    const isManual = manualClauseKeys.has(key);
+    const variables = isManual ? [] : (clause.variables || []);
+
+    for (const v of variables) {
+      const token = `{{${v}}}`;
+      let val = fieldValues[v];
+      if (val === undefined || val === null || val === "" || (typeof val === "boolean" && !val)) {
+        val = `....................`;
+      } else if (typeof val === "number") {
+        val = val.toLocaleString("ar-EG");
+      } else if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        val = val.split("-").reverse().join("/");
+      }
+      body = body.split(token).join(String(val));
+    }
+
+    rendered.push({
+      key,
+      titleAr: clause.titleAr || key,
+      bodyAr: body,
+      sourceDocumentName: clause.sourceDocumentName,
+      sourcePageStart: clause.sourcePageStart,
+      sourcePageEnd: clause.sourcePageEnd,
+    });
+  }
+
+  return rendered;
 }

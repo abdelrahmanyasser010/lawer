@@ -276,5 +276,17 @@ export default function DynamicFieldRenderer({
     return <RepeaterRenderer field={field} value={listValue} onChange={onChange} />;
   }
 
-  return renderScalarControl(field, scalarValue(value), (next) => onChange(next));
+  return (
+    <div className="space-y-1.5">
+      {field.type !== "checkbox" && (
+        <label className="block text-xs font-bold text-[#00102e]">
+          {field.labelAr} {field.required && <span className="text-[#c66b22]">*</span>}
+        </label>
+      )}
+      {renderScalarControl(field, scalarValue(value), (next) => onChange(next))}
+      {field.helpText && (
+        <p className="text-[10px] text-slate-400 leading-normal">{field.helpText}</p>
+      )}
+    </div>
+  );
 }

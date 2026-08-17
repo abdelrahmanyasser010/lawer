@@ -12,6 +12,8 @@ export default function MobileWizardPreview({
   title,
   serial,
   contractSlug,
+  variantKey,
+  selectedOptionalClauseKeys = [],
   fieldValues = {},
   rows,
   annexes,
@@ -20,7 +22,9 @@ export default function MobileWizardPreview({
   onClose: () => void;
   title: string;
   serial: string;
-  contractSlug?: string;
+  contractSlug?: string | null;
+  variantKey?: string | null;
+  selectedOptionalClauseKeys?: string[] | null;
   fieldValues?: Record<string, any>;
   rows: MobilePreviewRow[];
   annexes: string[];
@@ -70,6 +74,8 @@ export default function MobileWizardPreview({
               <LegalDocumentSheet
                 serialNumber={serial}
                 templateSlug={contractSlug}
+                variantKey={variantKey}
+                selectedOptionalClauseKeys={selectedOptionalClauseKeys}
                 templateNameAr={title}
                 fieldValues={fieldValues}
                 status="draft"

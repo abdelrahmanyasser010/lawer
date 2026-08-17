@@ -405,6 +405,8 @@ export default function ContractPage() {
               <LegalDocumentSheet
                 serialNumber={item.serial_number}
                 templateSlug={item.template_slug}
+                variantKey={item.variant_key}
+                selectedOptionalClauseKeys={item.selected_optional_clause_keys}
                 templateNameAr={item.template_name_ar}
                 fieldValues={fields}
                 status={item.status}

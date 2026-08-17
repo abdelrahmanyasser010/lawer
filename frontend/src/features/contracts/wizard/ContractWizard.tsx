@@ -451,6 +451,8 @@ export default function WizardPage() {
       title={contractTitle}
       serial={displaySerial}
       contractSlug={contractSlug}
+      variantKey={draft?.variantKey}
+      selectedOptionalClauseKeys={draft?.selectedOptionalClauseKeys}
       fieldValues={formData}
       rows={mobilePreviewRows}
       annexes={selectedAnnexDefinitions.map((item) => item.documentTitleAr ?? item.nameAr)}
@@ -721,6 +723,8 @@ export default function WizardPage() {
                   <LegalDocumentSheet
                     serialNumber={displaySerial}
                     templateSlug={contractSlug}
+                    variantKey={draft.variantKey}
+                    selectedOptionalClauseKeys={draft.selectedOptionalClauseKeys}
                     templateNameAr={contractTitle}
                     fieldValues={formData}
                     status="draft"
