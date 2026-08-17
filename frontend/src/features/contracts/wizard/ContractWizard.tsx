@@ -234,21 +234,105 @@ export default function WizardPage() {
   // ─── AUTO-SCROLL LIVE PREVIEW ON STEP TRANSITION ──────────────────────────
   useEffect(() => {
     if (!currentStepKey) return;
-    const getTargetId = (key: string): string => {
-      if (key.includes("meta") || key.includes("start")) return "doc-preamble";
-      if (key.includes("landlord") || key.includes("seller") || key.includes("client")) return "doc-party-1";
-      if (key.includes("tenant") || key.includes("buyer") || key.includes("provider")) return "doc-party-2";
-      if (key.includes("property") || key.includes("unit") || key.includes("scope") || key.includes("overview")) return "doc-unit-specs";
-      if (key.includes("financial") || key.includes("price") || key.includes("payment")) return "doc-unit-specs";
-      if (key.includes("terms") || key.includes("duration") || key.includes("general")) return "doc-signatures";
-      if (key.includes("review") || key.includes("closing") || key.includes("signing")) return "doc-signatures";
-      return "doc-preamble";
+
+    const resolveTargetElement = (key: string): HTMLElement | null => {
+      const k = key.toLowerCase();
+
+      // 1. Preamble & Meta
+      if (k.includes("meta") || k.includes("start")) {
+        return document.getElementById("doc-preamble");
+      }
+
+      // 2. Party 1 (Landlord / Seller / Client)
+      if (k.includes("landlord") || k.includes("seller") || k.includes("client") || k.includes("party_1") || k.includes("first_party")) {
+        return document.getElementById("doc-party-1");
+      }
+
+      // 3. Party 2 (Tenant / Buyer / Provider)
+      if (k.includes("tenant") || k.includes("buyer") || k.includes("provider") || k.includes("party_2") || k.includes("second_party")) {
+        return document.getElementById("doc-party-2");
+      }
+
+      // 4. Delay Penalty Clause
+      if (k.includes("penalty") || k.includes("delay")) {
+        return (
+          document.querySelector<HTMLElement>("[data-target='delay-penalty']") ||
+          document.getElementById("doc-delay-penalty") ||
+          document.getElementById("doc-clause-social_media_source_article_05") ||
+          document.getElementById("doc-clause-visual_identity_source_article_05") ||
+          document.getElementById("doc-clause-website_source_article_05")
+        );
+      }
+
+      // 5. Communications & Notices
+      if (k.includes("communication") || k.includes("notice") || k.includes("messaging")) {
+        return (
+          document.querySelector<HTMLElement>("[data-target='communications']") ||
+          document.getElementById("doc-communications") ||
+          document.getElementById("doc-clause-social_media_source_article_19") ||
+          document.getElementById("doc-clause-visual_identity_source_article_19") ||
+          document.getElementById("doc-clause-website_source_article_19")
+        );
+      }
+
+      // 6. Project & Services Scope (Freelancer)
+      if (k.includes("project") || k.includes("scope")) {
+        return (
+          document.getElementById("doc-project-specs") ||
+          document.querySelector<HTMLElement>("[data-target='project-scope']") ||
+          document.getElementById("doc-unit-specs") ||
+          document.getElementById("doc-clause-social_media_source_article_02") ||
+          document.getElementById("doc-clause-visual_identity_source_article_02") ||
+          document.getElementById("doc-clause-website_source_article_02")
+        );
+      }
+
+      // 7. Property & Specs (Rental / Sale)
+      if (k.includes("property") || k.includes("unit") || k.includes("overview")) {
+        return document.getElementById("doc-unit-specs") || document.getElementById("doc-clause-residential_lease_source_article_04");
+      }
+
+      // 8. Financials & Payments
+      if (k.includes("financial") || k.includes("price") || k.includes("payment") || k.includes("fee")) {
+        return (
+          document.getElementById("doc-project-specs") ||
+          document.querySelector<HTMLElement>("[data-target='financials']") ||
+          document.getElementById("doc-unit-specs") ||
+          document.getElementById("doc-clause-social_media_source_article_04")
+        );
+      }
+
+      // 9. Optional Clauses & Terms
+      if (k.includes("optional") || k.includes("terms")) {
+        return (
+          document.querySelector<HTMLElement>("[data-target='optional-clauses']") ||
+          document.getElementById("doc-optional-clauses") ||
+          document.getElementById("doc-signatures")
+        );
+      }
+
+      // 10. Witnesses & Signatures & Review
+      if (k.includes("witness") || k.includes("signature") || k.includes("review") || k.includes("closing") || k.includes("signing")) {
+        return document.getElementById("doc-signatures");
+      }
+
+      return document.getElementById("doc-preamble");
     };
 
-    const targetId = getTargetId(currentStepKey);
-    const element = document.getElementById(targetId);
+    const element = resolveTargetElement(currentStepKey);
     if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      const previewContainer = document.getElementById("wizard-preview");
+      if (previewContainer) {
+        const containerRect = previewContainer.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const offsetTop = elementRect.top - containerRect.top + previewContainer.scrollTop - 24;
+        previewContainer.scrollTo({
+          top: Math.max(0, offsetTop),
+          behavior: "smooth",
+        });
+      } else {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     }
   }, [currentStepKey]);
 

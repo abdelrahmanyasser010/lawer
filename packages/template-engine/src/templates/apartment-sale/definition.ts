@@ -577,7 +577,7 @@ const reviewedSourceClauses = saleSourceLegalClauses.map((item): LegalClauseDefi
   }
   if (key === "registrable_sale_source_article_22") {
     body = removeRange(body, "( هل يوجد شهادة سلبية )", "(في حالة اختيار جدول اقساط )");
-    body = removeRange(body, "(في حالة اختيار جدول اقساط )", "أي مستندات أو مالحق");
+    body = removeRange(body, "(في حالة اختيار جدول اقساط )", "أي مستندات أو ملاحق");
   }
   if (key === "preliminary_sale_source_article_24" || key === "inherited_sale_source_article_22") {
     body = body.replace(/جدول سداد األقساط[\s\S]*?(?=\n\n|$)/g, "");
