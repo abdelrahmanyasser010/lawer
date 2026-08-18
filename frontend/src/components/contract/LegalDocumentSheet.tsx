@@ -611,7 +611,7 @@ function AnnexPreviewSheet({
             <div className="zd-doc-office">Z draft</div>
             <div className="zd-doc-kind">ملحق تعاقدي — قالب فارغ للتعبئة اليدوية</div>
           </div>
-          <img src="/zdraft-logo-transparent.png" alt="Z draft" className="zd-doc-logo" />
+          <img src="/logo.png" alt="Z draft" className="zd-doc-logo" />
         </div>
         <h2 className="zd-doc-title">{annex.documentTitleAr ?? annex.nameAr}</h2>
         <div className="zd-doc-meta">
@@ -988,7 +988,7 @@ export default function LegalDocumentSheet({
             <div className="zd-doc-office">Z draft</div>
             <div className="zd-doc-kind">محرر تعاقدي</div>
           </div>
-          <img src="/zdraft-logo-transparent.png" alt="Z draft" className="zd-doc-logo" />
+          <img src="/logo.png" alt="Z draft" className="zd-doc-logo" />
         </div>
         <h1 className="zd-doc-title">{docTitle}</h1>
         <div className="zd-doc-meta">
