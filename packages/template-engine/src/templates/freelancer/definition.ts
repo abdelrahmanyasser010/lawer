@@ -2292,6 +2292,18 @@ ${socialDelayPenaltyCommonTail}`,
   enabled: true,
 };
 
+const socialCompetentCourtClause: LegalClauseDefinition = {
+  key: "social_competent_court_clause",
+  titleAr: "الاختصاص القضائي: 21-3",
+  bodyAr: "مع مراعاة قواعد الاختصاص الولائي والنوعي والمكاني المتعلقة بالنظام العام، اتفق الطرفان على أن تختص محكمة {{social_competent_court}} الابتدائية ودوائرها الجزئية بحسب الأحوال بنظر والفصل في جميع المنازعات الناشئة عن هذا العقد أو المرتبطة به، وذلك في الحدود التي يجيزها القانون. وفي حال عدم تحديد محكمة بعينها، تختص المحاكم المصرية المختصة نوعيًا ومكانيًا وفقًا لقواعد الاختصاص المقررة قانونًا.",
+  variables: ["social_competent_court"],
+  visibleWhen: { fieldKey: "social_competent_court", operator: "truthy" },
+  sourceDocumentName: "عقد تقديم خدمات إدارة حسابات ومنصات التواصل الاجتماعي.pdf",
+  sourcePageStart: 21,
+  sourcePageEnd: 21,
+  enabled: true,
+};
+
 const freelancerLegalClauses: LegalClauseDefinition[] = [
   ...freelanceSourceLegalClauses.map((clause): LegalClauseDefinition => {
     const identitySource = clause.key.startsWith("visual_identity_design_source_");
@@ -2397,6 +2409,7 @@ const freelancerLegalClauses: LegalClauseDefinition[] = [
     visibleWhen: { fieldKey: "social_legal_fees_enabled", operator: "truthy" },
     sourceDocumentName: "عقد تقديم خدمات إدارة حسابات ومنصات التواصل الاجتماعي.pdf", sourcePageStart: 25, sourcePageEnd: 25, enabled: true,
   },
+  socialCompetentCourtClause,
   {
     key: "visual_identity_email_contacts",
     titleAr: "بيانات البريد الإلكتروني المعتمد للمراسلات",

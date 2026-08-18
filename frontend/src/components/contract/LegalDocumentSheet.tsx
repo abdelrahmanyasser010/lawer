@@ -324,12 +324,9 @@ function LegalTextBody({ text, className = "" }: { text: string; className?: str
   );
 }
 
-function LiveFieldMarker({ label }: { label?: string | null }) {
+function LiveFieldMarker({ label: _label }: { label?: string | null }) {
   return (
-    <span className="pointer-events-none absolute -top-3 right-2 z-30 inline-flex items-center gap-1 rounded-full border border-[#d9a84e] bg-[#00102e] px-2 py-1 text-[8.5px] font-black text-[#f2c45f] shadow-md">
-      <CursorIcon className="h-3 w-3" />
-      {label ? `${label} يظهر هنا` : "التعديل يظهر هنا"}
-    </span>
+    <span className="pointer-events-none absolute inset-0 z-20 rounded-sm ring-2 ring-[#d9a84e] ring-offset-0" aria-hidden="true" />
   );
 }
 
@@ -1161,7 +1158,7 @@ export default function LegalDocumentSheet({
                   {/* Court Jurisdiction Row in Specs Table */}
                   <tr data-preview-group="jurisdiction" data-active-preview={activeJurisdiction ? "exact" : undefined} className={`border-b border-slate-200 bg-slate-50/40 ${activeJurisdiction ? "outline outline-2 outline-[#d9a84e]" : ""}`}>
                     <td colSpan={2} className="py-1.5 px-3 align-top">
-                      {activeJurisdiction && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#00102e] px-2 py-0.5 text-[8.5px] font-black text-[#f2c45f]"><CursorIcon className="h-3 w-3" />{activeFieldLabel || "المحكمة المختصة"} يظهر هنا</span>}
+                      {activeJurisdiction && <span className="pointer-events-none absolute inset-0 z-20 rounded-sm ring-2 ring-[#d9a84e] ring-offset-0" aria-hidden="true" />}
                       <span className="text-slate-500 text-[10px] block">المحكمة المختصة بنظر أي نزاع:</span>
                       <span className="font-bold text-[#00102e]">
                         {jurisdictionCourtDisplay || "⚠ مطلوب تحديد المحكمة المختصة"}
@@ -1268,7 +1265,7 @@ export default function LegalDocumentSheet({
                   </tr>
                   <tr data-preview-group="jurisdiction" data-active-preview={activeJurisdiction ? "exact" : undefined} className={`bg-slate-50/40 ${activeJurisdiction ? "outline outline-2 outline-[#d9a84e]" : ""}`}>
                     <td colSpan={2} className="py-1.5 px-3 align-top">
-                      {activeJurisdiction && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#00102e] px-2 py-0.5 text-[8.5px] font-black text-[#f2c45f]"><CursorIcon className="h-3 w-3" />{activeFieldLabel || "المحكمة المختصة"} يظهر هنا</span>}
+                      {activeJurisdiction && <span className="pointer-events-none absolute inset-0 z-20 rounded-sm ring-2 ring-[#d9a84e] ring-offset-0" aria-hidden="true" />}
                       <span className="text-slate-500 text-[10px] block">المحكمة المختصة بنظر أي نزاع:</span>
                       <span className="font-bold text-[#00102e]">
                         {jurisdictionCourtDisplay || "⚠ مطلوب تحديد المحكمة المختصة"}
