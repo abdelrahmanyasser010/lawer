@@ -45,7 +45,7 @@ for(const file of roots.flatMap(r=>walk(r))){
   }
   visit(sf);
 }
-const routeRaw=childProcess.execFileSync('php',[path.join(LARAVEL,'tools','dump_routes_stub.php')],{encoding:'utf8'});
+const routeRaw=childProcess.execFileSync('php',[path.join(LARAVEL,'tools','dump_routes_stub.php')],{encoding:'utf8',stdio:['ignore','pipe','pipe']});
 const declared=JSON.parse(routeRaw).filter(r=>r.path.startsWith('/api/v1/')).map(r=>({method:r.method.toUpperCase(),path:normalize(r.path)}));
 function compatible(usedPath,routePath){const a=usedPath.replace(/^\//,'').split('/'),b=routePath.replace(/^\//,'').split('/');const suffix=a.at(-1)==='{suffix}';if(suffix){if(b.length<a.length)return false;}else if(a.length!==b.length)return false;const limit=suffix?a.length-1:a.length;for(let i=0;i<limit;i++){const x=a[i],y=b[i];if(x==='{param}'||/^\{[^}]+\}$/.test(y)||x===y)continue;return false;}return true;}
 const missing=used.filter(u=>!declared.some(r=>u.method===r.method&&compatible(u.path,r.path)));

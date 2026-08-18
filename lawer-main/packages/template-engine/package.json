@@ -1,0 +1,29 @@
+{
+  "name": "@zdraft/template-engine",
+  "version": "0.2.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./templates": {
+      "types": "./dist/templates/registry.d.ts",
+      "require": "./dist/templates/registry.js",
+      "default": "./dist/templates/registry.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}

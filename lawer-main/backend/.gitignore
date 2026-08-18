@@ -1,0 +1,10 @@
+/vendor/
+.env
+.phpunit.result.cache
+/storage/*.key
+/storage/app/private/*
+!/storage/app/private/.gitignore
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*

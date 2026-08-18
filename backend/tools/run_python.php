@@ -34,8 +34,9 @@ exit(127);
 
 function run(array $command, bool $quiet): int
 {
+    $stdinPipe = PHP_OS_FAMILY === 'Windows' ? ['file', 'NUL', 'r'] : ['file', '/dev/null', 'r'];
     $descriptorSpec = [
-        0 => STDIN,
+        0 => $stdinPipe,
         1 => $quiet ? ['pipe', 'w'] : STDOUT,
         2 => $quiet ? ['pipe', 'w'] : STDERR,
     ];

@@ -14,8 +14,12 @@ def executable(name):
   if candidate:return candidate
  return name
 def run(cmd,**kw):
- if isinstance(cmd,list) and cmd:cmd=[executable(cmd[0]),*cmd[1:]]
- env=dict(os.environ);env.setdefault('TERM','dumb');env.update(kw.pop('env',{}));return subprocess.run(cmd,capture_output=True,text=True,env=env,**kw)
+ if isinstance(cmd,list) and cmd:
+  exe=executable(cmd[0])
+  if os.name=='nt' and (exe.lower().endswith('.cmd') or exe.lower().endswith('.bat')):
+   kw['shell']=True
+  cmd=[exe,*cmd[1:]]
+ env=dict(os.environ);env.setdefault('TERM','dumb');env.update(kw.pop('env',{}));return subprocess.run(cmd,capture_output=True,text=True,stdin=subprocess.DEVNULL,env=env,**kw)
 # PHP syntax
 excluded_parts={'vendor','storage','.next','dist','node_modules'}
 php_files=sorted(f for f in L.rglob('*.php') if not any(part in excluded_parts for part in f.relative_to(L).parts));errors=[]
@@ -130,15 +134,21 @@ missing_tests=[x for x in required_tests if not (L/x).exists()]
 add('laravel_runtime_tests_present',not missing_tests,{'missing':missing_tests})
 # Secrets
 allowed_local_env={'backend/.env'}
-all_env=[p.relative_to(ROOT).as_posix() for p in ROOT.rglob('.env') if p.name=='.env']
+excluded_scan_dirs={'.git','node_modules','.next','dist','vendor','storage'}
+all_env=[]
+hits=[]
+for root, dirs, files in os.walk(ROOT):
+ dirs[:] = [d for d in dirs if d not in excluded_scan_dirs]
+ for file in files:
+  if file == '.env':
+   all_env.append((Path(root)/file).relative_to(ROOT).as_posix())
+  f = Path(root)/file
+  if f.suffix.lower() in {'.png','.jpg','.jpeg','.webp','.pdf','.zip'}: continue
+  s=f.read_text('utf-8',errors='ignore')
+  for pattern in [r'AIza[0-9A-Za-z_-]{30,}',r're_[0-9A-Za-z]{20,}',r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----']:
+   if re.search(pattern,s):hits.append(str(f.relative_to(ROOT)))
 real_env=[p for p in all_env if p not in allowed_local_env]
 local_env=[p for p in all_env if p in allowed_local_env]
-hits=[]
-for f in ROOT.rglob('*'):
- if not f.is_file() or any(part in {'.git','node_modules','.next','dist','vendor','storage'} for part in f.parts) or f.suffix.lower() in {'.png','.jpg','.jpeg','.webp','.pdf','.zip'}:continue
- s=f.read_text('utf-8',errors='ignore')
- for pattern in [r'AIza[0-9A-Za-z_-]{30,}',r're_[0-9A-Za-z]{20,}',r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----']:
-  if re.search(pattern,s):hits.append(str(f.relative_to(ROOT)))
 add('secret_scan',not real_env and not hits,{'realEnvFiles':real_env,'localEnvFilesIgnored':local_env,'credentialHits':sorted(set(hits))})
 # Runtime environment disclosure, nonblocking here
 mods=run(['php','-m']).stdout.lower();required_mods=['pdo_pgsql','imagick','mbstring'];missing_mods=[m for m in required_mods if m not in mods]

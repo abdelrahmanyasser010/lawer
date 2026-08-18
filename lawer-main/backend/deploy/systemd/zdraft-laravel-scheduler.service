@@ -1,0 +1,16 @@
+[Unit]
+Description=Z draft Laravel scheduler worker
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=abdo2
+Group=abdo2
+WorkingDirectory=/home/abdo2/htdocs/api.zdraft.tech
+ExecStart=/usr/bin/php artisan schedule:work
+Restart=always
+RestartSec=5
+Environment=APP_ENV=production
+
+[Install]
+WantedBy=multi-user.target

@@ -9,7 +9,7 @@ import ArabicCurrencyInput from "@/components/contract/ArabicCurrencyInput";
 import FieldLabel from "@/components/contract/FieldLabel";
 import {
   Lock, ArrowRight, ArrowLeft, Upload, FileCheck,
-  ShieldCheck, CheckCircle2, Zap, ExternalLink, Camera, Receipt, FileText, Sparkles,
+  ShieldCheck, CheckCircle2, Zap, ExternalLink, Camera, Receipt, FileText, Sparkles, Loader2,
 } from "lucide-react";
 import { compressUploadFile } from "@/lib/compression";
 import { apiRequest, ApiClientError } from "@/lib/apiClient";
@@ -112,7 +112,9 @@ export default function WizardPage() {
   const [previewTab, setPreviewTab] = useState<"document" | "summary">("document");
   const [actionDialog, setActionDialog] = useState<{ title: string; message: string; confirmOnly: boolean; confirmLabel?: string; onConfirm?: () => void } | null>(null);
   const showNotice = (message: string, title = "تنبيه") => setActionDialog({ title, message, confirmOnly: true });
-  const [autoSaveStatus, setAutoSaveStatus] = useState("محفوظ مؤقتًا في هذه الجلسة");
+  const [autoSaveStatus, setAutoSaveStatus] = useState("محفوظ مؤقتًا في هذه الجلسة ✓");
+  const [isSaving, setIsSaving] = useState(false);
+  const lastSavedPayloadRef = useRef<string>("");
   const [backendContract, setBackendContract] = useState<ContractDetails | null>(null);
   const [checkoutContract, setCheckoutContract] = useState<{ id: number; serialNumber: string } | null>(null);
   const loadedContractId = useRef<number | null>(null);
@@ -342,14 +344,29 @@ export default function WizardPage() {
     const hasValues = Object.values(formData).some((v) => v !== "" && v !== null && v !== undefined);
     if (!hasValues) return;
 
+    const payloadToSave = JSON.stringify({
+      fieldValues: draft.fieldValues,
+      variantKey: draft.variantKey,
+      selectedOptionalClauseKeys: draft.selectedOptionalClauseKeys,
+      currentStepKey: draft.currentStepKey,
+    });
+
+    if (payloadToSave === lastSavedPayloadRef.current) {
+      return;
+    }
+
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
     }
 
+    setIsSaving(true);
     setAutoSaveStatus("جاري المزامنة مع السيرفر...");
+
     autosaveTimerRef.current = setTimeout(async () => {
       try {
         const saved = await saveDraftSnapshot(draft);
+        lastSavedPayloadRef.current = payloadToSave;
+        setIsSaving(false);
         if (saved && saved.id) {
           setBackendDraftReference(contractSlug, saved);
           setAutoSaveStatus("تم الحفظ في السيرفر ✓");
@@ -357,9 +374,11 @@ export default function WizardPage() {
           setAutoSaveStatus("محفوظ مؤقتًا في الجلسة ✓");
         }
       } catch {
+        lastSavedPayloadRef.current = payloadToSave;
+        setIsSaving(false);
         setAutoSaveStatus("محفوظ محليًا في المتصفح ✓");
       }
-    }, 1800);
+    }, 1500);
 
     return () => {
       if (autosaveTimerRef.current) {
@@ -691,8 +710,14 @@ export default function WizardPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
-              <CheckCircle2 className="h-3.5 w-3.5" />
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold transition-colors ${
+              isSaving ? "text-amber-700" : "text-emerald-700"
+            }`}>
+              {isSaving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-600" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              )}
               {autoSaveStatus}
             </span>
             <span className="rounded-xl bg-[#00102e] px-3 py-1 text-xs font-black text-[#d9a84e]">
