@@ -375,7 +375,7 @@ function witnessesStep(): WizardStepDefinition {
 const saleJurisdictionStep: WizardStepDefinition = {
   key: "sale_jurisdiction",
   titleAr: "المحكمة المختصة",
-  articleRange: "تسوية المنازعات",
+  articleRange: "الاختصاص القضائي وتسوية المنازعات",
   fields: [competentCourtField("sale_jurisdiction_court")],
 };
 
