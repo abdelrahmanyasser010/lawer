@@ -113,8 +113,6 @@ export interface ContractVariantDefinition {
   steps: WizardStepDefinition[];
   requiredClauseKeys: string[];
   allowedOptionalClauseKeys: string[];
-  /** Annexes that are part of the contract by definition and are always issued; the user cannot remove them. */
-  requiredAnnexKeys?: string[];
   defaultFieldValues?: Record<string, ContractFieldValue>;
 }
 
@@ -127,8 +125,6 @@ export interface OptionalClauseDefinition {
   outputMode?: "inline" | "separate_annex";
   /** When true the annex is selected in the wizard but its fields are printed blank for manual completion after printing. */
   manualFillAnnex?: boolean;
-  /** Makes an otherwise optional annex mandatory when the supplied draft condition becomes true. */
-  requiredWhen?: ConditionDefinition;
   applicableVariantKeys: string[];
   insertedSteps: WizardStepDefinition[];
   insertBeforeStepKey: string;

@@ -7,6 +7,7 @@ import type {
   WizardFieldDefinition,
   WizardStepDefinition,
 } from "../../types";
+import { normalizeLegalClauseDefinition } from "../legalText";
 import {
   saleSourceClauseKeysByVariant,
   saleSourceLegalClauses,
@@ -591,7 +592,7 @@ const conditionalClauses: LegalClauseDefinition[] = [
     key: "sale_jurisdiction_court_clause",
     titleAr: "المحكمة المختصة",
     variables: ["sale_jurisdiction_court"],
-    bodyAr: "تختص محكمة {{sale_jurisdiction_court}} بنظر أي نزاع ينشأ عن هذا العقد أو يتعلق بتفسيره أو تنفيذه أو آثاره، وذلك مع عدم الإخلال بقواعد الاختصاص الولائي والنوعي الآمرة.",
+    bodyAr: "تختص محكمة {{sale_jurisdiction_court}} الابتدائية ودوائرها الجزئية بحسب الأحوال بنظر أي نزاع ينشأ عن هذا العقد أو يتعلق بتفسيره أو تنفيذه أو آثاره، وذلك مع عدم الإخلال بقواعد الاختصاص الولائي والنوعي والمكاني الآمرة.",
   }),
   customClause({ key: "sale_full_payment_clause", titleAr: "السداد الكامل في مجلس العقد", bodyAr: "يقر البائع بأنه تسلم من المشتري قبل التوقيع وفي مجلس العقد كامل ثمن البيع المبين في بيانات العقد، ويُعد توقيعه مخالصة نهائية باستلام كامل الثمن وإبراءً لذمة المشتري من الالتزام المالي الناشئ عن الثمن، دون إخلال بأي التزامات أخرى ناشئة عن العقد أو القانون.", visibleWhen: fullPaymentCondition }),
   customClause({ key: "sale_installment_payment_clause", titleAr: "السداد بالتقسيط أو على دفعات", variables: ["sale_down_payment", "sale_remaining_amount", "sale_installment_grace_days"], bodyAr: `يقر البائع باستلام مقدم قدره {{sale_down_payment}} جنيه مصري، ويلتزم المشتري بسداد باقي الثمن وقدره {{sale_remaining_amount}} جنيه مصري وفق ملحق جدول الأقساط المرفق بهذا العقد، ويُعد الملحق جزءًا لا يتجزأ من العقد وتكون بياناته ملزمة للطرفين.
@@ -661,8 +662,7 @@ const installmentAnnex: OptionalClauseDefinition = {
   sourceDocumentName: "ملحق ( جدول الاقساط ) Z DRAFT.pdf",
   outputMode: "separate_annex",
   manualFillAnnex: true,
-  requiredWhen: installmentCondition,
-  description: "قالب فارغ للطباعة والتعبئة اليدوية فقط. يُضاف تلقائيًا بعد العقد عند اختيار البيع بالتقسيط، ولا تُنقل إليه بيانات الـWizard.",
+  description: "ملحق اختياري بالكامل وقالب فارغ للطباعة والتعبئة اليدوية؛ لا يُضاف تلقائيًا ولا تُنقل إليه بيانات الـWizard، ويظهر للاختيار عند البيع بالتقسيط.",
   applicableVariantKeys: ["preliminary_sale", "registrable_sale", "inherited_sale"],
   insertBeforeStepKey: "sale_review",
   legalClauseKeys: ["sale_installment_schedule_manual_clause"],
@@ -747,9 +747,9 @@ const installmentAnnexClause: LegalClauseDefinition = {
 
 export const apartmentSaleTemplateDefinition: ContractTemplateDefinition = {
   slug: "apartment_sale",
-  version: 7,
+  version: 11,
   nameAr: "عقود بيع الوحدات السكنية",
-  description: "ثلاثة عقود بيع مستقلة مطابقة للنماذج: بيع ابتدائي، بيع قابل للتسجيل بالشهر العقاري، وبيع لوحدة آلت بالميراث، مع ملحق جدول أقساط فارغ للطباعة عند التقسيط.",
+  description: "ثلاثة عقود بيع مستقلة مطابقة للنماذج: بيع ابتدائي، بيع قابل للتسجيل بالشهر العقاري، وبيع لوحدة آلت بالميراث، مع ملحق أقساط اختياري وفارغ قابل للطباعة والتعبئة اليدوية.",
   priceEgp: 0,
   variantPricing: {
     preliminary_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 999 },
@@ -779,5 +779,6 @@ export const apartmentSaleTemplateDefinition: ContractTemplateDefinition = {
     }),
   ],
   optionalClauses: [installmentAnnex],
-  legalClauses: [...reviewedSourceClauses, ...conditionalClauses, installmentAnnexClause],
+  legalClauses: [...reviewedSourceClauses, ...conditionalClauses, installmentAnnexClause]
+    .map(normalizeLegalClauseDefinition),
 };

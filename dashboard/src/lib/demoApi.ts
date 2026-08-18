@@ -113,14 +113,14 @@ const roles = [
 ];
 
 const contracts = [
-  { id: 101, serialNumber: "SCP-2026-APT-000101", title: "عقد بيع شقة سكنية", templateSlug: "apartment_sale", templateNameAr: "عقد بيع وحدة سكنية", clientName: "أحمد محمد حسن", createdByName: "واجهة العميل", assignedLawyerName: "أ. مريم سامي", sourceChannel: "customer", billingMode: "client_invoice", status: "pending_review", updatedAt: iso(-2) },
-  { id: 102, serialNumber: "SCP-2026-RNT-000102", title: "عقد إيجار شقة سكنية", templateSlug: "rental", templateNameAr: "عقد إيجار سكني أو تجاري", clientName: "علي حسن", createdByName: "Z draft Super Admin", assignedLawyerName: "أ. مريم سامي", sourceChannel: "office", billingMode: "office_waiver", status: "client_review", updatedAt: iso(-8) },
-  { id: 103, serialNumber: "SCP-2026-SALE-000103", title: "عقد بيع بالتقسيط", templateSlug: "apartment_sale", templateNameAr: "عقد بيع وحدة سكنية", clientName: "شركة النيل", createdByName: "واجهة العميل", assignedLawyerName: "", sourceChannel: "customer", billingMode: "client_invoice", status: "pending_payment", updatedAt: iso(-14) },
+  { id: 101, serialNumber: "SCP-2026-APT-000101", title: "عقد بيع شقة سكنية", templateSlug: "apartment_sale", templateNameAr: "عقد بيع وحدة سكنية", clientName: "أحمد محمد حسن", createdByName: "واجهة العميل", assignedLawyerName: "أ. مريم سامي", sourceChannel: "customer", billingMode: "client_invoice", status: "pending_review", currentVersionId: 1001, updatedAt: iso(-2) },
+  { id: 102, serialNumber: "SCP-2026-RNT-000102", title: "عقد إيجار شقة سكنية", templateSlug: "rental", templateNameAr: "عقد إيجار سكني أو تجاري", clientName: "علي حسن", createdByName: "Z draft Super Admin", assignedLawyerName: "أ. مريم سامي", sourceChannel: "office", billingMode: "office_waiver", status: "client_review", currentVersionId: 1001, updatedAt: iso(-8) },
+  { id: 103, serialNumber: "SCP-2026-SALE-000103", title: "عقد بيع بالتقسيط", templateSlug: "apartment_sale", templateNameAr: "عقد بيع وحدة سكنية", clientName: "شركة النيل", createdByName: "واجهة العميل", assignedLawyerName: "", sourceChannel: "customer", billingMode: "client_invoice", status: "pending_payment", currentVersionId: 1001, updatedAt: iso(-14) },
 ];
 
 const requests = [
   { id: 501, serialNumber: "REQ-2026-DEMO01", requestType: "contract_drafting", title: "إعداد عقد بيع مع محامي", status: "awaiting_payment", priority: "normal", createdAt: iso(-6), dueAt: iso(18), clientName: "أحمد محمد حسن", clientPhone: "01023817658", assignedLawyerName: "أ. مريم سامي" },
-  { id: 502, serialNumber: "CON-2026-DEMO02", requestType: "consultation", title: "استشارة حول عقد إيجار", status: "meeting_scheduled", priority: "high", createdAt: iso(-12), dueAt: iso(5), clientName: "علي حسن", clientPhone: "01011111111", assignedLawyerName: "أ. مريم سامي", meetingUrl: "https://zoom.us/j/demo" },
+  { id: 502, serialNumber: "REV-2026-DEMO02", requestType: "contract_review", title: "مراجعة عقد إيجار قبل التجديد", status: "in_progress", priority: "high", createdAt: iso(-12), dueAt: iso(5), clientName: "علي حسن", clientPhone: "01011111111", assignedLawyerName: "أ. مريم سامي" },
   { id: 503, serialNumber: "REV-2026-DEMO03", requestType: "contract_review", title: "مراجعة عقد قديم قبل التوقيع", status: "new", priority: "normal", createdAt: iso(-18), dueAt: iso(30), clientName: "منى محمود", clientPhone: "01022222222", assignedLawyerName: "" },
 ];
 
@@ -133,12 +133,11 @@ const settings = [
   { key: "office.display_name", value: "Z draft", isSecret: false, updatedAt: iso(-24) },
   { key: "office.support_email", value: "support@zdraft.com", isSecret: false, updatedAt: iso(-24) },
   { key: "office.whatsapp_number", value: "201023817658", isSecret: false, updatedAt: iso(-24) },
-  { key: "office.consultation_whatsapp_number", value: "201023817658", isSecret: false, updatedAt: iso(-24) },
+  { key: "office.review_whatsapp_number", value: "201023817658", isSecret: false, updatedAt: iso(-24) },
   { key: "office.support_whatsapp_number", value: "201023817658", isSecret: false, updatedAt: iso(-24) },
   { key: "office.support_phone", value: "01023817658", isSecret: false, updatedAt: iso(-24) },
   { key: "payments.vodafone_cash_number", value: "01023817658", isSecret: false, updatedAt: iso(-24) },
-  { key: "services.consultation.fee_egp", value: 300, isSecret: false, updatedAt: iso(-24) },
-  { key: "services.consultation.deposit_egp", value: 100, isSecret: false, updatedAt: iso(-24) },
+  { key: "services.contract_review.fee_egp", value: 300, isSecret: false, updatedAt: iso(-24) },
   { key: "services.contract_review.deposit_egp", value: 100, isSecret: false, updatedAt: iso(-24) },
   { key: "services.contract_drafting.deposit_egp", value: 100, isSecret: false, updatedAt: iso(-24) },
   { key: "contracts.require_email_verification", value: true, isSecret: false, updatedAt: iso(-24) },
@@ -175,6 +174,8 @@ export async function demoDashboardRequest<T>(path: string, init: RequestInit = 
   }
   if (pathname === "/api/v1/admin/contracts") return filterContracts(url) as T;
   if (pathname.match(/^\/api\/v1\/contracts\/\d+$/)) return contractDetails(Number(pathname.split("/").pop())) as T;
+  const previewMatch = pathname.match(/^\/api\/v1\/admin\/contracts\/(\d+)\/versions\/(\d+)\/preview$/);
+  if (previewMatch) return contractVersionPreview(Number(previewMatch[1]), Number(previewMatch[2])) as T;
   if (pathname.match(/^\/api\/v1\/admin\/contracts\/\d+/)) return { ok: true, versionId: 1001, versionNumber: 2 } as T;
   if (pathname.match(/^\/api\/v1\/contracts\/\d+\/shares$/)) return { shareUrl: "https://customer-demo.vercel.app/shared/demo-share-token" } as T;
   if (pathname === "/api/v1/admin/service-requests") return requests.filter((item) => item.requestType === url.searchParams.get("type")) as T;
@@ -254,6 +255,29 @@ function contractDetails(id: number) {
     versions: [
       { id: 1001, versionNumber: 1, status: "draft", createdAt: iso(-12), lockedAt: null, documentHash: null },
     ],
+  };
+}
+
+function contractVersionPreview(id: number, versionId: number) {
+  const details = contractDetails(id);
+  return {
+    contractId: details.id,
+    versionId,
+    versionNumber: 1,
+    versionStatus: "draft",
+    serialNumber: details.serial_number,
+    title: details.title,
+    templateSlug: contracts.find((item) => item.id === details.id)?.templateSlug || "rental",
+    templateNameAr: details.template_name_ar,
+    templateDefinition: details.template_definition,
+    variantKey: details.variant_key,
+    selectedOptionalClauseKeys: details.selected_optional_clause_keys,
+    fieldValues: details.field_values_json,
+    touchedFieldKeys: [],
+    legalClauseSnapshot: [],
+    documentHash: null,
+    lockedAt: null,
+    issuedAt: null,
   };
 }
 
@@ -344,14 +368,13 @@ function demoReports(periodValue: string | null) {
     templateDistribution: templates.map((item, index) => ({ slug: item.slug, nameAr: item.nameAr, count: [13, 11, 7][index] ?? 0, issued: [10, 9, 5][index] ?? 0 })),
     serviceDistribution: [
       { requestType: "contract_drafting", count: 7, completed: 5, active: 2 },
-      { requestType: "contract_review", count: 6, completed: 4, active: 2 },
-      { requestType: "consultation", count: 4, completed: 3, active: 1 },
+      { requestType: "contract_review", count: 10, completed: 7, active: 3 },
     ],
     lawyerPerformance: [
       { id: 2, name: "أ. مريم سامي", assignedCount: 9, completedCount: 7, activeCount: 2, overdueCount: 0, averageCompletionHours: 17.2 },
     ],
     contractStatuses: [{ status: "issued", count: 24 }, { status: "pending_review", count: 4 }, { status: "client_review", count: 3 }],
-    requestStatuses: [{ status: "completed", count: 12 }, { status: "in_progress", count: 3 }, { status: "meeting_scheduled", count: 2 }],
+    requestStatuses: [{ status: "completed", count: 12 }, { status: "in_progress", count: 3 }, { status: "client_review", count: 2 }],
     generatedAt: iso(),
   };
 }

@@ -98,8 +98,8 @@ export default function HistoryPage() {
                   key={request.id}
                   title={request.title}
                   serial={request.serialNumber}
-                  status={requestStatusLabels[request.status] || "تم تحديث الاستشارة"}
-                  meta={`${requestTypeLabels[request.requestType] || "استشارة قانونية"} · ${new Date(request.createdAt).toLocaleDateString("ar-EG")}`}
+                  status={requestStatusLabels[request.status] || "تم تحديث الطلب"}
+                  meta={`${requestTypeLabels[request.requestType] || "طلب خدمة"} · ${new Date(request.createdAt).toLocaleDateString("ar-EG")}`}
                   href={`/requests/${request.id}`}
                 />
               ))}

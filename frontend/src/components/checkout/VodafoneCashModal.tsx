@@ -7,6 +7,7 @@ import { apiRequest, ApiClientError, frontendApi } from "@/lib/apiClient";
 import { compressUploadFile } from "@/lib/compression";
 import { usePublicCatalog } from "@/hooks/usePublicCatalog";
 import { normalizePhoneInput, phoneValidationError } from "@/lib/inputValidation";
+import { usePaymentAccess } from "@/hooks/usePaymentAccess";
 
 interface Props {
   isOpen: boolean;
@@ -32,9 +33,10 @@ export default function VodafoneCashModal({
 }: Props) {
   const router = useRouter();
   const { catalog, loading: catalogLoading, loadError: catalogLoadError } = usePublicCatalog();
-  const cashNumber = catalog.payment.vodafoneCashNumber;
+  const cashNumber = paymentCashNumber;
   const editHours = catalog.policies.selfServiceEditHours;
   const targetPath = contractId ? `/contract/${contractId}` : serviceRequestId ? `/requests/${serviceRequestId}` : "/";
+  const { paymentAccess, paymentVerified, paymentCashNumber, requireVerified } = usePaymentAccess(targetPath);
   const [receipt, setReceipt] = useState<File | null>(null);
   const [senderPhone, setSenderPhone] = useState("");
   const [preparing, setPreparing] = useState(false);
@@ -87,6 +89,7 @@ export default function VodafoneCashModal({
 
   async function submitReceipt() {
     setError("");
+    if (!(await requireVerified())) { onClose(); return; }
     if (catalogLoading || catalogLoadError || !cashNumber) {
       setError("بيانات الدفع غير متاحة الآن. حاول مرة أخرى بعد قليل أو تواصل مع الدعم الفني.");
       return;
@@ -136,6 +139,12 @@ export default function VodafoneCashModal({
             <h2 className="mt-5 text-xl font-black text-white">تم استلام إثبات التحويل</h2>
             <p className="mt-3 text-sm leading-7 text-slate-300">مرجع الدفع: <strong className="font-mono text-[#d9a84e]">{paymentReference}</strong>. ستظهر حالة الدفع داخل العقد بعد مراجعة الإدارة.</p>
             <button type="button" onClick={() => { onClose(); router.push(targetPath); }} className="mt-6 rounded-xl bg-[#986410] px-6 py-3 text-sm font-black text-white">{contractId ? "فتح العقد" : "فتح الطلب"}</button>
+          </div>
+        ) : !paymentVerified ? (
+          <div className="py-5 text-center">
+            <p className="text-sm font-black text-white">تأكيد الحساب مطلوب قبل عرض بيانات التحويل</p>
+            <p className="mt-2 text-xs leading-6 text-slate-400">لن تظهر بيانات الدفع قبل تسجيل الدخول وتأكيد البريد الإلكتروني.</p>
+            <button type="button" onClick={() => void requireVerified().then((ok) => { if (!ok) onClose(); })} className="mt-5 rounded-xl bg-[#986410] px-5 py-3 text-xs font-black text-white">{paymentAccess === "unverified" ? "تأكيد البريد الإلكتروني" : "تسجيل الدخول والمتابعة"}</button>
           </div>
         ) : (
           <div>

@@ -5,6 +5,7 @@ import type {
   ContractTemplateDefinition,
   LegalClauseDefinition,
   ResolvedWizardDefinition,
+  WizardFieldDefinition,
   WizardStepDefinition,
 } from "./types";
 
@@ -78,15 +79,7 @@ export function resolveWizardDefinition(
 
   let steps = variant.steps.map((step) => ({ ...step, fields: [...step.fields] }));
   const activeClauseKeys = new Set(variant.requiredClauseKeys);
-  const dynamicRequiredClauseKeys = template.optionalClauses
-    .filter((item) =>
-      Boolean(item.requiredWhen) &&
-      variant.allowedOptionalClauseKeys.includes(item.key) &&
-      item.applicableVariantKeys.includes(variant.key) &&
-      evaluateCondition(item.requiredWhen, fieldValues),
-    )
-    .map((item) => item.key);
-  const effectiveClauseKeys = [...new Set([...(variant.requiredAnnexKeys ?? []), ...dynamicRequiredClauseKeys, ...selectedOptionalClauseKeys])];
+  const effectiveClauseKeys = [...new Set(selectedOptionalClauseKeys)];
 
   for (const clauseKey of effectiveClauseKeys) {
     const clause = template.optionalClauses.find(
@@ -126,6 +119,31 @@ export interface RenderedLegalClause {
   sourcePageEnd?: number;
 }
 
+function formatClauseVariable(
+  fieldKey: string,
+  value: unknown,
+  field: WizardFieldDefinition | undefined,
+  fieldValues: Record<string, any>,
+): string {
+  if (value === "أخرى") {
+    const other = fieldValues[`${fieldKey}_other`];
+    if (other !== undefined && other !== null && String(other).trim() !== "") return String(other).trim();
+  }
+  const option = field?.options?.find((item) => String(item.value) === String(value));
+  if (option) return option.labelAr;
+  if (typeof value === "boolean") return value ? "نعم" : "لا";
+  if (typeof value === "number") return value.toLocaleString("ar-EG");
+  if (Array.isArray(value)) {
+    return value.map((item) => {
+      if (item && typeof item === "object") return Object.values(item).filter(Boolean).join(" — ");
+      return String(item ?? "");
+    }).filter(Boolean).join("، ");
+  }
+  const text = String(value ?? "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text.split("-").reverse().join("/");
+  return text;
+}
+
 export function renderLegalClauses(
   template: ContractTemplateDefinition,
   variantKey: string,
@@ -143,7 +161,7 @@ export function renderLegalClauses(
   }
 
   const manualClauseKeys = new Set<string>();
-  const effectiveClauseKeys = [...new Set([...(variant.requiredAnnexKeys ?? []), ...selectedOptionalClauseKeys])];
+  const effectiveClauseKeys = [...new Set(selectedOptionalClauseKeys)];
   for (const optional of template.optionalClauses) {
     if (effectiveClauseKeys.includes(optional.key) && optional.manualFillAnnex) {
       for (const k of optional.legalClauseKeys) {
@@ -153,6 +171,9 @@ export function renderLegalClauses(
   }
 
   const rendered: RenderedLegalClause[] = [];
+  const fieldMap = new Map<string, WizardFieldDefinition>(
+    resolved.steps.flatMap((step) => step.fields).map((field) => [field.key, field] as const),
+  );
 
   for (const key of resolved.activeClauseKeys) {
     const clause = availableClauseMap.get(key);
@@ -166,12 +187,10 @@ export function renderLegalClauses(
     for (const v of variables) {
       const token = `{{${v}}}`;
       let val = fieldValues[v];
-      if (val === undefined || val === null || val === "" || (typeof val === "boolean" && !val)) {
+      if (val === undefined || val === null || val === "") {
         val = "بيان مطلوب";
-      } else if (typeof val === "number") {
-        val = val.toLocaleString("ar-EG");
-      } else if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
-        val = val.split("-").reverse().join("/");
+      } else {
+        val = formatClauseVariable(v, val, fieldMap.get(v), fieldValues);
       }
       body = body.split(token).join(String(val));
     }

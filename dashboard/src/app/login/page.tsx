@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, ShieldCheck } from "lucide-react";
 import { dashboardApi, DashboardApiError } from "@/lib/apiClient";
 import { setDashboardUser } from "@/lib/session";
+import { safeInternalRedirect } from "@/lib/safeRedirect";
 
 function DashboardLoginContent() {
   const params = useSearchParams();
@@ -26,7 +27,7 @@ function DashboardLoginContent() {
         throw new Error("هذا الحساب لا يملك صلاحية دخول لوحة المكتب");
       }
       setDashboardUser(user);
-      window.location.href = user.passwordChangeRequired ? "/account?changePassword=required" : (params.get("next") || "/");
+      window.location.href = user.passwordChangeRequired ? "/account?changePassword=required" : safeInternalRedirect(params.get("next"), "/");
     } catch (caught) {
       setError(caught instanceof DashboardApiError || caught instanceof Error ? caught.message : "تعذر تسجيل الدخول");
       setLoading(false);
@@ -39,7 +40,7 @@ function DashboardLoginContent() {
         <div className="hidden bg-[#00102e] p-10 text-white lg:block">
           <div className="relative h-16 w-32"><Image src="/logo.png" alt="Z draft" fill className="object-contain object-right" /></div>
           <h1 className="mt-12 text-3xl font-black leading-tight">لوحة إدارة Z draft</h1>
-          <p className="mt-4 text-sm font-semibold leading-7 text-slate-300">إدارة العقود والمراجعات والاستشارات والمدفوعات بصلاحيات منفصلة وسجل تدقيق لكل إجراء.</p>
+          <p className="mt-4 text-sm font-semibold leading-7 text-slate-300">إدارة العقود ومراجعات العقود والمدفوعات بصلاحيات منفصلة وسجل تدقيق لكل إجراء.</p>
           <div className="mt-10 space-y-4 text-xs font-bold text-slate-300">
             <div className="flex items-center gap-3"><ShieldCheck className="h-5 w-5 text-[#986410]"/> تشغيل محمي من حساب السوبر أدمن</div>
             <div className="flex items-center gap-3"><ShieldCheck className="h-5 w-5 text-[#986410]"/> الصلاحيات تُفرض من الباك إند</div>

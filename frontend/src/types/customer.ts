@@ -110,7 +110,7 @@ export type CommunicationChannel = "zoom" | "whatsapp";
 export interface ServiceRequestSummary {
   id: number;
   serialNumber: string;
-  requestType: "contract_drafting" | "contract_review" | "consultation";
+  requestType: "contract_drafting" | "contract_review";
   title: string;
   status: string;
   priority: string;
@@ -139,6 +139,9 @@ export interface ServiceRequestDetails {
   templateSlug?: string | null;
   variantKey?: string | null;
   expectedPaymentEgp?: number;
+  serviceTotalPriceEgp?: number | null;
+  serviceDepositEgp?: number | null;
+  serviceRemainingEgp?: number | null;
   lawyerTotalPriceEgp?: number | null;
   lawyerDepositEgp?: number | null;
   lawyerRemainingEgp?: number | null;
@@ -216,16 +219,15 @@ export interface PublicCatalog {
     }>;
   }>;
   services: {
+    contractReviewFeeEgp: number;
     contractReviewDepositEgp: number;
-    consultationDepositEgp: number;
-    consultationFeeEgp: number;
     contractDraftingDepositEgp: number;
   };
   office: {
     displayName: string;
     address: string;
     whatsappNumber: string;
-    consultationWhatsappNumber: string;
+    reviewWhatsappNumber: string;
     supportWhatsappNumber: string;
     supportPhone: string;
     supportEmail: string;

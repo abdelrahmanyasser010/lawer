@@ -10,6 +10,7 @@ import { compressMultipleFiles, compressUploadFile } from "@/lib/compression";
 import { usePublicCatalog } from "@/hooks/usePublicCatalog";
 import type { CommunicationChannel } from "@/types/customer";
 import { normalizePhoneInput, phoneValidationError } from "@/lib/inputValidation";
+import { usePaymentAccess } from "@/hooks/usePaymentAccess";
 
 const channels: Array<{ key: CommunicationChannel; label: string; icon: typeof Video }> = [
   { key: "zoom", label: "Zoom", icon: Video },
@@ -19,6 +20,7 @@ const channels: Array<{ key: CommunicationChannel; label: string; icon: typeof V
 export default function RequestReviewPage() {
   const router = useRouter();
   const { catalog, loading: catalogLoading, loadError: catalogLoadError } = usePublicCatalog();
+  const { paymentAccess, paymentVerified, paymentCashNumber, requireVerified } = usePaymentAccess("/request-review");
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -41,13 +43,11 @@ export default function RequestReviewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const reviewDeposit = catalog?.services?.contractReviewDepositEgp || 100;
-  const totalReviewPrice = (catalog?.services?.consultationFeeEgp && catalog?.services?.consultationFeeEgp > reviewDeposit)
-    ? catalog.services.consultationFeeEgp
-    : 300;
+  const totalReviewPrice = catalog?.services?.contractReviewFeeEgp || 0;
+  const reviewDeposit = totalReviewPrice > 0 ? Math.min(catalog?.services?.contractReviewDepositEgp || 0, totalReviewPrice) : (catalog?.services?.contractReviewDepositEgp || 0);
   const remainingPrice = Math.max(0, totalReviewPrice - reviewDeposit);
-  const cashNumber = catalog?.payment?.vodafoneCashNumber || "";
-  const consultationNumber = catalog?.office?.consultationWhatsappNumber || "";
+  const cashNumber = paymentCashNumber;
+  const reviewNumber = catalog?.office?.reviewWhatsappNumber || "";
 
   const enabledChannels = useMemo(() => {
     if (!catalog) return [];
@@ -63,7 +63,7 @@ export default function RequestReviewPage() {
   useEffect(() => {
     let cancelled = false;
     setAvailabilityLoading(true); setAvailabilityError(""); setSelectedDate(""); setSelectedSlotKey("");
-    apiRequest<{ days: Array<{ date: string; label: string; slots: Array<{ slotKey: string; start: string; end: string; label: string; remaining: number; limited?: boolean }> }> }>(`/api/v1/consultation-availability?channel=${encodeURIComponent(channel)}`)
+    apiRequest<{ days: Array<{ date: string; label: string; slots: Array<{ slotKey: string; start: string; end: string; label: string; remaining: number; limited?: boolean }> }> }>(`/api/v1/review-availability?channel=${encodeURIComponent(channel)}`)
       .then((result) => { if (!cancelled) setAvailabilityDays(result.days || []); })
       .catch((error) => { if (!cancelled) { setAvailabilityDays([]); setAvailabilityError(error instanceof Error ? error.message : "تعذر تحميل المواعيد المتاحة."); } })
       .finally(() => { if (!cancelled) setAvailabilityLoading(false); });
@@ -133,6 +133,7 @@ export default function RequestReviewPage() {
 
   async function submit() {
     setError("");
+    if (!(await requireVerified())) return;
     if (!title.trim()) {
       setError("اكتب موضوع المراجعة باختصار.");
       return;
@@ -181,7 +182,7 @@ export default function RequestReviewPage() {
       const request = await apiRequest<{ id: number; serialNumber: string }>("/api/v1/service-requests", {
         method: "POST",
         body: JSON.stringify({
-          requestType: "consultation",
+          requestType: "contract_review",
           title: title.trim(),
           description: description.trim(),
           communicationChannel: channel,
@@ -214,7 +215,7 @@ export default function RequestReviewPage() {
         return;
       }
       if (caught instanceof ApiClientError && caught.status === 401) {
-        router.push("/login?next=/#consultation");
+        router.push("/login?next=%2Frequest-review");
         return;
       }
       setError(caught instanceof Error ? caught.message : "تعذر إرسال الطلب الآن.");
@@ -275,7 +276,7 @@ export default function RequestReviewPage() {
                   )}
 
                   <p className="mt-2 text-[10px] leading-5 text-slate-400 border-t border-white/10 pt-2">
-                    يُدفع العربون لتأكيد حجز الموعد والبدء في دراسة العقد، وسيتم تحصيل المبلغ المتبقي ({remainingPrice.toLocaleString("ar-EG")} ج.م) بواسطة المحامي عند إتمام مراجعة العقد.
+                    يُدفع العربون لتأكيد حجز الموعد والبدء في دراسة العقد، وسيظهر المبلغ المتبقي ({remainingPrice.toLocaleString("ar-EG")} ج.م) داخل الطلب عند اكتمال المراجعة وقبل إتاحة المخرج النهائي.
                   </p>
                 </div>
 
@@ -289,13 +290,13 @@ export default function RequestReviewPage() {
                   <div className="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-3.5">
                     <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" /> موعدك يُحجز مبدئيًا عند إرسال الطلب، ويُثبت بعد مراجعة الدفع.
                   </div>
-                  {consultationNumber && (
+                  {reviewNumber && (
                     <div className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3.5">
                       <div className="flex items-center gap-2 text-emerald-300">
                         <MessageCircle className="h-4 w-4 shrink-0 text-emerald-400" />
                         <span>رقم WhatsApp للمراجعات:</span>
                       </div>
-                      <b dir="ltr" className="font-mono text-white">{consultationNumber}</b>
+                      <b dir="ltr" className="font-mono text-white">{reviewNumber}</b>
                     </div>
                   )}
                 </div>
@@ -382,20 +383,21 @@ export default function RequestReviewPage() {
                   </div>
                 )}
 
-                {reviewDeposit > 0 && <>
+                {reviewDeposit > 0 && !paymentVerified && <button type="button" onClick={() => void requireVerified()} className="w-full rounded-xl border border-[#986410]/30 bg-[#986410]/10 px-4 py-3 text-xs font-black text-[#d9a84e]">{paymentAccess === "unverified" ? "أكد بريدك الإلكتروني لعرض تعليمات الدفع" : "سجّل الدخول وأكد بريدك لعرض تعليمات الدفع"}</button>}
+              {reviewDeposit > 0 && paymentVerified && <>
                   <div className="rounded-xl border border-white/10 bg-slate-900/90 px-3.5 py-2.5 flex items-center justify-between mt-3">
                     <span className="text-[11px] font-bold text-slate-300">حوّل العربون إلى رقم فودافون كاش:</span>
                     {catalogLoading ? (
                       <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-400"><Loader2 className="h-3 w-3 animate-spin" /> جاري التحميل...</span>
-                    ) : cashNumber ? (
+                    ) : paymentVerified && cashNumber ? (
                       <b dir="ltr" className="font-mono text-xs tracking-wide text-[#d9a84e]">{cashNumber}</b>
                     ) : (
                       <span className="text-[10px] font-bold text-red-300">غير متاح مؤقتًا.</span>
                     )}
                   </div>
 
-                  <label className={`block rounded-xl border border-dashed border-[#986410]/50 bg-[#986410]/10 p-3 text-center transition hover:bg-[#986410]/20 ${catalogLoading || !cashNumber ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
-                    <input type="file" accept="image/*,.pdf" className="hidden" disabled={catalogLoading || !cashNumber} onChange={(event) => void selectReceipt(event.target.files?.[0] || null)} />
+                  <label className={`block rounded-xl border border-dashed border-[#986410]/50 bg-[#986410]/10 p-3 text-center transition hover:bg-[#986410]/20 ${catalogLoading || !cashNumber || !paymentVerified ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
+                    <input type="file" accept="image/*,.pdf" className="hidden" disabled={catalogLoading || !cashNumber || !paymentVerified} onChange={(event) => void selectReceipt(event.target.files?.[0] || null)} />
                     <Upload className="mx-auto h-4 w-4 text-[#d9a84e]" />
                     <span className="mt-1.5 block text-[10px] font-black text-white">{receipt?.name || `رفع إثبات دفع عربون المراجعة — ${reviewDeposit.toLocaleString("ar-EG")} ج.م`}</span>
                   </label>

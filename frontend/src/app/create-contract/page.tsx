@@ -28,6 +28,7 @@ import type { CommunicationChannel, PublicCatalog } from "@/types/customer";
 import { useWizardStore } from "@/store/wizardStore";
 import type { ContractSlug } from "@/types/zdraft";
 import { normalizePhoneInput, phoneValidationError } from "@/lib/inputValidation";
+import { usePaymentAccess } from "@/hooks/usePaymentAccess";
 
 const MAX_FILES = 30;
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -230,6 +231,7 @@ function VariantCard({ mode, template, variant, onChoose }: { mode: CatalogMode;
 function LawyerRequestModal({ selected, catalog, onClose }: { selected: SelectedVariant; catalog: PublicCatalog; onClose: () => void }) {
   const router = useRouter();
   const { template, variant } = selected;
+  const { paymentAccess, paymentVerified, paymentCashNumber, requireVerified } = usePaymentAccess("/create-contract?mode=lawyer_assisted");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [channel, setChannel] = useState<CommunicationChannel>("whatsapp");
@@ -244,7 +246,7 @@ function LawyerRequestModal({ selected, catalog, onClose }: { selected: Selected
   const total = variant.lawyerAssistedPriceEgp;
   const deposit = Math.min(variant.lawyerDepositEgp, total);
   const remaining = Math.max(0, total - deposit);
-  const cashNumber = catalog.payment.vodafoneCashNumber;
+  const cashNumber = paymentCashNumber;
 
   async function addDocuments(files: FileList | null) {
     if (!files) return;
@@ -275,6 +277,7 @@ function LawyerRequestModal({ selected, catalog, onClose }: { selected: Selected
 
   async function submit(event: FormEvent) {
     event.preventDefault(); setError("");
+    if (!(await requireVerified())) { onClose(); return; }
     if (!fullName.trim()) return setError("اكتب الاسم الكامل.");
     const phoneError = phoneValidationError(phone, true); if (phoneError) return setError(phoneError);
     if (!documents.length) return setError("ارفع مستندًا واحدًا على الأقل ليستطيع المحامي بدء مراجعة الطلب.");
@@ -351,7 +354,8 @@ function LawyerRequestModal({ selected, catalog, onClose }: { selected: Selected
           {documents.length > 0 && <div className="mt-3 flex max-h-32 flex-wrap gap-2 overflow-y-auto">{documents.map((file, index) => <span key={`${file.name}-${index}`} className="inline-flex max-w-full items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-[10px] font-bold text-slate-600"><span className="max-w-44 truncate">{file.name}</span><button type="button" onClick={() => setDocuments((current) => current.filter((_, i) => i !== index))}><X className="h-3 w-3 text-red-500" /></button></span>)}</div>}
         </div>
 
-        {deposit > 0 && <div className="mt-5 rounded-2xl border border-[#986410]/20 bg-[#986410]/5 p-4"><h3 className="text-sm font-black text-[#00102e]">إثبات دفع العربون</h3><p className="mt-1 text-[10px] leading-5 text-slate-500">حوّل {deposit.toLocaleString("ar-EG")} ج.م إلى رقم الدفع الظاهر في المنصة، ثم ارفع صورة أو PDF للإثبات.</p>{cashNumber && <div dir="ltr" className="mt-2 w-fit rounded-lg bg-white px-3 py-2 font-mono text-sm font-black text-[#00102e]">{cashNumber}</div>}<label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#986410]/30 bg-white p-4 text-xs font-black text-[#986410]"><input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={(e) => void chooseReceipt(e.target.files?.[0] || null)} /><Upload className="h-4 w-4" />{receipt ? receipt.name : "رفع إثبات العربون"}</label></div>}
+        {deposit > 0 && !paymentVerified && <button type="button" onClick={() => void requireVerified().then((ok) => { if (!ok) onClose(); })} className="mt-5 w-full rounded-2xl border border-[#986410]/20 bg-[#986410]/5 p-4 text-xs font-black text-[#986410]">{paymentAccess === "unverified" ? "أكد بريدك الإلكتروني لعرض تعليمات دفع العربون" : "سجّل الدخول وأكد بريدك لعرض تعليمات دفع العربون"}</button>}
+        {deposit > 0 && paymentVerified && <div className="mt-5 rounded-2xl border border-[#986410]/20 bg-[#986410]/5 p-4"><h3 className="text-sm font-black text-[#00102e]">إثبات دفع العربون</h3><p className="mt-1 text-[10px] leading-5 text-slate-500">حوّل {deposit.toLocaleString("ar-EG")} ج.م إلى رقم الدفع الظاهر في المنصة، ثم ارفع صورة أو PDF للإثبات.</p>{cashNumber && <div dir="ltr" className="mt-2 w-fit rounded-lg bg-white px-3 py-2 font-mono text-sm font-black text-[#00102e]">{cashNumber}</div>}<label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#986410]/30 bg-white p-4 text-xs font-black text-[#986410]"><input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={(e) => void chooseReceipt(e.target.files?.[0] || null)} /><Upload className="h-4 w-4" />{receipt ? receipt.name : "رفع إثبات العربون"}</label></div>}
 
         {error && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">{error}</div>}
         <button type="submit" disabled={submitting || preparing || total <= 0} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-5 py-3.5 text-sm font-black text-white disabled:opacity-50">{submitting ? <><Loader2 className="h-4 w-4 animate-spin" />جاري رفع المستندات وإرسال الطلب...</> : <><CheckCircle2 className="h-4 w-4" />إرسال الطلب للمكتب</>}</button>

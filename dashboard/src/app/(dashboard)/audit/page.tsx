@@ -12,9 +12,9 @@ const labels:Record<string,string>={
   "auth.login":"تسجيل دخول","auth.registered":"إنشاء حساب","auth.email_verified":"تأكيد البريد","auth.password_changed":"تغيير كلمة المرور",
   "contract.draft_created":"إنشاء مسودة عقد","contract.draft_updated":"تعديل مسودة عقد","contract.version_created":"إنشاء إصدار عقد","contract.version_updated":"تعديل إصدار عقد","contract.status_changed":"تغيير حالة عقد","contract.locked":"قفل عقد","contract.issued":"إصدار عقد","contract.share_created":"إنشاء مشاركة عقد","contract.share_revoked":"إلغاء مشاركة عقد","contract.payment_waived":"إعفاء عقد من الدفع",
   "payment.receipt_uploaded":"رفع إيصال دفع","payment.approved":"اعتماد دفع","payment.rejected":"رفض دفع","payment.clarification_requested":"طلب توضيح دفع","payment.manual_recorded":"تسجيل تحصيل يدوي",
-  "user.status_changed":"تغيير حالة عميل","settings.updated":"تعديل الإعدادات","consultation.schedule_updated":"تعديل جدول الاستشارات","consultation.schedule_blocked":"حظر موعد استشارة",
+  "user.status_changed":"تغيير حالة عميل","settings.updated":"تعديل الإعدادات","consultation.schedule_updated":"تعديل جدول مراجعة العقود","consultation.schedule_blocked":"حظر موعد مراجعة عقد","consultation.schedule_block_removed":"إلغاء حظر موعد مراجعة عقد",
 };
-const entityLabels:Record<string,string>={user:"مستخدم",contract:"عقد",payment:"دفع",service_request:"طلب خدمة",contract_version:"إصدار عقد",contract_share:"مشاركة عقد",consultation_schedule:"جدول الاستشارات",consultation_schedule_exception:"استثناء موعد",platform_settings:"إعدادات"};
+const entityLabels:Record<string,string>={user:"مستخدم",contract:"عقد",payment:"دفع",service_request:"طلب خدمة",contract_version:"إصدار عقد",contract_share:"مشاركة عقد",consultation_schedule:"جدول مراجعة العقود",consultation_schedule_exception:"استثناء موعد مراجعة",platform_settings:"إعدادات"};
 
 export default function AuditPage(){
   const [items,setItems]=useState<Audit[]>([]),[entity,setEntity]=useState(""),[mode,setMode]=useState<"business"|"security"|"all">("business"),[error,setError]=useState(""),[loaded,setLoaded]=useState(false),[verify,setVerify]=useState<Verify|null>(null),[verifying,setVerifying]=useState(false),[from,setFrom]=useState(""),[to,setTo]=useState(""),[page,setPage]=useState(1),[pages,setPages]=useState(1),[total,setTotal]=useState(0);

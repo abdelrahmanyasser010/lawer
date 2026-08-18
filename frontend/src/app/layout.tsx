@@ -8,14 +8,18 @@ import "@fontsource/cairo/900.css";
 import "@fontsource/alexandria/700.css";
 import "@fontsource/alexandria/800.css";
 import "@fontsource/alexandria/900.css";
+import "@fontsource/noto-sans-arabic/400.css";
+import "@fontsource/noto-sans-arabic/600.css";
+import "@fontsource/noto-sans-arabic/700.css";
+import "@fontsource/noto-sans-arabic/800.css";
 import "./globals.css";
 import FloatingSupportButton from "@/components/support/FloatingSupportButton";
 
 export const metadata: Metadata = {
   title: "Z draft – إعداد العقود والخدمات القانونية",
   description:
-    "أنشئ عقدك بنفسك أو اطلب استشارة قانونية من المكتب وارفق المستندات المرتبطة بها.",
-  keywords: ["عقود قانونية", "عقد إيجار", "عقد بيع شقة", "استشارة قانونية", "Z draft", "عقد عمل حر"],
+    "أنشئ عقدك بنفسك، اطلب إعداده بواسطة محامٍ، أو ارفع عقدًا قائمًا لمراجعته من المكتب.",
+  keywords: ["عقود قانونية", "عقد إيجار", "عقد بيع شقة", "Z draft", "عقد عمل حر"],
 };
 
 export default function RootLayout({

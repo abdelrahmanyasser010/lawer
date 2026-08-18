@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, FileText, Scale, ShieldCheck, Lock, Shield, Zap, FileBadge2, Building2, Headset, FolderLock, BarChart3, Database, Users, LayoutDashboard } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FileText, Scale, ShieldCheck, Lock, Shield, Zap, FileBadge2, Building2, FolderLock, BarChart3, Database, Users, LayoutDashboard } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
@@ -39,7 +39,7 @@ export default function HomePage() {
                 </h1>
 
                 <p className="mt-4 sm:mt-6 max-w-lg text-[12px] sm:text-[14px] font-bold leading-[1.8] text-slate-500">
-                  المنصة الأولى لإعداد العقود الذكية وتقديم الاستشارات القانونية. احصل على عقودك جاهزة في دقائق، أو اعتمد على نخبة من المحامين المختصين لضمان حماية حقوقك بأعلى المعايير.
+                  منصة متخصصة في إعداد العقود الذكية ومراجعة العقود القائمة. أنشئ عقدك بنفسك، أو اطلب إعداده بواسطة محامٍ، أو ارفع عقدًا لمراجعته قبل الاعتماد.
                 </p>
 
                 <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -258,7 +258,6 @@ export default function HomePage() {
                 { icon: FileText, title: "صياغة فورية بنفسك", desc: "اختر القالب، أجب عن الأسئلة، واستلم عقدك في دقائق.", link: "/create-contract?mode=self_service", cta: "ابدأ الآن" },
                 { icon: Users, title: "صياغة بواسطة محام", desc: "محامٍ مختص يصوغ لك عقداً احترافياً مخصصاً.", link: "/create-contract?mode=lawyer_assisted", cta: "اطلب الآن" },
                 { icon: CheckCircle2, title: "مراجعة عقد قائم", desc: "ارفع عقدك واحصل على تقرير قانوني شامل بالمخاطر.", link: "/request-review", cta: "اطلب مراجعة" },
-                { icon: Headset, title: "استشارة قانونية", desc: "احجز جلسة مع محامٍ مختص للإجابة على استفساراتك.", link: "/requests", cta: "احجز جلسة" },
                 { icon: FolderLock, title: "Z Draft Vault", desc: "خزنة عقودك الآمنة — احفظ وشارك وتحقق بسهولة.", link: "/contracts", cta: "اكتشف الآن" },
                 { icon: BarChart3, title: "عقود جاهزة للاستخدام", desc: "أكثر من 25 قالب عقد محدّث ومعتمد من خبرائنا.", link: "/create-contract?mode=self_service", cta: "تصفح القوالب" },
               ].map(({ icon: Icon, title, desc, link, cta }) => (

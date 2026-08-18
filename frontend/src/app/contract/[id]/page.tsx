@@ -110,7 +110,8 @@ export default function ContractPage() {
     Object.entries(fields).forEach(([k, v]) => {
       if (v === null || v === undefined || v === "" || Array.isArray(v) || typeof v === "object") return;
       const label = legalLabelDictionary[k] || item?.fieldMetadata?.[k]?.labelAr || k;
-      const formattedVal = formatLegalValue(k, v);
+      const metadata = item?.fieldMetadata?.[k];
+      const formattedVal = formatLegalValue(k, v, metadata?.options ?? [], metadata?.type);
 
       if (k.includes("seller") || k.includes("buyer") || k.includes("landlord") || k.includes("tenant") || k.includes("party") || k.includes("employer") || k.includes("employee") || k.includes("client") || k.includes("provider")) {
         parties.push({ key: k, label, value: formattedVal });
@@ -632,13 +633,13 @@ export default function ContractPage() {
               <section className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
                 <h3 className="text-xs font-black text-amber-950">هل تحتاج تعديلاً بعد الاعتماد؟</h3>
                 <p className="mt-1 text-[11px] leading-5 text-amber-900">
-                  النسخة المعتمدة تظل ثابتة للحفاظ على الحجية القانونية. لطلب صياغة ملحق أو مراجعة إضافية يمكنك طلب استشارة من المكتب.
+                  النسخة المعتمدة تظل ثابتة للحفاظ على الحجية القانونية. إذا أردت مراجعة إضافية يمكنك إنشاء طلب مراجعة عقد جديد من المكتب.
                 </p>
                 <Link
-                  href="/#consultation"
+                  href="/request-review"
                   className="mt-3 inline-block rounded-xl bg-amber-700 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-amber-800 transition"
                 >
-                  طلب استشارة قانونية
+                  طلب مراجعة عقد
                 </Link>
               </section>
             )}

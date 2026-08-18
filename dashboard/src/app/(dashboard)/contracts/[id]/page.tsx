@@ -7,7 +7,6 @@ import { ArrowRight, Copy, FileLock2, FilePlus2, Link2, Send, ShieldCheck, UserR
 import { dashboardRequest, DashboardApiError } from "@/lib/apiClient";
 import { AdminDialog } from "@/components/admin/AdminDialog";
 import { StatusBadge } from "@/components/admin/PageFeedback";
-import { frontendContractUrl } from "@/lib/urls";
 import { getCurrentStaff } from "@/lib/adminAccess";
 import { dashboardFeatures } from "@/config/dashboardFeatures";
 
@@ -126,7 +125,7 @@ export default function ContractDetailsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex flex-wrap items-end justify-between gap-3"><div><Link href="/contracts" className="inline-flex items-center gap-1 text-xs font-black text-slate-500"><ArrowRight className="h-4 w-4"/> العقود</Link><h1 className="mt-3 text-2xl font-black text-[#00102e]">{contract.title}</h1><p className="mt-1 font-mono text-xs font-bold text-slate-400">{contract.serial_number}</p></div><a href={frontendContractUrl(String(id))} target="_blank" rel="noreferrer" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-[#00102e]">فتح المعاينة</a></div>
+      <div className="flex flex-wrap items-end justify-between gap-3"><div><Link href="/contracts" className="inline-flex items-center gap-1 text-xs font-black text-slate-500"><ArrowRight className="h-4 w-4"/> العقود</Link><h1 className="mt-3 text-2xl font-black text-[#00102e]">{contract.title}</h1><p className="mt-1 font-mono text-xs font-bold text-slate-400">{contract.serial_number}</p></div><Link href={`/contracts/${id}/preview${contract.current_version_id ? `?versionId=${contract.current_version_id}` : ""}`} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-[#00102e]">فتح المعاينة</Link></div>
       {notice && <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-black text-emerald-800">{notice}</div>}
       {error && <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-black text-rose-700">{error}</div>}
 
@@ -139,7 +138,7 @@ export default function ContractDetailsPage() {
             ].map(([label,value]) => <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="text-[10px] font-black text-slate-400">{label}</div><div className="mt-1 text-xs font-black text-slate-800">{String(value || "—")}</div></div>)}
           </div>
           <h3 className="mt-6 text-xs font-black text-[#00102e]">إصدارات العقد</h3>
-          <div className="mt-3 space-y-2">{contract.versions.map((version) => <div key={version.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-3"><div><div className="text-xs font-black text-slate-800">الإصدار {version.versionNumber}</div><div className="mt-1 text-[10px] font-bold text-slate-400">{new Date(version.createdAt).toLocaleString("ar-EG")}</div></div><div className="text-left"><div className="flex items-center justify-end gap-2"><StatusBadge value={version.status}/>{dashboardFeatures.contractEditing && hasPermission("contracts.edit_legal") && contract.current_version_id === version.id && ["draft","internal_review","revision_requested","client_review","approved"].includes(version.status) && <Link href={`/contracts/${id}/versions/${version.id}`} className="rounded-lg border border-[#986410]/30 bg-[#986410]/5 px-2 py-1 text-[9px] font-black text-[#986410]">تحرير الإصدار</Link>}</div>{version.documentHash && <div className="mt-1 max-w-56 truncate font-mono text-[8px] text-slate-400">{version.documentHash}</div>}</div></div>)}</div>
+          <div className="mt-3 space-y-2">{contract.versions.map((version) => <div key={version.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-3"><div><div className="text-xs font-black text-slate-800">الإصدار {version.versionNumber}</div><div className="mt-1 text-[10px] font-bold text-slate-400">{new Date(version.createdAt).toLocaleString("ar-EG")}</div></div><div className="text-left"><div className="flex items-center justify-end gap-2"><StatusBadge value={version.status}/><Link href={`/contracts/${id}/preview?versionId=${version.id}`} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[9px] font-black text-slate-700">معاينة</Link>{dashboardFeatures.contractEditing && hasPermission("contracts.edit_legal") && contract.current_version_id === version.id && ["draft","internal_review","revision_requested","client_review","approved"].includes(version.status) && <Link href={`/contracts/${id}/versions/${version.id}`} className="rounded-lg border border-[#986410]/30 bg-[#986410]/5 px-2 py-1 text-[9px] font-black text-[#986410]">تحرير الإصدار</Link>}</div>{version.documentHash && <div className="mt-1 max-w-56 truncate font-mono text-[8px] text-slate-400">{version.documentHash}</div>}</div></div>)}</div>
         </section>
 
         <aside className="space-y-4">

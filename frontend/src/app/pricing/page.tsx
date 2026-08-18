@@ -68,7 +68,6 @@ export default function PricingPage() {
         <section className="mt-10 grid gap-4 md:grid-cols-3">
           <Link href="/create-contract?mode=self_service" className="rounded-2xl bg-[#00102e] p-5 text-white"><FileText className="h-5 w-5 text-[#d9a84e]"/><h3 className="mt-3 font-black">إنشاء عقد بنفسي</h3><p className="mt-2 text-xs leading-6 text-slate-300">اختر العقد ثم أدخل بياناته خطوة بخطوة.</p></Link>
           <Link href="/create-contract?mode=lawyer_assisted" className="rounded-2xl border border-[#986410]/30 bg-white p-5"><Scale className="h-5 w-5 text-[#986410]"/><h3 className="mt-3 font-black text-[#00102e]">إنشاء عقد بواسطة محامي المكتب</h3><p className="mt-2 text-xs leading-6 text-slate-500">اختر نوع العقد وارفع المستندات ثم ادفع العربون.</p></Link>
-          <Link href="/#consultation" className="rounded-2xl border border-slate-200 bg-white p-5"><Scale className="h-5 w-5 text-blue-700"/><h3 className="mt-3 font-black text-[#00102e]">استشارة قانونية</h3><p className="mt-2 text-xs leading-6 text-slate-500">السعر الحالي: <b>{Number(catalog.services.consultationFeeEgp || 0).toLocaleString("ar-EG")} ج.م</b></p></Link>
         </section>
       </main>
       <Footer />

@@ -64,6 +64,37 @@ final class ContractController extends Controller
         $auth=$this->auth($request);$c=$this->contract($id);$this->assertAccess($auth,$c);$versions=DB::select('SELECT id,version_number AS "versionNumber",status,created_at AS "createdAt",locked_at AS "lockedAt",issued_at AS "issuedAt",document_hash AS "documentHash",pdf_path AS "pdfPath" FROM contract_versions WHERE contract_id=? ORDER BY version_number DESC',[$id]);$definition=$this->json($c->template_definition);$optional=$this->jsonList($c->selected_optional_clause_keys);$window=$this->editWindow($c->edit_expires_at);$isOwner=in_array($auth['id'],[(int)$c->user_id,(int)($c->client_user_id??0)],true);$canDraft=in_array($c->status,['draft','revision_requested'],true);$canWindow=$isOwner&&$c->creation_mode==='self_service'&&$c->status==='client_review'&&$window['active'];$payload=$this->objectArray($c);$payload['template_definition']=$definition;$payload['field_values_json']=$this->json($c->field_values_json);$payload['touched_field_keys_json']=$this->jsonList($c->touched_field_keys_json??null);$payload['selected_optional_clause_keys']=$optional;$payload['attachment_refs_json']=$this->json($c->attachment_refs_json);$payload['legal_clause_snapshot_json']=$this->jsonList($c->legal_clause_snapshot_json);$payload['versions']=$versions;$payload['coreIdentityFieldKeys']=$this->engine->coreIdentityFieldKeys($definition,$c->variant_key);$payload['fieldMetadata']=$this->fieldMetadata($definition,$c->variant_key,$optional);$payload['editWindow']=$window+['expiresAt'=>$c->edit_expires_at];$paymentUnlocked=$this->customerOutputUnlocked($c);$canFinalize=$isOwner&&$c->creation_mode==='self_service'&&$c->status==='client_review'&&$paymentUnlocked;$payload['permissions']=['canEdit'=>$canDraft||$canWindow,'canEditCoreIdentity'=>$canDraft&&!$c->core_identity_locked,'canFinalize'=>$canFinalize,'canRequestRevision'=>$isOwner&&$c->creation_mode!=='self_service'&&in_array($c->status,['client_review','approved'],true),'canShare'=>$paymentUnlocked,'canDownloadPdf'=>$paymentUnlocked&&$c->status==='issued'&&$c->pdf_status==='ready'&&(bool)$c->pdf_path];return$this->ok($request,$payload);
     }
 
+    public function versionPreview(Request $request, int $id, int $versionId)
+    {
+        $auth = $this->auth($request);
+        $contract = $this->contract($id);
+        $this->assertStaff($auth, $contract);
+        $version = DB::selectOne(
+            'SELECT cv.id,cv.version_number,cv.status,cv.variant_key,cv.selected_optional_clause_keys,cv.field_values_json,cv.touched_field_keys_json,cv.legal_clause_snapshot_json,cv.document_hash,cv.locked_at,cv.issued_at,c.serial_number,c.title,ct.slug AS template_slug,ct.name_ar AS template_name_ar,tv.definition_json AS template_definition FROM contract_versions cv JOIN contracts c ON c.id=cv.contract_id JOIN contract_templates ct ON ct.id=c.template_id JOIN template_versions tv ON tv.id=cv.template_version_id WHERE cv.id=? AND cv.contract_id=? AND c.deleted_at IS NULL',
+            [$versionId, $id],
+        );
+        if (!$version) throw new ApiException(404, 'إصدار العقد غير موجود');
+        return $this->ok($request, [
+            'contractId' => $id,
+            'versionId' => (int) $version->id,
+            'versionNumber' => (int) $version->version_number,
+            'versionStatus' => (string) $version->status,
+            'serialNumber' => (string) $version->serial_number,
+            'title' => (string) $version->title,
+            'templateSlug' => (string) $version->template_slug,
+            'templateNameAr' => (string) $version->template_name_ar,
+            'templateDefinition' => $this->json($version->template_definition),
+            'variantKey' => (string) $version->variant_key,
+            'selectedOptionalClauseKeys' => $this->jsonList($version->selected_optional_clause_keys),
+            'fieldValues' => $this->json($version->field_values_json),
+            'touchedFieldKeys' => $this->jsonList($version->touched_field_keys_json),
+            'legalClauseSnapshot' => $this->jsonList($version->legal_clause_snapshot_json),
+            'documentHash' => $version->document_hash,
+            'lockedAt' => $version->locked_at,
+            'issuedAt' => $version->issued_at,
+        ]);
+    }
+
     public function updateDraft(Request $request,int $id)
     {
         $auth=$this->auth($request);$c=$this->contract($id);$this->assertAccess($auth,$c);$isOwner=in_array($auth['id'],[(int)$c->user_id,(int)($c->client_user_id??0)],true);$window=$this->editWindow($c->edit_expires_at);$ordinary=in_array($c->status,['draft','revision_requested'],true);$selfWindow=$isOwner&&$c->creation_mode==='self_service'&&$c->status==='client_review'&&$window['active'];if(!$ordinary&&!$selfWindow){if($c->creation_mode==='self_service'&&$c->status==='client_review'&&$window['expired'])throw new ApiException(409,'انتهت مهلة التعديل. اطلب خدمة تصحيح أو مراجعة من المكتب','EDIT_WINDOW_EXPIRED');throw new ApiException(409,'لا يمكن تعديل العقد في حالته الحالية');}
@@ -98,7 +129,7 @@ final class ContractController extends Controller
         elseif($group==='issued')$where[]="c.status='issued'";
         elseif($group==='cancelled')$where[]="c.status='cancelled'";
         if($search!==''){$where[]='(c.serial_number ILIKE ? OR c.title ILIKE ? OR client.name ILIKE ?)';$like='%'.$search.'%';array_push($bindings,$like,$like,$like);}
-        $sql='SELECT c.id,c.serial_number AS "serialNumber",c.title,c.status,c.source_channel AS "sourceChannel",c.billing_mode AS "billingMode",c.original_price_egp::float AS "originalPriceEgp",c.updated_at AS "updatedAt",ct.name_ar AS "templateNameAr",ct.slug AS "templateSlug",COALESCE(client.name,coc.client_snapshot_json->>\'name\',\'استخدام داخلي\') AS "clientName",lawyer.name AS "assignedLawyerName",creator.name AS "createdByName" FROM contracts c JOIN contract_templates ct ON ct.id=c.template_id LEFT JOIN users client ON client.id=COALESCE(c.client_user_id,c.user_id) LEFT JOIN users lawyer ON lawyer.id=c.assigned_lawyer_id LEFT JOIN users creator ON creator.id=c.created_by_user_id LEFT JOIN contract_office_contexts coc ON coc.contract_id=c.id WHERE '.implode(' AND ',$where).' ORDER BY c.updated_at DESC LIMIT 300';
+        $sql='SELECT c.id,c.serial_number AS "serialNumber",c.title,c.status,c.current_version_id AS "currentVersionId",c.source_channel AS "sourceChannel",c.billing_mode AS "billingMode",c.original_price_egp::float AS "originalPriceEgp",c.updated_at AS "updatedAt",ct.name_ar AS "templateNameAr",ct.slug AS "templateSlug",COALESCE(client.name,coc.client_snapshot_json->>\'name\',\'استخدام داخلي\') AS "clientName",lawyer.name AS "assignedLawyerName",creator.name AS "createdByName" FROM contracts c JOIN contract_templates ct ON ct.id=c.template_id LEFT JOIN users client ON client.id=COALESCE(c.client_user_id,c.user_id) LEFT JOIN users lawyer ON lawyer.id=c.assigned_lawyer_id LEFT JOIN users creator ON creator.id=c.created_by_user_id LEFT JOIN contract_office_contexts coc ON coc.contract_id=c.id WHERE '.implode(' AND ',$where).' ORDER BY c.updated_at DESC LIMIT 300';
         return $this->ok($request,DB::select($sql,$bindings));
     }
 

@@ -39,7 +39,7 @@ $register = static function (string $prefix = 'v1'): void {
         Route::get('catalog',CatalogController::class);
         Route::get('templates',[TemplateController::class,'index']);
         Route::get('templates/{slug}/definition',[TemplateController::class,'definition']);
-        Route::get('consultation-availability',[ConsultationScheduleController::class,'availability']);
+        Route::get('review-availability',[ConsultationScheduleController::class,'availability']);
 
         Route::prefix('contracts')->group(function (): void {
             Route::get('shared/{token}',[ContractController::class,'sharedInfo']);
@@ -68,9 +68,11 @@ $register = static function (string $prefix = 'v1'): void {
             Route::post('{id}/attachments',[ServiceRequestController::class,'appendAttachments'])->whereNumber('id');
             Route::post('{id}/revision-request',[ServiceRequestController::class,'requestRevision'])->whereNumber('id');
             Route::post('{id}/confirm-receipt',[ServiceRequestController::class,'confirmReceipt'])->whereNumber('id');
+            Route::post('{id}/rebook',[ServiceRequestController::class,'rebook'])->whereNumber('id');
         });
 
         Route::prefix('payments')->middleware('auth.session')->group(function (): void {
+            Route::get('instructions',[PaymentController::class,'instructions']);
             Route::post('receipts',[PaymentController::class,'createReceipt']);
             Route::get('my',[PaymentController::class,'my']);
         });
@@ -104,6 +106,7 @@ $register = static function (string $prefix = 'v1'): void {
                 Route::post('{id}/status',[ContractController::class,'status'])->whereNumber('id')->middleware('permission:contracts.manage_status');
                 Route::post('{id}/payment-waiver',[ContractController::class,'paymentWaiver'])->whereNumber('id')->middleware('permission:contracts.waive_payment');
                 Route::post('{id}/versions',[ContractController::class,'createVersion'])->whereNumber('id')->middleware('permission:contracts.edit_legal');
+                Route::get('{id}/versions/{versionId}/preview',[ContractController::class,'versionPreview'])->whereNumber(['id','versionId']);
                 Route::patch('{id}/versions/{versionId}',[ContractController::class,'updateVersion'])->whereNumber(['id','versionId'])->middleware('permission:contracts.edit_legal');
                 Route::post('{id}/lock',[ContractController::class,'lock'])->whereNumber('id')->middleware('permission:contracts.lock');
                 Route::post('{id}/issue',[ContractController::class,'issue'])->whereNumber('id')->middleware('permission:contracts.issue');
@@ -136,7 +139,7 @@ $register = static function (string $prefix = 'v1'): void {
                 Route::get('',[SettingsController::class,'index']);
                 Route::patch('',[SettingsController::class,'update']);
             });
-            Route::prefix('consultation-schedule')->middleware('permission:settings.manage')->group(function (): void {
+            Route::prefix('review-schedule')->middleware('permission:settings.manage')->group(function (): void {
                 Route::get('',[ConsultationScheduleController::class,'adminIndex']);
                 Route::put('',[ConsultationScheduleController::class,'updateWindows']);
                 Route::post('exceptions',[ConsultationScheduleController::class,'addException']);

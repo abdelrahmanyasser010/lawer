@@ -156,12 +156,12 @@ export default function FloatingQuickAssistant() {
 
               <button
                 type="button"
-                onClick={() => goTo("#consultation")}
+                onClick={() => router.push("/request-review")}
                 className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-right transition-colors hover:bg-white/15"
               >
                 <HelpCircle className="h-4 w-4 shrink-0 text-emerald-300" />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-black text-white">استشارة أو مراجعة</span>
+                  <span className="block text-xs font-black text-white">مراجعة عقد</span>
                   <span className="block text-[10px] text-slate-300">ارفع مستند أو اشرح مشكلتك</span>
                 </span>
               </button>

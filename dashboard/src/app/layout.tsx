@@ -9,7 +9,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Z draft — لوحة الإدارة",
-  description: "لوحة إدارة العقود والمدفوعات والاستشارات في Z draft",
+  description: "لوحة إدارة العقود ومراجعات العقود والمدفوعات في Z draft",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

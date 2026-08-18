@@ -24,7 +24,7 @@ def has_atomic(condition,field_key,operator=None,value_marker=object()):
 
 d=json.loads(txt('backend/database/template-definitions/freelancer.json'))
 visual=next((v for v in d.get('variants',[]) if v.get('key')=='visual_identity_design'),None)
-check('freelancer_current_preserves_visual',int(d.get('version',0))>=5,str(d.get('version')))
+check('freelancer_current_preserves_visual',d.get('version')==10,str(d.get('version')))
 check('visual_variant_exists',visual is not None)
 steps=visual.get('steps',[]) if visual else []
 fields={f.get('key'):f for s in steps for f in s.get('fields',[])}
@@ -37,9 +37,9 @@ check('old_review_rounds_removed','visual_review_rounds' not in fields)
 check('contract_value_words_without_currency','بدون اسم العملة' in fields.get('visual_contract_value_words',{}).get('labelAr',''))
 check('visual_self_service_no_identity_uploads',all(k not in fields for k in ['visual_client_identity_documents','visual_provider_identity_documents']))
 
-expected_courts=['شمال القاهرة','جنوب القاهرة','القاهرة الجديدة','شمال الجيزة','جنوب الجيزة','الإسكندرية','طنطا','دمنهور','كفر الشيخ','المنصورة','الزقازيق','بنها','شبين الكوم','بورسعيد','الإسماعيلية','السويس','دمياط','المنيا','بني سويف','الفيوم','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مرسى مطروح','شمال سيناء','جنوب سيناء','أخرى']
+expected_courts=['القاهرة','شمال القاهرة','جنوب القاهرة','القاهرة الجديدة','شمال الجيزة','جنوب الجيزة','الإسكندرية','طنطا','دمنهور','كفر الشيخ','المنصورة','الزقازيق','بنها','شبين الكوم','بورسعيد','الإسماعيلية','السويس','دمياط','المنيا','بني سويف','الفيوم','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','شمال سيناء','جنوب سيناء','مرسى مطروح','أخرى']
 court=fields.get('visual_competent_court',{})
-check('court_optional',court.get('required') is not True)
+check('court_required',court.get('required') is True)
 check('court_exact_source_options',[x.get('value') for x in court.get('options',[])]==expected_courts,str([x.get('value') for x in court.get('options',[])]))
 other=fields.get('visual_competent_court_other',{})
 check('other_court_conditional_required',other.get('visibleWhen',{}).get('value')=='أخرى' and other.get('requiredWhen',{}).get('value')=='أخرى')
@@ -129,6 +129,8 @@ annex_min_steps={'visual_identity_scope_annex':8,'visual_identity_financial_anne
 for key,min_steps in annex_min_steps.items():
     a=annexes.get(key,{})
     check(f'{key}_manual',a.get('manualFillAnnex') is True and a.get('outputMode')=='separate_annex')
+    check(f'{key}_never_mandatory','requiredWhen' not in a)
+    check(f'{key}_explicit_selection_only','اختياري بالكامل' in a.get('description','') and 'لا يُضاف تلقائيًا' in a.get('description',''))
     check(f'{key}_full_blank_layout',len(a.get('insertedSteps',[]))>=min_steps,str(len(a.get('insertedSteps',[]))))
     legal=[clause_by_key.get(k,{}) for k in a.get('legalClauseKeys',[])]
     check(f'{key}_no_raw_placeholder',all('البيان المثبت بجدول بيانات العقد أو الملحق' not in c.get('bodyAr','') for c in legal))
@@ -170,9 +172,9 @@ check('dashboard_required_ui_orange','#c66b22' in dashboard_renderer and 'rose-'
 check('required_checkbox_markers',all('aria-label="إلزامي"' in x for x in [renderer,dashboard_renderer]))
 check('hidden_fields_not_printed',"evaluateCondition($field['visibleWhen']" in proc and "printInDocument" in proc)
 check('manual_checkbox_rendering',"$field['manualCheckbox']" in proc and "□   ................................" in proc)
-check('manual_annex_blank_metadata','قالب فارغ للتعبئة اليدوية' in blade and 'لا تُنقل إليه بيانات المستخدم تلقائيًا' in blade)
+check('manual_annex_metadata_blank','قالب فارغ للتعبئة اليدوية' in blade and 'لم تُنقل إليه أي بيانات من العقد أو الـWizard' in blade)
 check('witness_signature_block','الشهود (إن وجدوا)' in blade and 'witnessMeta' in proc)
-check('identity_signature_layout_matches_source','identitySignatureLayout' in proc and 'الصفة: ................................................' in blade and 'البصمة: ................................................' in blade)
+check('identity_signature_layout_matches_source','identitySignatureLayout' in proc and "$party['capacity'] ?: '................................................'" in blade and 'البصمة: ................................................' in blade)
 check('v4_migration_present','version_number\', 4' in migration and 'different immutable definition' in migration and '> 4' in migration)
 
 failed=[name for name,ok,_ in checks if not ok]

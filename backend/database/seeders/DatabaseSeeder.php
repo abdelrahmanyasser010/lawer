@@ -23,7 +23,7 @@ final class DatabaseSeeder extends Seeder
         'contracts.waive_payment' => 'إعفاء عقد من الدفع',
         'contracts.lock' => 'قفل النسخة القانونية',
         'contracts.issue' => 'إصدار العقد النهائي',
-        'consultations.manage' => 'إدارة الاستشارات والمواعيد',
+        'consultations.manage' => 'إدارة مواعيد مراجعة العقود',
         'payments.review' => 'اعتماد ورفض المدفوعات',
         'clients.view' => 'عرض العملاء',
         'clients.manage' => 'إدارة حالات العملاء',

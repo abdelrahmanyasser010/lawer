@@ -7,6 +7,7 @@ import type {
   WizardFieldDefinition,
   WizardStepDefinition,
 } from "../../types";
+import { normalizeLegalClauseDefinition } from "../legalText";
 import { rentalSourceClauseKeysByVariant, rentalSourceLegalClauses } from "../../legal-content/sourceClauses";
 import { competentCourtField, contractDateField } from "../common";
 
@@ -437,11 +438,7 @@ const handoverOptionalClause: OptionalClauseDefinition = {
   sourceDocumentName: "محضر استلام وجرد العين المؤجرة Z DRAFT.pdf",
   outputMode: "separate_annex",
   manualFillAnnex: true,
-  requiredWhen: anyConditions(
-    { fieldKey: "residential_is_furnished", operator: "truthy" },
-    { fieldKey: "administrative_delivery_condition", operator: "equals", value: "inventory_report" },
-  ),
-  description: "قالب فارغ يُطبع بعد عقد الإيجار لتوثيق الاستلام وحالة العين ووسائل الدخول والمنقولات. يصبح إلزاميًا تلقائيًا إذا كانت العين السكنية مفروشة أو كان تسليم العين الإدارية وفق محضر الجرد.",
+  description: "ملحق اختياري بالكامل وقالب فارغ للطباعة والتعبئة اليدوية؛ لا يُضاف تلقائيًا ولا تُنقل إليه بيانات الـWizard. يناسب توثيق حالة العين والمنقولات ووسائل الدخول عند التسليم.",
   applicableVariantKeys: ["residential_lease", "commercial_lease", "administrative_lease"],
   insertBeforeStepKey: "rental_review",
   legalClauseKeys: [...rentalSourceClauseKeysByVariant.rental_handover_inventory_report],
@@ -726,7 +723,7 @@ const conditionalClauses: LegalClauseDefinition[] = [
     key: "rental_jurisdiction_court_clause",
     titleAr: "المحكمة المختصة",
     variables: ["rental_jurisdiction_court"],
-    bodyAr: "تختص محكمة {{rental_jurisdiction_court}} بنظر المنازعات الناشئة عن هذا العقد أو المتعلقة بتنفيذه أو تفسيره، وذلك مع عدم الإخلال بقواعد الاختصاص الولائي والنوعي الآمرة.",
+    bodyAr: "تختص محكمة {{rental_jurisdiction_court}} الابتدائية ودوائرها الجزئية بحسب الأحوال بنظر المنازعات الناشئة عن هذا العقد أو المتعلقة بتنفيذه أو تفسيره، وذلك مع عدم الإخلال بقواعد الاختصاص الولائي والنوعي والمكاني الآمرة.",
   }),
   customClause({ key: "rental_residential_furnished_clause", titleAr: "فقرة العين المفروشة والمنقولات", bodyAr: "إذا كانت العين المؤجرة مفروشة أو مشتملة على منقولات: يقر الطرفان بأن العين المؤجرة تشتمل على منقولات وأثاث وأجهزة وتجهيزات مبينة تفصيلاً بمحضر الجرد المرفق بهذا العقد، والذي يُعد جزءاً لا يتجزأ منه ومكملاً ومفسراً لأحكامه. ويلتزم الطرف الثاني (المستأجر) بالمحافظة على جميع تلك المنقولات واستعمالها بعناية الشخص المعتاد، وردها عند انتهاء العلاقة الإيجارية بذات الحالة التي تسلمها عليها، مع مراعاة الاستهلاك المعتاد الناشئ عن الاستعمال المألوف. وفي حال فقد أو إتلاف أي من تلك المنقولات أو الأجهزة، كلياً أو جزئياً، بسبب فعل الطرف الثاني أو تابعيه أو من سمح لهم باستعمال العين، التزم بإصلاحها أو استبدالها بمثلها أو بسداد قيمتها السوقية وقت وقوع الضرر، وذلك دون إخلال بحق الطرف الأول في الرجوع بالتعويض عما يجاوز تلك القيمة إن كان له مقتضى.", visibleWhen: { fieldKey: "residential_is_furnished", operator: "truthy" }, sourceDocumentName: "عقد ايجار سكني (Z DRAFT).pdf", sourcePageStart: 4, sourcePageEnd: 4 }),
   customClause({ key: "rental_residential_annual_increase_clause", titleAr: "الزيادة الدورية في الأجرة (إن وجدت)", bodyAr: "إذا اتفق الطرفان على تطبيق الزيادة الدورية المنصوص عليها في العقد، تُزاد القيمة الإيجارية بنسبة عشرة بالمائة (10%) اعتبارًا من بداية كل سنة إيجارية جديدة، وتُحسب الزيادة على آخر أجرة مستحقة، وفقًا للنص الأصلي للعقد.", visibleWhen: { fieldKey: "annual_increase_enabled", operator: "truthy" }, sourceDocumentName: "عقد ايجار سكني (Z DRAFT).pdf", sourcePageStart: 5, sourcePageEnd: 5 }),
@@ -812,9 +809,9 @@ const conditionalClauses: LegalClauseDefinition[] = [
 
 export const rentalTemplateDefinition: ContractTemplateDefinition = {
   slug: "rental",
-  version: 8,
+  version: 12,
   nameAr: "عقود إيجار الوحدات",
-  description: "ثلاثة عقود إيجار مستقلة مطابقة للنماذج السكنية والتجارية والإدارية، مع محضر استلام وجرد فارغ يُضاف عند الحاجة.",
+  description: "ثلاثة عقود إيجار مستقلة مطابقة للنماذج السكنية والتجارية والإدارية، مع محضر استلام وجرد اختياري وفارغ قابل للطباعة والتعبئة اليدوية.",
   priceEgp: 0,
   variantPricing: {
     residential_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 599 },
@@ -862,5 +859,6 @@ export const rentalTemplateDefinition: ContractTemplateDefinition = {
     }),
   ],
   optionalClauses: [handoverOptionalClause],
-  legalClauses: [...reviewedSourceClauses, ...conditionalClauses],
+  legalClauses: [...reviewedSourceClauses, ...conditionalClauses]
+    .map(normalizeLegalClauseDefinition),
 };

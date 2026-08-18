@@ -62,18 +62,6 @@ export interface ContractDraft {
   updatedAt: string;
 }
 
-export interface LegalConsultation {
-  id: number;
-  serialNumber: string;
-  title: string;
-  caseDescription: string;
-  consultationFeeEgp: number;
-  status: 'pending_payment_verification' | 'pending_lawyer_review' | 'answered' | 'closed';
-  reviewSlaHours: number;
-  attachments: DocumentAttachment[];
-  createdAt: string;
-}
-
 export interface DocumentAttachment {
   id: string;
   fileName: string;

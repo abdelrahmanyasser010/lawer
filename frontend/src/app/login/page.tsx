@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { frontendApi, ApiClientError } from "@/lib/apiClient";
+import { safeInternalRedirect } from "@/lib/safeRedirect";
 
 function BrandLogo({ compact = false }: { compact?: boolean }) {
   return (
@@ -34,7 +35,7 @@ function LoginContent() {
       await frontendApi.login(email, password);
       window.dispatchEvent(new Event("zdraft-auth-changed"));
       const next = params.get("next");
-      window.location.href = next && next.startsWith("/") ? next : "/contracts";
+      window.location.href = safeInternalRedirect(next, "/contracts");
     } catch (caught) {
       setError(caught instanceof ApiClientError ? caught.message : "تعذر تسجيل الدخول الآن.");
       setLoading(false);
@@ -48,7 +49,7 @@ function LoginContent() {
           <BrandLogo />
           <h1 className="mt-10 text-3xl font-black leading-tight text-white">عقودك وطلبات المكتب في حساب واحد</h1>
           <p className="mt-4 text-sm leading-7 text-slate-400">تابع المسودات، حالة الدفع، مواعيد التواصل، والمستندات التي يتيحها المكتب لك.</p>
-          <div className="mt-8 space-y-3">{["حفظ العقود والمسودات", "متابعة طلبات المراجعة والاستشارة", "تنزيل النسخ والتقارير المتاحة"].map((text) => <div key={text} className="flex items-center gap-3 text-sm text-slate-300"><CheckCircle2 className="h-4 w-4 text-[#d9a84e]" /> {text}</div>)}</div>
+          <div className="mt-8 space-y-3">{["حفظ العقود والمسودات", "متابعة طلبات مراجعة وإعداد العقود", "تنزيل النسخ والتقارير المتاحة"].map((text) => <div key={text} className="flex items-center gap-3 text-sm text-slate-300"><CheckCircle2 className="h-4 w-4 text-[#d9a84e]" /> {text}</div>)}</div>
         </div>
       </aside>
 

@@ -13,7 +13,14 @@ return new class extends Migration {
 
         $raw = file_get_contents($path);
         $definition = json_decode($raw ?: '', true, 512, JSON_THROW_ON_ERROR);
-        if (($definition['slug'] ?? null) !== 'apartment_sale' || (int)($definition['version'] ?? 0) !== 7) {
+        if (($definition['slug'] ?? null) !== 'apartment_sale') {
+            throw new RuntimeException('Canonical apartment_sale definition is invalid.');
+        }
+        $canonicalVersion = (int)($definition['version'] ?? 0);
+        if ($canonicalVersion > 7) {
+            return;
+        }
+        if ($canonicalVersion !== 7) {
             throw new RuntimeException('Canonical apartment_sale v7 definition is required by this migration.');
         }
 

@@ -1,6 +1,6 @@
 {
   "version": "V29",
-  "notes": "Dashboard + customer workflow hardening: consultation availability, manual payments, clarification, admin template route, audit verification, contract summary; test-email UI/API removed by product decision.",
+  "notes": "Customer + dashboard workflow hardening: contract-review availability/rebooking, protected manual payments, clarification, admin template routes, audit verification, contract snapshots; standalone consultation service removed.",
   "routes": [
     {
       "method": "GET",
@@ -12,19 +12,19 @@
     },
     {
       "method": "GET",
-      "path": "/api/v1/admin/consultation-schedule"
+      "path": "/api/v1/admin/review-schedule"
     },
     {
       "method": "PUT",
-      "path": "/api/v1/admin/consultation-schedule"
+      "path": "/api/v1/admin/review-schedule"
     },
     {
       "method": "POST",
-      "path": "/api/v1/admin/consultation-schedule/exceptions"
+      "path": "/api/v1/admin/review-schedule/exceptions"
     },
     {
       "method": "DELETE",
-      "path": "/api/v1/admin/consultation-schedule/exceptions/{id}"
+      "path": "/api/v1/admin/review-schedule/exceptions/{id}"
     },
     {
       "method": "GET",
@@ -61,6 +61,10 @@
     {
       "method": "PATCH",
       "path": "/api/v1/admin/contracts/{id}/versions/{versionId}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/contracts/{id}/versions/{versionId}/preview"
     },
     {
       "method": "GET",
@@ -344,7 +348,7 @@
     },
     {
       "method": "GET",
-      "path": "/api/v1/consultation-availability"
+      "path": "/api/v1/review-availability"
     },
     {
       "method": "POST",
@@ -428,6 +432,10 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/payments/instructions"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/payments/my"
     },
     {
@@ -453,6 +461,10 @@
     {
       "method": "POST",
       "path": "/api/v1/service-requests/{id}/confirm-receipt"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/service-requests/{id}/rebook"
     },
     {
       "method": "POST",

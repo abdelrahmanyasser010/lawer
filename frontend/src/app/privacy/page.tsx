@@ -16,7 +16,7 @@ export default function PrivacyPage() {
             <section><h2 className="font-black text-[#00102e]">المسودات على جهازك</h2><p className="mt-2">قد تُحفظ مسودة مؤقتة داخل جلسة المتصفح لتجنب فقد العمل أثناء الإعداد. تنتهي هذه النسخة المؤقتة تلقائيًا، بينما الحفظ الدائم للعقد يتم داخل حسابك على الخادم.</p></section>
             <section><h2 className="font-black text-[#00102e]">مدة الاحتفاظ والطلبات المتعلقة بالبيانات</h2><p className="mt-2">تُحتفظ البيانات بالقدر اللازم لتشغيل الخدمة وحفظ السجل القانوني والتشغيلي، ووفق المتطلبات النظامية وسياسة المكتب. للاستفسار عن بياناتك أو طلب إجراء متاح قانونًا بشأنها استخدم بيانات الدعم الظاهرة داخل المنصة.</p></section>
           </div>
-          <div className="mt-8 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs leading-6 text-emerald-900"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /> لا تُستخدم هذه الصفحة بدل الاستشارة القانونية بشأن التزامات حماية البيانات؛ وهي توضح سلوك المنصة التشغيلي للمستخدم.</div>
+          <div className="mt-8 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs leading-6 text-emerald-900"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /> هذه الصفحة توضح سلوك المنصة التشغيلي في التعامل مع البيانات، ولا تُعد رأيًا قانونيًا مخصصًا لحالة بعينها.</div>
         </div>
       </main>
       <Footer />

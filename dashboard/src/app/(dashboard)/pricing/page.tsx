@@ -11,8 +11,8 @@ type Setting = { key:string; value:unknown; isSecret:boolean; updatedAt:string }
 type Toast = { kind:"success"|"error"; text:string } | null;
 
 const servicePriceDefs = [
-  { key:"services.consultation.fee_egp", label:"إجمالي مراجعة العقد", description:"المبلغ الكامل المطلوب لقيمة مراجعة العقد.", icon:MessageSquareText },
-  { key:"services.consultation.deposit_egp", label:"عربون مراجعة العقد", description:"المبلغ المطلوب دفعه كعربون مبدئي لحجز موعد المراجعة.", icon:MessageSquareText },
+  { key:"services.contract_review.fee_egp", label:"إجمالي مراجعة العقد", description:"القيمة الكاملة لخدمة مراجعة العقد.", icon:MessageSquareText },
+  { key:"services.contract_review.deposit_egp", label:"عربون مراجعة العقد", description:"المبلغ المطلوب الآن لبدء المراجعة وحجز جلسة مناقشة التقرير.", icon:MessageSquareText },
   { key:"services.contract_drafting.deposit_egp", label:"عربون إعداد عقد بواسطة محامي", description:"العربون الموحد الذي يدفعه العميل عند طلب صياغة عقد بواسطة محامي المكتب.", icon:BriefcaseBusiness },
 ] as const;
 

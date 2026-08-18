@@ -8,6 +8,7 @@ import { useWizardStore } from "@/store/wizardStore";
 import { apiRequest, ApiClientError } from "@/lib/apiClient";
 import type { CommunicationChannel } from "@/types/customer";
 import { usePublicCatalog } from "@/hooks/usePublicCatalog";
+import { usePaymentAccess } from "@/hooks/usePaymentAccess";
 
 interface Props {
   template: ContractTemplate | null;
@@ -23,6 +24,7 @@ const channelOptions: Array<{ key: CommunicationChannel; label: string; icon: ty
 export default function CreationModeModal({ template: initialTemplate, isOpen, onClose }: Props) {
   const router = useRouter();
   const { catalog } = usePublicCatalog();
+  const { paymentVerified, paymentCashNumber, requireVerified } = usePaymentAccess("/#templates");
   const resetWizard = useWizardStore((state) => state.resetWizard);
   const [step, setStep] = useState<"select" | "lawyer" | "success">("select");
   const [fullName, setFullName] = useState("");
@@ -36,7 +38,7 @@ export default function CreationModeModal({ template: initialTemplate, isOpen, o
   const [createdRequestId, setCreatedRequestId] = useState<number | null>(null);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   const draftingDeposit = catalog.services.contractDraftingDepositEgp;
-  const cashNumber = catalog.payment.vodafoneCashNumber;
+  const cashNumber = paymentCashNumber;
   const editHours = catalog.policies.selfServiceEditHours;
   const enabledChannels = useMemo(() => channelOptions.filter((option) => catalog.policies.communicationChannels.includes(option.key)), [catalog.policies.communicationChannels]);
   useEffect(() => { if (enabledChannels.length && !enabledChannels.some((option) => option.key === channel)) setChannel(enabledChannels[0].key); }, [channel, enabledChannels]);
@@ -62,6 +64,7 @@ export default function CreationModeModal({ template: initialTemplate, isOpen, o
   async function submitLawyerRequest(event: FormEvent) {
     event.preventDefault();
     setError("");
+    if (!(await requireVerified())) { close(); return; }
     if (!fullName.trim() || phone.replace(/\D/g, "").length < 10) {
       setError("اكتب الاسم ورقم الهاتف بصورة صحيحة.");
       return;
@@ -190,10 +193,10 @@ export default function CreationModeModal({ template: initialTemplate, isOpen, o
 
             <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-xs leading-6 text-slate-300">
               <div className="flex items-center justify-between"><span className="inline-flex items-center gap-2"><CreditCard className="h-4 w-4 text-[#d9a84e]" /> عربون الحجز</span><strong className="text-white">{draftingDeposit > 0 ? `${draftingDeposit.toLocaleString("ar-EG")} ج.م` : "غير مطلوب"}</strong></div>
-              {draftingDeposit > 0 ? <><p className="mt-2">حوّل المبلغ إلى رقم Vodafone Cash التالي، ثم ارفع صورة أو PDF لإثبات التحويل. يتم تأكيد الطلب بعد مراجعة الإدارة.</p><div className="mt-3 rounded-xl border border-[#986410]/30 bg-slate-950 px-4 py-3 text-center font-mono text-base font-black text-[#d9a84e]" dir="ltr">{cashNumber || "غير محدد بعد"}</div></> : <p className="mt-2">يمكن إرسال طلب الصياغة بدون عربون وفق السعر الحالي المضبوط من المكتب.</p>}
+              {draftingDeposit > 0 ? paymentVerified ? <><p className="mt-2">حوّل المبلغ إلى رقم Vodafone Cash التالي، ثم ارفع صورة أو PDF لإثبات التحويل. يتم تأكيد الطلب بعد مراجعة الإدارة.</p><div className="mt-3 rounded-xl border border-[#986410]/30 bg-slate-950 px-4 py-3 text-center font-mono text-base font-black text-[#d9a84e]" dir="ltr">{cashNumber || "غير محدد بعد"}</div></> : <button type="button" onClick={() => void requireVerified()} className="mt-3 w-full rounded-xl border border-[#986410]/40 px-4 py-3 text-xs font-black text-[#d9a84e]">سجّل الدخول وأكّد البريد لعرض بيانات الدفع</button> : <p className="mt-2">يمكن إرسال طلب الصياغة بدون عربون وفق السعر الحالي المضبوط من المكتب.</p>}
             </div>
 
-            {draftingDeposit > 0 && <label className="block cursor-pointer rounded-2xl border border-dashed border-slate-600 bg-slate-900 p-5 text-center">
+            {draftingDeposit > 0 && paymentVerified && <label className="block cursor-pointer rounded-2xl border border-dashed border-slate-600 bg-slate-900 p-5 text-center">
               <input type="file" accept="image/*,.pdf" className="hidden" onChange={(event) => setReceipt(event.target.files?.[0] || null)} />
               <Upload className="mx-auto h-6 w-6 text-[#d9a84e]" />
               <span className="mt-2 block text-xs font-black text-white">{receipt?.name || "رفع إثبات تحويل العربون"}</span>

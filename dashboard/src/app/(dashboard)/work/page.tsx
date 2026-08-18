@@ -11,7 +11,7 @@ import { dashboardFeatures } from "@/config/dashboardFeatures";
 
 type WorkItem={id:number;serialNumber:string;requestType:string;title:string;status:string;priority:string;dueAt?:string;meetingAt?:string;clientName?:string;assignedLawyerName?:string};
 type Staff={id:number;name:string;status:string};
-const requestTypeLabels:Record<string,string>={consultation:"استشارة قانونية",contract_review:"مراجعة عقد أو مستند",contract_drafting:"إعداد عقد بواسطة محامي المكتب"};
+const requestTypeLabels:Record<string,string>={contract_review:"مراجعة عقد أو مستند",contract_drafting:"إعداد عقد بواسطة محامي المكتب"};
 const priorityLabels:Record<string,string>={normal:"عادية",high:"عاجلة"};
 const queueLabels:Record<string,string>={needs_attention:"تحتاج إجراء من الإدارة",awaiting_client:"بانتظار العميل",meetings_today:"مواعيد اليوم",overdue:"متأخرة"};
 

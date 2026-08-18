@@ -7,16 +7,15 @@ import type { PublicCatalog } from "@/types/customer";
 const fallback: PublicCatalog = {
   templates: [],
   services: {
+    contractReviewFeeEgp: 0,
     contractReviewDepositEgp: 0,
-    consultationDepositEgp: 0,
-    consultationFeeEgp: 0,
     contractDraftingDepositEgp: 0,
   },
   office: {
     displayName: "Z draft",
     address: "",
     whatsappNumber: "",
-    consultationWhatsappNumber: "",
+    reviewWhatsappNumber: "",
     supportWhatsappNumber: "",
     supportPhone: "",
     supportEmail: "",

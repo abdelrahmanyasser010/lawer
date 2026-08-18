@@ -1,7 +1,9 @@
 from pathlib import Path
-import json, re, subprocess, sys
+import json, re, sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools'))
+from template_source_runtime import load_template_definitions
 checks=[]
 def check(name, ok, note=''):
     checks.append((name,bool(ok),note))
@@ -32,7 +34,7 @@ def has_not_company(cond,prefix):
     return False
 
 d=json.loads(txt('backend/database/template-definitions/apartment_sale.json'))
-check('sale_version_7',d.get('version')==7)
+check('sale_version_11',d.get('version')==11)
 check('sale_family_price_disabled',d.get('priceEgp')==0)
 expected_variants=['preliminary_sale','registrable_sale','inherited_sale']
 check('sale_three_variants_exact',[v.get('key') for v in d.get('variants',[])]==expected_variants)
@@ -225,15 +227,16 @@ for key in ['inheritance_declaration_attachment','deceased_death_certificate','d
 for key in ['sale_utility_receipts','sale_building_docs','sale_handover_report','sale_extra_docs']:
     if key in i: check('inherit_optional_attachment_'+key,i[key].get('required') is not True)
 
-# Installment annex: always blank/manual; automatically required with installments; no wizard data copied.
+# Installment annex: always optional and blank/manual; no wizard data copied.
 ann=annexes.get('sale_installment_schedule',{})
 check('annex_exists',bool(ann))
 check('annex_manual_fill_true',ann.get('manualFillAnnex') is True)
 check('annex_separate_output',ann.get('outputMode')=='separate_annex')
-check('annex_required_when_installments',has(ann.get('requiredWhen'),'sale_payment_plan','equals','installments',True))
+check('annex_never_mandatory','requiredWhen' not in ann)
+check('annex_never_auto_added','لا يُضاف تلقائيًا' in ann.get('description',''))
 check('annex_applies_all_sale_variants',set(ann.get('applicableVariantKeys',[]))==set(expected_variants))
 check('annex_no_default_field_values',not ann.get('defaultFieldValues'))
-check('annex_description_blank_manual','قالب فارغ' in ann.get('description','') and 'لا تُنقل' in ann.get('description',''))
+check('annex_description_blank_manual','قالب فارغ للطباعة والتعبئة اليدوية' in ann.get('description','') and 'لا تُنقل إليه بيانات الـWizard' in ann.get('description',''))
 ann_steps={s['key']:s for s in ann.get('insertedSteps',[])}
 check('annex_four_sections',set(ann_steps)=={'sale_installment_schedule_header','sale_installment_schedule_price','sale_installment_schedule_rows','sale_installment_schedule_signatures'})
 price_keys=[f['key'] for f in ann_steps.get('sale_installment_schedule_price',{}).get('fields',[])]
@@ -301,22 +304,22 @@ check('ts_rejects_annex_on_full','sale_installment_schedule' in val and 'sale_pa
 check('ts_validates_sale_arithmetic','sale_total_price' in val and 'sale_down_payment' in val and 'sale_remaining_amount' in val)
 check('php_rejects_annex_on_full','ملحق جدول الأقساط يُستخدم فقط عند اختيار السداد بالتقسيط' in php)
 check('php_validates_sale_arithmetic','إجمالي الثمن يجب أن يساوي الدفعة المقدمة + باقي الثمن' in php)
-check('php_skips_manual_annex_validation','manualFillAnnex are printed as blank templates' in php)
-check('php_auto_required_annex','effectiveOptionalKeys' in php and "requiredWhen" in php)
-check('worker_auto_required_annex','effectiveOptionalKeys' in worker and "requiredWhen" in worker)
+check('php_skips_annex_only_validation','manualFillAnnex are printed as blank templates and excluded from wizard validation' in php)
+check('php_selected_annexes_only','Every annex is optional' in php and "array_map('strval',$selected)" in php and 'requiredAnnexKeys' not in php)
+check('worker_selected_annexes_only','Every annex is optional' in worker and "array_map('strval',$selected)" in worker and 'requiredAnnexKeys' not in worker)
 check('worker_blank_sections_manual','buildBlankSections' in worker and "manualFillAnnex" in worker)
 check('worker_appends_annex_to_main_pdf',"$annexes[]" in worker and "'annexes'=>$annexes" in worker)
-check('pdf_manual_annex_meta_blank','تابع للعقد رقم: <span class="ltr">........................</span>' in pdf)
-check('pdf_manual_annex_names_blank',"($annex['manualFill'] ?? false) ? '................................................'" in pdf)
-check('pdf_manual_annex_capacity_blank','الصفة: ................................................' in pdf)
-check('pdf_manual_annex_note','لا يتضمن بيانات المستخدم تلقائيًا' in pdf)
+check('pdf_manual_annex_meta_blank',"$manualStandaloneAnnex" in pdf and 'تابع للعقد رقم: <span class="ltr">................................</span>' in pdf)
+check('pdf_manual_annex_names_blank',"$manualStandaloneAnnex ? '................................................'" in pdf)
+check('pdf_manual_annex_capacity_blank',"($annex['manualFill'] ?? false) ? '................................................'" in pdf)
+check('pdf_manual_annex_note','هذا الملحق قالب فارغ' in pdf and 'لم تُدرج فيه بيانات المستخدم تلقائيًا' in pdf)
 check('frontend_sale_schema_branch','if (slug === "apartment_sale")' in front and 'DynamicOptionalStep' in front and 'validateDynamicDefinition' in front)
-check('frontend_sale_annex_blank_message','الملاحق لا تُملأ من بياناتك' in front and 'قالب فارغ' in front)
+check('frontend_sale_annex_blank_message','قالب فارغ للطباعة' in front and 'لا تُنقل إليه بيانات الـWizard' in front and 'يستكمله المستخدم يدويًا' in front)
 check('frontend_no_legacy_sale_keys',not any(k in front for k in legacy_keys))
 check('shared_page_current_payment_key','sale_payment_plan' in shared and 'sale_payment_method' not in shared and 'sale_competent_court' not in shared)
 check('demo_current_payment_key','sale_payment_plan: "full"' in demo and 'sale_payment_method' not in demo)
 check('optional_selector_hides_annex_for_full','clause.key !== "sale_installment_schedule" || fieldValues.sale_payment_plan === "installments"' in optui)
-check('optional_selector_required_disabled','disabled={required}' in optui)
+check('optional_selector_never_locks_annex','disabled={required}' not in optui and 'جميع الملاحق اختيارية بالكامل' in optui)
 
 # Migration / canonical / engine compiled equality.
 mig=ROOT/'backend/database/migrations/2026_08_12_000500_publish_apartment_sale_review_v6.php'
@@ -333,10 +336,39 @@ if new_mig.is_file():
     m=new_mig.read_text(encoding='utf-8')
     check('sale_migration_v7_number',"version_number', 7" in m and "template_version' => 7" in m)
     check('sale_migration_v7_immutable_guard','already exists with a different immutable definition' in m)
+    check('sale_migration_v7_newer_guard',"$canonicalVersion > 7" in m and 'return;' in m)
     check('sale_migration_v7_no_rollback','rollback is intentionally disabled' in m)
+integrity_mig=ROOT/'backend/database/migrations/2026_08_18_000100_publish_contract_integrity_versions.php'
+check('sale_migration_v8_exists',integrity_mig.is_file())
+if integrity_mig.is_file():
+    m=integrity_mig.read_text(encoding='utf-8')
+    check('sale_migration_v8_number',"'slug' => 'apartment_sale'" in m and "'version' => 8" in m)
+    check('sale_migration_v8_newer_guard',"$canonicalVersion > $specification['version']" in m)
+latest_mig=ROOT/'backend/database/migrations/2026_08_18_000300_publish_rental_sale_text_integrity_versions.php'
+check('sale_migration_v9_exists',latest_mig.is_file())
+if latest_mig.is_file():
+    m=latest_mig.read_text(encoding='utf-8')
+    check('sale_migration_v9_number',"'slug' => 'apartment_sale'" in m and "'version' => 9" in m)
+    check('sale_migration_v9_immutable_guard','different immutable definition' in m)
+    check('sale_migration_v9_no_rollback','rollback is intentionally disabled' in m)
+blank_annex_mig=ROOT/'backend/database/migrations/2026_08_18_000400_publish_blank_annex_template_versions.php'
+check('sale_migration_v10_exists',blank_annex_mig.is_file())
+if blank_annex_mig.is_file():
+    m=blank_annex_mig.read_text(encoding='utf-8')
+    check('sale_migration_v10_number',"'slug' => 'apartment_sale'" in m and "'version' => 10" in m)
+    check('sale_migration_v10_immutable_guard','different immutable definition' in m)
+    check('sale_migration_v10_no_rollback','rollback is intentionally disabled' in m)
+optional_annex_mig=ROOT/'backend/database/migrations/2026_08_18_000500_publish_optional_annex_template_versions.php'
+check('sale_migration_v11_exists',optional_annex_mig.is_file())
+if optional_annex_mig.is_file():
+    m=optional_annex_mig.read_text(encoding='utf-8')
+    check('sale_migration_v11_number',"'slug' => 'apartment_sale'" in m and "'version' => 11" in m)
+    check('sale_migration_v11_optional_summary','ملحق جدول الأقساط اختياريًا بالكامل' in m)
+    check('sale_migration_v11_immutable_guard','different immutable definition' in m)
+    check('sale_migration_v11_no_rollback','rollback is intentionally disabled' in m)
 try:
-    out=subprocess.check_output(['node','-e',"const d=require('./packages/template-engine/dist').apartmentSaleTemplateDefinition;process.stdout.write(JSON.stringify(d))"],cwd=ROOT,text=True,encoding='utf-8')
-    check('canonical_equals_compiled_engine',json.loads(out)==d)
+    engine_definition=load_template_definitions(ROOT)['apartment_sale']
+    check('canonical_equals_compiled_engine',engine_definition==d)
 except Exception as exc:
     check('canonical_equals_compiled_engine',False,str(exc))
 

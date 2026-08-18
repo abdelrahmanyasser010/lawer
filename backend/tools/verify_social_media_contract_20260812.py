@@ -21,7 +21,7 @@ def has_atomic(condition,field_key,operator=None,value_marker=None,check_value=F
     return False
 
 d=json.loads(txt('backend/database/template-definitions/freelancer.json'))
-check('freelancer_version_6',d.get('version')==6)
+check('freelancer_version_10',d.get('version')==10)
 social=next((v for v in d.get('variants',[]) if v.get('key')=='social_media_management'),None)
 check('social_variant_exists',social is not None)
 steps=social.get('steps',[]) if social else []
@@ -54,7 +54,7 @@ for bad in ['موقع تعريفي','متجر إلكتروني','Web Application
 check('main_project_clause_explicit_social_scope','إدارة حسابات ومنصات التواصل الاجتماعي' in project_clause and 'المنصات والحسابات المشمولة' in project_clause)
 
 # Commercial terms.
-check('fee_is_contract_value','سعر شراء' in fields.get('social_fee',{}).get('helpText',''))
+check('fee_guidance_is_contract_value','إجمالي المقابل المالي المتفق عليه' in fields.get('social_fee',{}).get('helpText','') and 'سعر شراء' not in fields.get('social_fee',{}).get('helpText',''))
 check('fee_nature_exact_options',[o.get('value') for o in fields.get('social_fee_nature',{}).get('options',[])]==['إجمالي','دوري'])
 check('article_9_duration_dynamic','{{social_contract_duration}}' in clauses.get('social_media_management_source_section_10',{}).get('bodyAr',''))
 article10=clauses.get('social_media_management_source_section_11',{}).get('bodyAr','')
@@ -87,13 +87,14 @@ for k in ['social_media_management_article_14_intro','social_media_management_ar
     check(k+'_nonempty',len(clauses.get(k,{}).get('bodyAr',''))>300)
 check('article_14_notice_fixed_five_days','خمسة (5) أيام عمل' in amount_clause.get('bodyAr','') and 'خمسة (5) أيام عمل' in percent_clause.get('bodyAr',''))
 
-# Court exact source list and optional fallback.
-expected_courts=['شمال القاهرة','جنوب القاهرة','القاهرة الجديدة','شمال الجيزة','جنوب الجيزة','الإسكندرية','طنطا','دمنهور','كفر الشيخ','المنصورة','الزقازيق','بنها','شبين الكوم','بورسعيد','الإسماعيلية','السويس','دمياط','المنيا','بني سويف','الفيوم','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مرسى مطروح','شمال سيناء','جنوب سيناء','أخرى']
+# Court is mandatory and uses the shared reviewed list.
+expected_courts=['القاهرة','شمال القاهرة','جنوب القاهرة','القاهرة الجديدة','شمال الجيزة','جنوب الجيزة','الإسكندرية','طنطا','دمنهور','كفر الشيخ','المنصورة','الزقازيق','بنها','شبين الكوم','بورسعيد','الإسماعيلية','السويس','دمياط','المنيا','بني سويف','الفيوم','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','شمال سيناء','جنوب سيناء','مرسى مطروح','أخرى']
 court=fields.get('social_competent_court',{})
-check('court_optional',court.get('required') is not True)
+check('court_required',court.get('required') is True)
 check('court_exact_options',[o.get('value') for o in court.get('options',[])]==expected_courts)
 check('court_other_conditional',fields.get('social_competent_court_other',{}).get('requiredWhen',{}).get('value')=='أخرى')
-check('court_clause_has_fallback','عدم تحديد محكمة بعينها' in clauses.get('social_media_management_source_section_23',{}).get('bodyAr',''))
+court_body=clauses.get('social_media_management_source_section_23',{}).get('bodyAr','')
+check('court_clause_uses_selected_court','المحكمة المحددة في بيانات هذا العقد' in court_body and 'تعذر انعقاد الاختصاص للمحكمة المختارة قانونًا' in court_body)
 
 # Communications: Article 20-3 prints e-mail and phone contacts in orange, so contact data cannot be disabled.
 check('email_notice_disable_toggle_removed','social_email_notices_enabled' not in fields)
@@ -138,6 +139,8 @@ for akey in ['social_media_scope_annex','social_media_financial_annex']:
     annex=next((a for a in d.get('optionalClauses',[]) if a.get('key')==akey),None)
     if annex:
         check(akey+'_not_customer_selectable',akey not in social.get('allowedOptionalClauseKeys',[]))
+check('freelancer_variants_have_no_required_annex_keys',all('requiredAnnexKeys' not in variant for variant in d.get('variants',[])))
+check('freelancer_optional_clauses_never_mandatory',all('requiredWhen' not in annex for annex in d.get('optionalClauses',[])))
 
 # No raw placeholders in any required main-clause output.
 for k in req:
@@ -165,6 +168,16 @@ mig=txt('backend/database/migrations/2026_08_12_000200_publish_freelancer_social
 check('v6_migration_exists',"version_number', 6" in mig and 'different immutable definition' in mig)
 check('v6_migration_mentions_penalty','الجزاء الاتفاقي الشرطي' in mig)
 check('v6_migration_newer_guard',"> 6" in mig and 'return;' in mig)
+integrity_mig=txt('backend/database/migrations/2026_08_18_000100_publish_contract_integrity_versions.php')
+check('v7_migration_exists',"'slug' => 'freelancer'" in integrity_mig and "'version' => 7" in integrity_mig)
+check('integrity_migration_immutable_guard','different immutable definition' in integrity_mig)
+v8_mig=txt('backend/database/migrations/2026_08_18_000200_publish_freelancer_preview_guidance_v8.php')
+check('v8_migration_exists',"version_number', 8" in v8_mig and 'different immutable definition' in v8_mig)
+v9_mig=txt('backend/database/migrations/2026_08_18_000400_publish_blank_annex_template_versions.php')
+check('v9_migration_exists',"'slug' => 'freelancer'" in v9_mig and "'version' => 9" in v9_mig and 'different immutable definition' in v9_mig)
+v10_mig=txt('backend/database/migrations/2026_08_18_000500_publish_optional_annex_template_versions.php')
+check('v10_migration_exists',"'slug' => 'freelancer'" in v10_mig and "'version' => 10" in v10_mig and 'different immutable definition' in v10_mig)
+check('v10_migration_all_annexes_optional','جميع ملاحق عقود العمل الحر اختيارية بالكامل' in v10_mig)
 
 failed=[name for name,ok,_ in checks if not ok]
 print(f'SOCIAL MEDIA CONTRACT CHECKS {len(checks)-len(failed)}/{len(checks)}')

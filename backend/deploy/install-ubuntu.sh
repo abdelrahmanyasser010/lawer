@@ -15,7 +15,7 @@ apt-get install -y software-properties-common ca-certificates lsb-release apt-tr
 add-apt-repository -y ppa:ondrej/php
 apt-get update
 apt-get install -y \
-  nginx postgresql postgresql-contrib composer weasyprint imagemagick ghostscript clamav clamav-daemon \
+  nginx postgresql postgresql-contrib composer weasyprint fonts-noto-core imagemagick ghostscript clamav clamav-daemon \
   certbot python3-certbot-nginx \
   "php${PHP_VERSION}-fpm" "php${PHP_VERSION}-cli" "php${PHP_VERSION}-pgsql" \
   "php${PHP_VERSION}-mbstring" "php${PHP_VERSION}-xml" "php${PHP_VERSION}-curl" \

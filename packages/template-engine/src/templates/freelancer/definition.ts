@@ -7,12 +7,13 @@ import type {
   WizardFieldDefinition,
   WizardStepDefinition,
 } from "../../types";
+import { normalizeLegalClauseDefinition } from "../legalText";
 import {
   freelanceSourceClauseKeysByAnnex,
   freelanceSourceClauseKeysByVariant,
   freelanceSourceLegalClauses,
 } from "../../legal-content/freelanceSourceClauses";
-import { contractDateField } from "../common";
+import { competentCourtOptions, contractDateField } from "../common";
 
 const yesNo = [
   { value: "yes", labelAr: "نعم" },
@@ -33,12 +34,10 @@ const currencyOptions = [
   { value: "other", labelAr: "عملة أخرى" },
 ];
 
-const visualIdentityCourtOptions = [
-  "شمال القاهرة", "جنوب القاهرة", "القاهرة الجديدة", "شمال الجيزة", "جنوب الجيزة", "الإسكندرية", "طنطا",
-  "دمنهور", "كفر الشيخ", "المنصورة", "الزقازيق", "بنها", "شبين الكوم", "بورسعيد", "الإسماعيلية", "السويس",
-  "دمياط", "المنيا", "بني سويف", "الفيوم", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان", "البحر الأحمر",
-  "الوادي الجديد", "مرسى مطروح", "شمال سيناء", "جنوب سيناء", "أخرى",
-].map((value) => ({ value, labelAr: value }));
+const freelancerCourtOptions = [
+  ...competentCourtOptions,
+  { value: "أخرى", labelAr: "محكمة أخرى" },
+];
 
 const allConditions = (...conditions: ConditionDefinition[]): ConditionDefinition => ({ all: conditions });
 
@@ -92,8 +91,8 @@ function commonPartySteps(
   includeIdentityDocuments = true,
 ): WizardStepDefinition[] {
   return [
-    { key: `${secondPrefix}_client_party`, titleAr: "بيانات الطرف الأول (العميل)", fields: partyFields(`${secondPrefix}_client`, "العميل", "العميل", includeIdentityDocuments) },
-    { key: `${secondPrefix}_provider_party`, titleAr: `بيانات الطرف الثاني (${secondLabel})`, fields: partyFields(`${secondPrefix}_provider`, secondLabel, roleLabel, includeIdentityDocuments) },
+    { key: `${secondPrefix}_client_party`, titleAr: "بيانات الطرف الأول (العميل)", articleRange: "المادة الأولى — تعريف الطرف الأول", fields: partyFields(`${secondPrefix}_client`, "العميل", "العميل", includeIdentityDocuments) },
+    { key: `${secondPrefix}_provider_party`, titleAr: `بيانات الطرف الثاني (${secondLabel})`, articleRange: "المادة الأولى — تعريف الطرف الثاني", fields: partyFields(`${secondPrefix}_provider`, secondLabel, roleLabel, includeIdentityDocuments) },
   ];
 }
 
@@ -175,12 +174,12 @@ function socialPartySteps(): WizardStepDefinition[] {
   }));
 }
 
-const reviewStep = (key: string): WizardStepDefinition => ({ key, titleAr: "المراجعة وإصدار العقد", fields: [] });
+const reviewStep = (key: string): WizardStepDefinition => ({ key, titleAr: "المراجعة وإصدار العقد", articleRange: "مراجعة البيانات والبنود والملاحق", fields: [] });
 
 const visualSteps: WizardStepDefinition[] = [
-  { key: "visual_contract_meta", titleAr: "بيانات العقد", fields: [contractDateField] },
+  { key: "visual_contract_meta", titleAr: "بيانات العقد", articleRange: "صدر العقد وتاريخ تحريره", fields: [contractDateField] },
   ...visualPartySteps(),
-  { key: "visual_project", titleAr: "بيانات مشروع الهوية البصرية", fields: [
+  { key: "visual_project", titleAr: "بيانات مشروع الهوية البصرية", articleRange: "بيانات المشروع والمدة والمقابل", fields: [
     { key: "visual_project_name", type: "text", labelAr: "اسم المشروع / العلامة التجارية / النشاط", required: true },
     { key: "visual_project_brief", type: "textarea", labelAr: "وصف مختصر للمشروع (اختياري)" },
     { key: "visual_project_purpose", type: "textarea", labelAr: "الغرض من تصميم الهوية البصرية", required: true },
@@ -197,7 +196,7 @@ const visualSteps: WizardStepDefinition[] = [
       labelAr: "المقابل المالي المتفق عليه بين العميل والمصمم",
       required: true,
       validation: { min: 1 },
-      helpText: "هذا مبلغ التعاقد بين الطرفين وليس سعر شراء القالب من منصة Z draft.",
+      helpText: "أدخل إجمالي المقابل المالي المتفق عليه مقابل تنفيذ الخدمات.",
     },
     {
       key: "visual_contract_value_words",
@@ -207,7 +206,7 @@ const visualSteps: WizardStepDefinition[] = [
       helpText: "اكتب قيمة المبلغ بالحروف فقط، مثال: خمسة آلاف. سيضيف العقد عبارة جنيه مصري تلقائيًا.",
     },
   ] },
-  { key: "visual_communications", titleAr: "الإخطارات والمراسلات", fields: [
+  { key: "visual_communications", titleAr: "الإخطارات والمراسلات", articleRange: "الإخطارات ووسائل التواصل المعتمدة", fields: [
     {
       key: "visual_email_notices_enabled",
       type: "checkbox",
@@ -218,7 +217,6 @@ const visualSteps: WizardStepDefinition[] = [
       key: "visual_notice_use_party_emails",
       type: "checkbox",
       labelAr: "استخدام نفس البريد الإلكتروني المسجل في بيانات الطرفين",
-      helpText: "إذا ألغيت هذا الاختيار ستظهر حقول بريد مخصصة للمراسلات الرسمية.",
       visibleWhen: { fieldKey: "visual_email_notices_enabled", operator: "truthy" },
       printInDocument: false,
     },
@@ -269,7 +267,6 @@ const visualSteps: WizardStepDefinition[] = [
       key: "visual_messaging_use_party_phones",
       type: "checkbox",
       labelAr: "استخدام نفس أرقام الهاتف المسجلة في بيانات الطرفين",
-      helpText: "إذا ألغيت هذا الاختيار ستظهر أرقام مخصصة لتطبيقات المراسلة.",
       visibleWhen: { fieldKey: "visual_messaging_apps_enabled", operator: "truthy" },
       printInDocument: false,
     },
@@ -302,7 +299,7 @@ const visualSteps: WizardStepDefinition[] = [
       ),
     },
   ] },
-  { key: "visual_witnesses", titleAr: "الشهود (اختياري)", fields: [
+  { key: "visual_witnesses", titleAr: "الشهود (اختياري)", articleRange: "بيانات التوقيع والشهود", fields: [
     { key: "visual_witness_1_enabled", type: "checkbox", labelAr: "إضافة الشاهد الأول", printInDocument: false },
     {
       key: "visual_witness_1_name",
@@ -342,9 +339,10 @@ const visualSteps: WizardStepDefinition[] = [
     {
       key: "visual_competent_court",
       type: "select",
-      labelAr: "المحكمة المختصة (اختياري)",
-      options: visualIdentityCourtOptions,
-      helpText: "إذا لم تُحدد محكمة بعينها تُطبق قواعد الاختصاص النوعي والمكاني المقررة قانونًا.",
+      labelAr: "المحكمة المختصة",
+      required: true,
+      options: freelancerCourtOptions,
+      helpText: "اختر المحكمة المتفق عليها بين الطرفين، مع مراعاة قواعد الاختصاص القضائي الآمرة.",
     },
     {
       key: "visual_competent_court_other",
@@ -358,9 +356,9 @@ const visualSteps: WizardStepDefinition[] = [
 ];
 
 const websiteSteps: WizardStepDefinition[] = [
-  { key: "website_contract_meta", titleAr: "بيانات العقد", fields: [contractDateField] },
+  { key: "website_contract_meta", titleAr: "بيانات العقد", articleRange: "صدر العقد وتاريخ تحريره", fields: [contractDateField] },
   ...websitePartySteps(),
-  { key: "website_project", titleAr: "بيانات مشروع الموقع الإلكتروني", fields: [
+  { key: "website_project", titleAr: "بيانات مشروع الموقع الإلكتروني", articleRange: "المواد 1 و10 و11 و14 و16 — المشروع والمدة والمقابل والضمان والسرية", fields: [
     { key: "website_project_name", type: "text", labelAr: "اسم المشروع", required: true },
     { key: "website_project_type", type: "select", labelAr: "نوع المشروع", required: true, options: [
       { value: "corporate", labelAr: "موقع تعريفي" },
@@ -383,36 +381,36 @@ const websiteSteps: WizardStepDefinition[] = [
       { value: "بأيام العمل، ما لم يتفق الطرفان كتابةً على احتسابها بالأيام التقويمية", labelAr: "أيام العمل (الأصل في العقد)" },
       { value: "بالأيام التقويمية بناءً على اتفاق الطرفين", labelAr: "الأيام التقويمية باتفاق الطرفين" },
     ] },
-    { key: "website_total_price", type: "money", labelAr: "إجمالي المقابل المالي بين العميل ومقدم الخدمة (جنيه مصري)", required: true, validation: { min: 1 }, helpText: "هذا مبلغ التعاقد بين الطرفين وليس سعر شراء القالب من منصة Z draft." },
+    { key: "website_total_price", type: "money", labelAr: "إجمالي المقابل المالي بين العميل ومقدم الخدمة (جنيه مصري)", required: true, validation: { min: 1 }, helpText: "أدخل إجمالي المقابل المالي المتفق عليه مقابل تنفيذ المشروع." },
     { key: "website_total_price_words", type: "text", labelAr: "إجمالي المقابل المالي كتابةً (بدون اسم العملة)", required: true, helpText: "مثال: خمسون ألفًا. سيضيف العقد عبارة جنيه مصري تلقائيًا." },
     { key: "website_warranty_duration_value", type: "number", labelAr: "مدة الضمان", required: true, validation: { min: 1 } },
     { key: "website_warranty_duration_unit", type: "select", labelAr: "وحدة مدة الضمان", required: true, options: [
       { value: "يومًا", labelAr: "يوم" }, { value: "أسبوعًا", labelAr: "أسبوع" }, { value: "شهرًا", labelAr: "شهر" }, { value: "سنة", labelAr: "سنة" },
     ] },
-    { key: "website_confidentiality_years", type: "number", labelAr: "مدة استمرار السرية بعد انتهاء العقد (بالسنوات)", required: true, validation: { min: 1 }, helpText: "النموذج الأصلي يذكر 3 سنوات كمدة مفضلة؛ يمكنك الاتفاق على مدة أخرى." },
+    { key: "website_confidentiality_years", type: "number", labelAr: "مدة استمرار السرية بعد انتهاء العقد (بالسنوات)", required: true, validation: { min: 1 }, helpText: "حدد المدة التي اتفق عليها الطرفان لاستمرار التزام السرية بعد انتهاء العقد." },
   ] },
-  { key: "website_communications", titleAr: "الإخطارات ووسائل التواصل", fields: [
+  { key: "website_communications", titleAr: "الإخطارات ووسائل التواصل", articleRange: "المادة 20 — وسائل التواصل والإخطارات", fields: [
     { key: "website_email_notices_enabled", type: "checkbox", labelAr: "اعتماد البريد الإلكتروني للإخطارات والمراسلات", printInDocument: false },
-    { key: "website_notice_use_party_emails", type: "checkbox", labelAr: "استخدام نفس البريد الإلكتروني المسجل في بيانات الطرفين", visibleWhen: { fieldKey: "website_email_notices_enabled", operator: "truthy" }, printInDocument: false, helpText: "إذا ألغيت هذا الاختيار ستظهر حقول بريد مخصصة للإخطارات." },
+    { key: "website_notice_use_party_emails", type: "checkbox", labelAr: "استخدام نفس البريد الإلكتروني المسجل في بيانات الطرفين", visibleWhen: { fieldKey: "website_email_notices_enabled", operator: "truthy" }, printInDocument: false },
     { key: "website_notice_client_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للطرف الأول (العميل)", visibleWhen: allConditions({ fieldKey: "website_email_notices_enabled", operator: "truthy" }, { fieldKey: "website_notice_use_party_emails", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "website_email_notices_enabled", operator: "truthy" }, { fieldKey: "website_notice_use_party_emails", operator: "falsy" }) },
     { key: "website_notice_provider_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للطرف الثاني (مقدم الخدمة)", visibleWhen: allConditions({ fieldKey: "website_email_notices_enabled", operator: "truthy" }, { fieldKey: "website_notice_use_party_emails", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "website_email_notices_enabled", operator: "truthy" }, { fieldKey: "website_notice_use_party_emails", operator: "falsy" }) },
     { key: "website_messaging_apps_enabled", type: "checkbox", labelAr: "اعتماد تطبيقات المراسلة الإلكترونية (مثل WhatsApp)", printInDocument: false },
     { key: "website_messaging_apps", type: "text", labelAr: "تطبيقات المراسلة المعتمدة", placeholder: "مثال: WhatsApp", visibleWhen: { fieldKey: "website_messaging_apps_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_messaging_apps_enabled", operator: "truthy" } },
-    { key: "website_messaging_use_party_phones", type: "checkbox", labelAr: "استخدام نفس أرقام الهاتف المسجلة في بيانات الطرفين", visibleWhen: { fieldKey: "website_messaging_apps_enabled", operator: "truthy" }, printInDocument: false, helpText: "إذا ألغيت هذا الاختيار ستظهر أرقام مخصصة لتطبيقات المراسلة." },
+    { key: "website_messaging_use_party_phones", type: "checkbox", labelAr: "استخدام نفس أرقام الهاتف المسجلة في بيانات الطرفين", visibleWhen: { fieldKey: "website_messaging_apps_enabled", operator: "truthy" }, printInDocument: false },
     { key: "website_messaging_client_number", type: "text", labelAr: "رقم المراسلة المعتمد للطرف الأول (العميل)", visibleWhen: allConditions({ fieldKey: "website_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "website_messaging_use_party_phones", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "website_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "website_messaging_use_party_phones", operator: "falsy" }) },
     { key: "website_messaging_provider_number", type: "text", labelAr: "رقم المراسلة المعتمد للطرف الثاني (مقدم الخدمة)", visibleWhen: allConditions({ fieldKey: "website_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "website_messaging_use_party_phones", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "website_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "website_messaging_use_party_phones", operator: "falsy" }) },
     { key: "website_project_platform_enabled", type: "checkbox", labelAr: "اعتماد منصة إلكترونية لإدارة المشروع", printInDocument: false },
     { key: "website_project_platform_name", type: "text", labelAr: "اسم منصة إدارة المشروع", visibleWhen: { fieldKey: "website_project_platform_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_project_platform_enabled", operator: "truthy" } },
     { key: "website_project_platform_link", type: "text", labelAr: "رابط المشروع أو الحساب على المنصة", visibleWhen: { fieldKey: "website_project_platform_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_project_platform_enabled", operator: "truthy" } },
   ] },
-  { key: "website_optional_terms", titleAr: "بنود اختيارية", fields: [
+  { key: "website_optional_terms", titleAr: "بنود اختيارية", articleRange: "البنود الإضافية المشروطة", fields: [
     { key: "website_legal_fees_enabled", type: "checkbox", labelAr: "تحديد من يتحمل رسوم الدمغة والرسوم القانونية", printInDocument: false },
     { key: "website_legal_fees_payer", type: "radio", labelAr: "يتحمل الرسوم", visibleWhen: { fieldKey: "website_legal_fees_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_legal_fees_enabled", operator: "truthy" }, options: [
       { value: "الطرف الأول (العميل)", labelAr: "الطرف الأول (العميل)" }, { value: "الطرف الثاني (مقدم الخدمة)", labelAr: "الطرف الثاني (مقدم الخدمة)" }, { value: "الطرفان مناصفة", labelAr: "الطرفان مناصفة" }, { value: "أخرى", labelAr: "أخرى" },
     ] },
     { key: "website_legal_fees_other", type: "text", labelAr: "اتفاق آخر لتحمل الرسوم", visibleWhen: allConditions({ fieldKey: "website_legal_fees_enabled", operator: "truthy" }, { fieldKey: "website_legal_fees_payer", operator: "equals", value: "أخرى" }), requiredWhen: allConditions({ fieldKey: "website_legal_fees_enabled", operator: "truthy" }, { fieldKey: "website_legal_fees_payer", operator: "equals", value: "أخرى" }) },
   ] },
-  { key: "website_witnesses", titleAr: "الشهود (اختياري)", fields: [
+  { key: "website_witnesses", titleAr: "الشهود (اختياري)", articleRange: "بيانات التوقيع والشهود", fields: [
     { key: "website_witness_1_enabled", type: "checkbox", labelAr: "إضافة الشاهد الأول", printInDocument: false },
     { key: "website_witness_1_name", type: "text", labelAr: "اسم الشاهد الأول", visibleWhen: { fieldKey: "website_witness_1_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_witness_1_enabled", operator: "truthy" }, printInDocument: false },
     { key: "website_witness_1_national_id", type: "text", labelAr: "الرقم القومي للشاهد الأول", visibleWhen: { fieldKey: "website_witness_1_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_witness_1_enabled", operator: "truthy" }, printInDocument: false },
@@ -421,16 +419,16 @@ const websiteSteps: WizardStepDefinition[] = [
     { key: "website_witness_2_national_id", type: "text", labelAr: "الرقم القومي للشاهد الثاني", visibleWhen: { fieldKey: "website_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_witness_2_enabled", operator: "truthy" }, printInDocument: false },
   ] },
   { key: "website_jurisdiction", titleAr: "المحكمة المختصة", articleRange: "الاختصاص القضائي وتسوية المنازعات", fields: [
-    { key: "website_competent_court", type: "select", labelAr: "المحكمة المختصة (اختياري)", options: visualIdentityCourtOptions, helpText: "إذا لم تُحدد محكمة بعينها تُطبق قواعد الاختصاص النوعي والمكاني المقررة قانونًا." },
+    { key: "website_competent_court", type: "select", labelAr: "المحكمة المختصة", required: true, options: freelancerCourtOptions, helpText: "اختر المحكمة المتفق عليها بين الطرفين، مع مراعاة قواعد الاختصاص القضائي الآمرة." },
     { key: "website_competent_court_other", type: "text", labelAr: "اسم المحكمة الأخرى", visibleWhen: { fieldKey: "website_competent_court", operator: "equals", value: "أخرى" }, requiredWhen: { fieldKey: "website_competent_court", operator: "equals", value: "أخرى" } },
   ] },
   reviewStep("website_review"),
 ];
 
 const socialSteps: WizardStepDefinition[] = [
-  { key: "social_contract_meta", titleAr: "بيانات العقد", fields: [contractDateField] },
+  { key: "social_contract_meta", titleAr: "بيانات العقد", articleRange: "صدر العقد وتاريخ تحريره", fields: [contractDateField] },
   ...socialPartySteps(),
-  { key: "social_project", titleAr: "بيانات ونطاق خدمة إدارة الحسابات", fields: [
+  { key: "social_project", titleAr: "بيانات ونطاق خدمة إدارة الحسابات", articleRange: "بيانات المشروع والنطاق والمدة والمقابل", fields: [
     { key: "social_project_name", type: "text", labelAr: "اسم المشروع أو النشاط التجاري", required: true },
     { key: "social_brand_name", type: "text", labelAr: "العلامة التجارية - إن وجدت" },
     { key: "social_business_nature", type: "text", labelAr: "طبيعة النشاط", required: true },
@@ -448,30 +446,30 @@ const socialSteps: WizardStepDefinition[] = [
       { value: "إجمالي", labelAr: "إجمالي" },
       { value: "دوري", labelAr: "دوري" },
     ] },
-    { key: "social_fee", type: "money", labelAr: "المقابل المالي المتفق عليه (جنيه مصري)", required: true, validation: { min: 1 }, helpText: "هذا هو المقابل بين العميل ومقدم الخدمة، وليس سعر شراء القالب من المنصة." },
+    { key: "social_fee", type: "money", labelAr: "المقابل المالي المتفق عليه (جنيه مصري)", required: true, validation: { min: 1 }, helpText: "أدخل إجمالي المقابل المالي المتفق عليه مقابل تقديم الخدمات." },
     { key: "social_fee_words", type: "text", labelAr: "المقابل المالي كتابةً (بدون اسم العملة)", required: true, helpText: "مثال: عشرة آلاف. سيضيف العقد عبارة جنيه مصري تلقائيًا." },
   ] },
-  { key: "social_delay_penalty", titleAr: "الجزاء الاتفاقي عن التأخير", fields: [
+  { key: "social_delay_penalty", titleAr: "الجزاء الاتفاقي عن التأخير", articleRange: "بند التأخير والجزاء الاتفاقي", fields: [
     { key: "social_delay_penalty_mode", type: "radio", labelAr: "طريقة احتساب الجزاء عن كل يوم تأخير", required: true, options: [
       { value: "amount", labelAr: "مبلغ ثابت بالجنيه المصري عن كل يوم تأخير" },
       { value: "percentage", labelAr: "نسبة من قيمة المرحلة عن كل يوم تأخير" },
-    ], helpText: "النموذج الأصلي يوجب تحديد مبلغ ثابت أو نسبة من قيمة المرحلة، وليس الاثنين معًا." },
+    ], helpText: "اختر طريقة واحدة لاحتساب الجزاء: مبلغ ثابت أو نسبة من قيمة المرحلة." },
     { key: "social_delay_penalty_amount", type: "money", labelAr: "قيمة الجزاء عن كل يوم تأخير (جنيه مصري)", visibleWhen: { fieldKey: "social_delay_penalty_mode", operator: "equals", value: "amount" }, requiredWhen: { fieldKey: "social_delay_penalty_mode", operator: "equals", value: "amount" }, validation: { min: 1 } },
     { key: "social_delay_penalty_percentage", type: "number", labelAr: "نسبة الجزاء من قيمة المرحلة عن كل يوم تأخير (%)", visibleWhen: { fieldKey: "social_delay_penalty_mode", operator: "equals", value: "percentage" }, requiredWhen: { fieldKey: "social_delay_penalty_mode", operator: "equals", value: "percentage" }, validation: { min: 0.01, max: 100 } },
     { key: "social_delay_penalty_cap_percentage", type: "number", labelAr: "الحد الأقصى لإجمالي الجزاء من قيمة الخدمة أو المرحلة (%)", required: true, validation: { min: 0.01, max: 100 } },
   ] },
-  { key: "social_communications", titleAr: "الإخطارات وبيانات الاتصال المعتمدة", fields: [
-    { key: "social_notice_use_party_emails", type: "checkbox", labelAr: "استخدام نفس البريد الإلكتروني المسجل في بيانات الطرفين", printInDocument: false, helpText: "البريد المعتمد للإخطارات إلزامي في العقد. إذا ألغيت هذا الاختيار تظهر حقول بريد مخصصة للطرفين وتصبح إلزامية." },
+  { key: "social_communications", titleAr: "الإخطارات وبيانات الاتصال المعتمدة", articleRange: "الإخطارات ووسائل الاتصال", fields: [
+    { key: "social_notice_use_party_emails", type: "checkbox", labelAr: "استخدام نفس البريد الإلكتروني المسجل في بيانات الطرفين", printInDocument: false },
     { key: "social_notice_client_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للطرف الأول (العميل)", visibleWhen: { fieldKey: "social_notice_use_party_emails", operator: "falsy" }, requiredWhen: { fieldKey: "social_notice_use_party_emails", operator: "falsy" } },
     { key: "social_notice_provider_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للطرف الثاني (مقدم الخدمة)", visibleWhen: { fieldKey: "social_notice_use_party_emails", operator: "falsy" }, requiredWhen: { fieldKey: "social_notice_use_party_emails", operator: "falsy" } },
-    { key: "social_messaging_use_party_phones", type: "checkbox", labelAr: "استخدام نفس أرقام الهاتف المسجلة في بيانات الطرفين للمراسلات الإلكترونية", printInDocument: false, helpText: "أرقام الاتصال المعتمدة إلزامية في العقد. إذا ألغيت هذا الاختيار تظهر أرقام مخصصة وتصبح إلزامية." },
+    { key: "social_messaging_use_party_phones", type: "checkbox", labelAr: "استخدام نفس أرقام الهاتف المسجلة في بيانات الطرفين للمراسلات الإلكترونية", printInDocument: false },
     { key: "social_messaging_client_number", type: "text", labelAr: "رقم الاتصال المعتمد للطرف الأول (العميل)", visibleWhen: { fieldKey: "social_messaging_use_party_phones", operator: "falsy" }, requiredWhen: { fieldKey: "social_messaging_use_party_phones", operator: "falsy" } },
     { key: "social_messaging_provider_number", type: "text", labelAr: "رقم الاتصال المعتمد للطرف الثاني (مقدم الخدمة)", visibleWhen: { fieldKey: "social_messaging_use_party_phones", operator: "falsy" }, requiredWhen: { fieldKey: "social_messaging_use_party_phones", operator: "falsy" } },
   ] },
-  { key: "social_optional_terms", titleAr: "بنود اختيارية", fields: [
+  { key: "social_optional_terms", titleAr: "بنود اختيارية", articleRange: "البنود الإضافية المشروطة", fields: [
     { key: "social_legal_fees_enabled", type: "checkbox", labelAr: "إضافة بند الرسوم والضرائب القانونية الاختياري", printInDocument: false },
   ] },
-  { key: "social_witnesses", titleAr: "الشهود (اختياري)", fields: [
+  { key: "social_witnesses", titleAr: "الشهود (اختياري)", articleRange: "بيانات التوقيع والشهود", fields: [
     { key: "social_witness_1_enabled", type: "checkbox", labelAr: "إضافة الشاهد الأول", printInDocument: false },
     { key: "social_witness_1_name", type: "text", labelAr: "اسم الشاهد الأول", visibleWhen: { fieldKey: "social_witness_1_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "social_witness_1_enabled", operator: "truthy" }, printInDocument: false },
     { key: "social_witness_1_national_id", type: "text", labelAr: "الرقم القومي للشاهد الأول", visibleWhen: { fieldKey: "social_witness_1_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "social_witness_1_enabled", operator: "truthy" }, printInDocument: false },
@@ -480,7 +478,7 @@ const socialSteps: WizardStepDefinition[] = [
     { key: "social_witness_2_national_id", type: "text", labelAr: "الرقم القومي للشاهد الثاني", visibleWhen: { fieldKey: "social_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "social_witness_2_enabled", operator: "truthy" }, printInDocument: false },
   ] },
   { key: "social_jurisdiction", titleAr: "المحكمة المختصة", articleRange: "الاختصاص القضائي وتسوية المنازعات", fields: [
-    { key: "social_competent_court", type: "select", labelAr: "المحكمة المختصة (اختياري)", options: visualIdentityCourtOptions, helpText: "إذا لم تُحدد محكمة بعينها تُطبق قواعد الاختصاص المقررة قانونًا." },
+    { key: "social_competent_court", type: "select", labelAr: "المحكمة المختصة", required: true, options: freelancerCourtOptions, helpText: "اختر المحكمة المتفق عليها بين الطرفين، مع مراعاة قواعد الاختصاص القضائي الآمرة." },
     { key: "social_competent_court_other", type: "text", labelAr: "اسم المحكمة الأخرى", visibleWhen: { fieldKey: "social_competent_court", operator: "equals", value: "أخرى" }, requiredWhen: { fieldKey: "social_competent_court", operator: "equals", value: "أخرى" } },
   ] },
   reviewStep("social_review"),
@@ -929,8 +927,8 @@ const websiteProjectDataSteps: WizardStepDefinition[] = [
     ], columns: [{ key: "item", type: "text", labelAr: "البيان" }, { key: "details", type: "text", labelAr: "التفاصيل" }] },
   ] },
   { key: "website_project_data_contact", titleAr: "ثانيًا: بيانات التواصل الخاصة بالمشروع", fields: [
-    { key: "website_pd_contact", type: "repeater", labelAr: "بيانات التواصل", blankRows: 7, blankRowLabels: [
-      "مسؤول المشروع لدى الطرف الأول", "الصفة", "البريد الإلكتروني", "رقم الهاتف", "وسائل التواصل المعتمدة", "أوقات التواصل المفضلة", "ملاحظات",
+    { key: "website_pd_contact", type: "repeater", labelAr: "بيانات التواصل", blankRows: 9, blankRowLabels: [
+      "مسؤول المشروع لدى الطرف الأول", "الشخص المسؤول عن الاعتماد", "الشخص المسؤول عن الفواتير أو المدفوعات", "الصفة", "البريد الإلكتروني", "رقم الهاتف", "وسائل التواصل المعتمدة", "أوقات التواصل المفضلة", "ملاحظات",
     ], columns: [{ key: "item", type: "text", labelAr: "البيان" }, { key: "details", type: "text", labelAr: "التفاصيل" }] },
   ] },
   { key: "website_project_data_files", titleAr: "ثالثًا: البيانات والملفات التي يلتزم الطرف الأول بتوفيرها", fields: [
@@ -1260,7 +1258,7 @@ function optionalClause(input: {
   return {
     key: input.key,
     nameAr: input.nameAr,
-    description: input.description,
+    description: `ملحق اختياري بالكامل وقالب فارغ للطباعة والتعبئة اليدوية؛ لا يُضاف تلقائيًا ولا تُنقل إليه بيانات الـWizard. ${input.description}`,
     documentTitleAr: input.title,
     sourceDocumentName: input.source,
     outputMode: "separate_annex",
@@ -1273,9 +1271,9 @@ function optionalClause(input: {
 }
 
 const optionalClauses: OptionalClauseDefinition[] = [
-  optionalClause({ key: "visual_identity_scope_annex", nameAr: "ملحق نطاق العمل والمخرجات الفنية", description: "قالب مستقل فارغ من بيانات المستخدم لتحديد الخدمات والمخرجات والمراجعات وجدول التنفيذ يدويًا.", title: "ملحق نطاق العمل والمخرجات الفنية", source: "ملحق رقم (1).pdf", variant: "visual_identity_design", steps: visualScopeSteps }),
-  optionalClause({ key: "visual_identity_financial_annex", nameAr: "ملحق المقابل المالي وخطة التنفيذ", description: "قالب مستقل فارغ من بيانات المستخدم للقيمة والدفعات ووسائل السداد وشروط بدء التنفيذ.", title: "ملحق المقابل المالي وآلية السداد وخطة التنفيذ", source: "ملحق المقابل المالي وآلية السداد وخطة التنفيذ.pdf", variant: "visual_identity_design", steps: visualFinancialSteps }),
-  optionalClause({ key: "visual_identity_approvals_annex", nameAr: "ملحق الاعتمادات وإدارة التنفيذ", description: "قالب مستقل فارغ من بيانات المستخدم لسجل المراحل والمراجعات والتعديلات والتسليم.", title: "ملحق الاعتمادات وإدارة التنفيذ", source: "الملحق رقم (3).pdf", variant: "visual_identity_design", steps: visualApprovalsSteps }),
+  optionalClause({ key: "visual_identity_scope_annex", nameAr: "ملحق نطاق العمل والمخرجات الفنية", description: "يُستكمل فيه نطاق الخدمات والمخرجات والمراجعات وجدول التنفيذ.", title: "ملحق نطاق العمل والمخرجات الفنية", source: "ملحق رقم (1).pdf", variant: "visual_identity_design", steps: visualScopeSteps }),
+  optionalClause({ key: "visual_identity_financial_annex", nameAr: "ملحق المقابل المالي وخطة التنفيذ", description: "يُستكمل فيه المقابل والدفعات ووسائل السداد وشروط بدء التنفيذ.", title: "ملحق المقابل المالي وآلية السداد وخطة التنفيذ", source: "ملحق المقابل المالي وآلية السداد وخطة التنفيذ.pdf", variant: "visual_identity_design", steps: visualFinancialSteps }),
+  optionalClause({ key: "visual_identity_approvals_annex", nameAr: "ملحق الاعتمادات وإدارة التنفيذ", description: "يُستكمل فيه سجل المراحل والمراجعات والتعديلات والتسليم.", title: "ملحق الاعتمادات وإدارة التنفيذ", source: "الملحق رقم (3).pdf", variant: "visual_identity_design", steps: visualApprovalsSteps }),
   optionalClause({ key: "website_scope_annex", nameAr: "ملحق نطاق العمل SOW", description: "الأعمال والمخرجات والوظائف والصفحات المشمولة.", title: "ملحق نطاق العمل (Scope of Work)", source: "الملحق (أ)  نطاق العمل (Scope of Work).pdf", variant: "website_development", steps: websiteScopeSteps }),
   optionalClause({ key: "website_technical_annex", nameAr: "ملحق المواصفات الفنية TS", description: "البنية والتقنيات والتكاملات والاستضافة والأمان.", title: "ملحق المواصفات الفنية (Technical Specifications)", source: "الملحق (ب).pdf", variant: "website_development", steps: websiteTechnicalSteps }),
   optionalClause({ key: "website_project_data_annex", nameAr: "ملحق بيانات المشروع", description: "بيانات المشروع والملفات والحسابات المطلوب توفيرها.", title: "ملحق بيانات المشروع", source: "Document 8.pdf", variant: "website_development", steps: websiteProjectDataSteps }),
@@ -1326,7 +1324,6 @@ const variants: ContractVariantDefinition[] = [
       key === "website_development_source_section_12" ? ["website_development_restored_section_11", key] : [key],
     ),
     allowedOptionalClauseKeys: ["website_scope_annex", "website_technical_annex", "website_project_data_annex", "website_delivery_annex", "website_sla_annex", "website_future_development_annex"],
-    requiredAnnexKeys: ["website_scope_annex", "website_technical_annex", "website_project_data_annex", "website_delivery_annex"],
     defaultFieldValues: {
       website_client_party_type: "individual",
       website_provider_party_type: "individual",
@@ -1556,12 +1553,64 @@ function reviewedWebsiteMainClause(clause: LegalClauseDefinition): LegalClauseDe
 ويشار إلى الطرف الأول في هذا العقد بـ «الطرف الأول» أو «العميل»، وإلى الطرف الثاني بـ «الطرف الثاني» أو «مقدم الخدمة».
 ويقر الطرف الأول بأن الشخص المحدد للاعتماد مخول بإصدار الموافقات المتعلقة بالمشروع، وتعتبر موافقاته نافذة في حدود نطاق المشروع.`,
       };
+    case "website_development_source_section_03":
+      return {
+        ...base,
+        titleAr: "المادة الثانية: التمهيد والإقرارات العامة",
+        bodyAr: `يرغب الطرف الأول في التعاقد مع الطرف الثاني لتطوير الموقع الإلكتروني المبين في بيانات العقد، ويقر الطرف الثاني بامتلاكه الخبرة والقدرة المهنية اللازمة لتنفيذ الأعمال المتفق عليها.
+يُعد هذا العقد نافذًا ومستقلًا بذاته، ولا يتوقف انعقاده أو نفاذه أو صحة أحكامه على اختيار أي ملحق أو استكماله أو اعتماده.
+جميع الملاحق المتاحة عبر المنصة اختيارية. ولا يُعد أي ملحق جزءًا من هذا العقد إلا إذا اختاره الطرفان، واستكملا بياناته، واعتمداه أو وقّعاه كتابةً. وعندئذ يُقرأ الملحق المعتمد مع العقد كوحدة واحدة في حدود موضوعه.
+ويقر الطرفان بأنهما أبرما العقد بإرادة حرة، وأُتيحت لكل منهما فرصة مراجعته والاستعانة بمن يراه من المستشارين أو المتخصصين قبل التوقيع عليه.`,
+      };
+    case "website_development_source_section_04":
+      return {
+        ...base,
+        titleAr: "المادة الثالثة: التعريفات",
+        bodyAr: `لأغراض تطبيق هذا العقد، تكون للمصطلحات الآتية المعاني المبينة قرين كل منها ما لم يقتض السياق غير ذلك:
+العقد: هذا المحرر ببياناته ومواده، وأي تعديل أو ملحق اختياري يستكمله الطرفان ويعتمدانه كتابةً.
+المشروع: الموقع أو النظام أو المنصة الإلكترونية المحددة في بيانات العقد.
+نطاق العمل: الأعمال والخدمات والمخرجات التي اتفق عليها الطرفان صراحةً في بيانات العقد أو في اتفاق مكتوب أو ملحق اختياري معتمد.
+المخرجات: الأعمال أو الملفات أو الأكواد أو التصاميم أو قواعد البيانات أو المستندات الداخلة صراحةً في نطاق العمل المتفق عليه.
+الاعتماد: قبول الطرف الأول للأعمال أو المخرجات كتابةً أو بإحدى وسائل الاعتماد المقررة في العقد.
+الأعمال الإضافية: كل عمل أو خدمة أو تطوير أو خاصية أو تعديل لا يدخل صراحةً في نطاق العمل المتفق عليه.
+الملحق الاختياري: نموذج مستقل لا يُضاف إلى العقد تلقائيًا، ولا ينتج أثرًا تعاقديًا إلا بعد اختياره واستكماله واعتماده من الطرفين.`,
+      };
+    case "website_development_source_section_05":
+      return {
+        ...base,
+        titleAr: "المادة الرابعة: محل العقد",
+        bodyAr: `يتمثل محل هذا العقد في التزام الطرف الثاني بتطوير المشروع الإلكتروني المبين في بيانات العقد، وتنفيذ الأعمال والمخرجات التي اتفق عليها الطرفان صراحةً، مقابل التزام الطرف الأول بسداد المقابل المالي والوفاء بالتزاماته المبينة في العقد.
+يُحدد نطاق العمل من بيانات المشروع المثبتة في العقد وما يعتمد كتابةً بين الطرفين. ويجوز للطرفين، دون إلزام، اختيار واستكمال واعتماد ملحق نطاق عمل أو مواصفات فنية أو بيانات مشروع أو محضر تسليم لتفصيل بعض الجوانب الفنية أو التشغيلية.
+لا يمتد التزام الطرف الثاني إلى أعمال أو خدمات أو خصائص أو تكاملات أو تراخيص أو خدمات خارجية لم يتفق عليها الطرفان صراحةً، ولا تُعد الطلبات الإضافية مشمولة بالمقابل المالي أو مدة التنفيذ إلا باتفاق مكتوب.
+هذا العقد عقد مقاولة لتقديم خدمات فنية مستقلة، ولا يُعد عقد عمل أو شراكة أو وكالة أو مشروعًا مشتركًا، ولا يضمن الطرف الثاني تحقيق نتيجة تجارية أو مالية أو تسويقية ما لم يتفق الطرفان كتابةً على خلاف ذلك.`,
+      };
+    case "website_development_source_section_06":
+      return {
+        ...base,
+        titleAr: "المادة الخامسة: الملاحق الاختيارية",
+        bodyAr: `5-1 جميع ملاحق هذا العقد اختيارية بالكامل، ولا يُضاف أي ملحق تلقائيًا، ولا يلتزم أي من الطرفين باختيار ملحق معين لمجرد إبرام هذا العقد أو بسبب إجابة واردة في بياناته.
+5-2 يجوز للطرفين اختيار واستكمال واعتماد ملحق أو أكثر عند الحاجة، ومن ذلك ملحق نطاق العمل (SOW)، وملحق المواصفات الفنية (TS)، وملحق بيانات المشروع، ومحضر التسليم والاعتماد النهائي (DAR)، واتفاقية الصيانة والدعم الفني (SLA)، واتفاقية التطويرات المستقبلية والأعمال الإضافية.
+5-3 لا يُعد الملحق جزءًا من العقد ولا ينتج أثرًا إلا بعد استكمال بياناته واعتماده أو توقيعه من الطرفين. ومجرد ظهور قالب الملحق أو طباعته لا يُعد اختيارًا له أو موافقةً على محتواه.
+5-4 أي إشارة في مواد العقد إلى ملحق معين تُفهم على أنها إشارة مشروطة بوجود هذا الملحق واختياره واستكماله واعتماده. وعند عدم اعتماده، تسري بيانات العقد والاتفاقات الكتابية الأخرى بين الطرفين دون أن ينشأ التزام بإعداد الملحق.
+5-5 عند تعارض ملحق معتمد مع العقد، تكون الأولوية لأحكام العقد ما لم يتضمن الملحق نصًا صريحًا معتمدًا من الطرفين يعدل حكمًا محددًا، وفي حدود ذلك التعديل فقط، وبما لا يخالف الأحكام الآمرة في القانون.`,
+      };
+    case "website_development_source_section_07":
+      return {
+        ...base,
+        titleAr: "المادة السادسة: نطاق العمل",
+        bodyAr: `6-1 يلتزم الطرف الثاني بتنفيذ الأعمال والخدمات والمخرجات المتفق عليها صراحةً في بيانات العقد أو في اتفاق كتابي معتمد بين الطرفين.
+6-2 إذا اختار الطرفان ملحق نطاق العمل (SOW) أو ملحق المواصفات الفنية (TS) واستكملاه واعتمداه، استُخدم الملحق لتفصيل الأعمال والمخرجات والصفحات والوظائف والتقنيات والتكاملات ومعايير القبول، دون أن يكون اختياره شرطًا لنفاذ العقد.
+6-3 عند عدم اعتماد أي ملحق، يُحدد نطاق العمل من بيانات المشروع المثبتة في العقد، والعروض أو المراسلات أو الموافقات الكتابية الصريحة المعتمدة بين الطرفين.
+6-4 كل عمل أو خدمة أو تطوير أو خاصية أو تكامل لم يرد ضمن نطاق العمل المتفق عليه يُعد عملًا إضافيًا، ولا يلتزم الطرف الثاني بتنفيذه إلا بعد اتفاق كتابي يحدد أثره على المقابل المالي ومدة التنفيذ.
+6-5 يرتبط بدء كل مرحلة بتسلم الطرف الثاني للبيانات والمحتوى والاعتمادات ووسائل الوصول اللازمة لها، ويترتب على تأخر الطرف الأول في تقديمها امتداد المدة بقدر التأخير وآثاره الفعلية.
+6-6 لا يجوز التوسع في تفسير نطاق العمل على نحو يضيف التزامات لم يتفق عليها الطرفان صراحةً.`,
+      };
     case "website_development_source_section_10":
       return {
         ...base,
         titleAr: "المادة التاسعة: مدة التنفيذ",
         variables: ["website_execution_duration_value", "website_execution_duration_unit", "website_duration_basis"],
-        bodyAr: `تبدأ مدة تنفيذ المشروع من التاريخ الذي يتفق عليه الطرفان، أو من تاريخ استيفاء جميع متطلبات بدء التنفيذ المنصوص عليها في هذا العقد وملحق بيانات المشروع وملحق نطاق العمل (SOW)، أيهما لاحق.
+        bodyAr: `تبدأ مدة تنفيذ المشروع من التاريخ الذي يتفق عليه الطرفان، أو من تاريخ استيفاء متطلبات بدء التنفيذ المنصوص عليها في هذا العقد وأي ملحق اختياري تم اختياره واستكماله واعتماده، أيهما لاحق.
 مدة تنفيذ المشروع هي ({{website_execution_duration_value}} {{website_execution_duration_unit}}).
 تُحسب مدة التنفيذ {{website_duration_basis}}.
 إذا تأخر الطرف الأول في تنفيذ أي من التزاماته، أو في تقديم البيانات أو المحتوى أو الاعتمادات أو بيانات الوصول أو أي متطلبات لازمة لبدء التنفيذ أو استكماله، أو في سداد أي دفعة مستحقة، توقفت مدة التنفيذ أو امتدت تلقائيًا بالقدر الذي يقابل مدة التأخير وآثاره الفعلية، دون أن يُعد ذلك إخلالًا من الطرف الثاني.
@@ -1636,7 +1685,7 @@ function reviewedWebsiteMainClause(clause: LegalClauseDefinition): LegalClauseDe
       return { ...base, titleAr: "المادة العشرون: الإخطارات والموطن المختار", bodyAr: body.trim() };
     }
     case "website_development_source_section_21": {
-      const replacement = `21-3 الاختصاص القضائي: مع مراعاة قواعد الاختصاص الولائي والنوعي المتعلقة بالنظام العام، إذا حدد الطرفان محكمة مختصة ضمن بيانات هذا العقد فتختص المحكمة المحددة الابتدائية وجزئياتها بنظر والفصل في جميع المنازعات الناشئة عن هذا العقد أو المرتبطة به، وذلك في الحدود التي يجيزها القانون. وفي حال عدم تحديد محكمة بعينها، تختص المحاكم المصرية المختصة نوعيًا ومكانيًا وفقًا لقواعد الاختصاص المقررة قانونًا.\n`;
+      const replacement = `21-3 الاختصاص القضائي: مع مراعاة قواعد الاختصاص الولائي والنوعي والمكاني المتعلقة بالنظام العام، تختص المحكمة المحددة في بيانات هذا العقد — ودوائرها الجزئية بحسب الأحوال — بنظر المنازعات الناشئة عن العقد أو المرتبطة به، وذلك في الحدود التي يجيزها القانون. وإذا تعذر انعقاد الاختصاص للمحكمة المختارة قانونًا، ينعقد الاختصاص للمحكمة المصرية المختصة وفقًا للقواعد الآمرة.\n`;
       const body = base.bodyAr.replace(/21-3\s*الاختصاص القضائي:[\s\S]*?(?=21-4\s*المنازعات الفنية:)/, replacement);
       return { ...base, titleAr: "المادة الحادية والعشرون: القانون الواجب التطبيق وتسوية المنازعات", bodyAr: body.trim() };
     }
@@ -1711,7 +1760,7 @@ function reviewedSocialMainClause(clause: LegalClauseDefinition): LegalClauseDef
 20-4 استخدام المراسلات الإلكترونية: يجوز استخدام البريد الإلكتروني وتطبيقات المراسلة الإلكترونية المتفق عليها بين الطرفين لتبادل التعليمات الفنية والملاحظات والملفات والاعتمادات المتعلقة بتنفيذ الخدمات. ولا يترتب على تلك المراسلات تعديل أي حكم جوهري في هذا العقد أو نطاق الخدمات أو المقابل المالي أو مدة التنفيذ إلا بموافقة صريحة من الطرفين وفقًا لإجراءات التعديل الواردة بالعقد.
 20-5 وقت استلام الإخطار الإلكتروني: يُعد الإخطار أو المراسلة الإلكترونية مستلمة ومنتجة لآثارها من تاريخ إرسالها إلى وسيلة الاتصال المعتمدة، ما لم يثبت تعذر وصولها بسبب عطل فني خارج عن إرادة المرسل إليه. ولا يؤثر عدم فتح الرسالة أو عدم الاطلاع عليها، متى ثبت إرسالها إلى وسيلة الاتصال المعتمدة، على آثارها القانونية، مع مراعاة أي إجراءات خاصة يوجبها القانون لبعض الإخطارات.` };
     case "social_media_management_source_section_23":
-      return { ...base, titleAr: "المادة الحادية والعشرون: القانون الواجب التطبيق وتسوية المنازعات", bodyAr: base.bodyAr.replace(/21-3\s*الاختصاص القضائي:[\s\S]*?(?=21-4\s*المنازعات الفنية)/, `21-3 الاختصاص القضائي: مع مراعاة قواعد الاختصاص الولائي والنوعي والمكاني المتعلقة بالنظام العام، إذا حدد الطرفان محكمة مختصة في بيانات هذا العقد فتختص المحكمة المحددة الابتدائية وجزئياتها — بحسب الأحوال — بنظر المنازعات الناشئة عن العقد أو المرتبطة به في الحدود التي يجيزها القانون. وفي حال عدم تحديد محكمة بعينها، أو تعذر انعقاد الاختصاص للمحكمة المختارة قانونًا، يكون الاختصاص للمحاكم المصرية المختصة وفقًا لقواعد الاختصاص المقررة في التشريعات النافذة.\n`) };
+      return { ...base, titleAr: "المادة الحادية والعشرون: القانون الواجب التطبيق وتسوية المنازعات", bodyAr: base.bodyAr.replace(/21-3\s*الاختصاص القضائي:[\s\S]*?(?=21-4\s*المنازعات الفنية)/, `21-3 الاختصاص القضائي: مع مراعاة قواعد الاختصاص الولائي والنوعي والمكاني المتعلقة بالنظام العام، تختص المحكمة المحددة في بيانات هذا العقد — ودوائرها الجزئية بحسب الأحوال — بنظر المنازعات الناشئة عن العقد أو المرتبطة به، وذلك في الحدود التي يجيزها القانون. وإذا تعذر انعقاد الاختصاص للمحكمة المختارة قانونًا، ينعقد الاختصاص للمحكمة المصرية المختصة وفقًا للقواعد الآمرة.\n`) };
     case "social_media_management_source_section_24": {
       const body = base.bodyAr
         .replace(/22-11\s*عدد النسخ:[\s\S]*?(?=22-12\s*اللغة المعتمدة)/u, "22-11 عدد النسخ: يجوز تحرير هذا العقد من نسخ أصلية أو إلكترونية متطابقة، ويحتفظ كل طرف بنسخة للعمل بموجبها، وتكون لجميع النسخ ذات الحجية القانونية متى ثبتت صحتها ونسبتها إلى أطرافها. ويجوز توقيع العقد على نسخ منفصلة أو إلكترونية، ويُعد مجموعها عقدًا واحدًا منتجًا لجميع آثاره القانونية.\n")
@@ -2297,7 +2346,7 @@ const freelancerLegalClauses: LegalClauseDefinition[] = [
       return {
         ...baseClause,
         titleAr: "ثالثًا: الاختصاص القضائي والمنازعات الفنية والإجراءات الوقتية",
-        bodyAr: `مع مراعاة قواعد الاختصاص الولائي والنوعي المتعلقة بالنظام العام، إذا حدد الطرفان محكمة مختصة ضمن بيانات هذا العقد فتختص المحكمة المحددة الابتدائية وجزئياتها بنظر والفصل في جميع المنازعات الناشئة عن هذا العقد أو المرتبطة به، وذلك في الحدود التي يجيزها القانون. وفي حال عدم تحديد محكمة بعينها، تختص المحاكم المصرية المختصة نوعيًا ومكانيًا وفقًا لقواعد الاختصاص المقررة قانونًا.
+        bodyAr: `مع مراعاة قواعد الاختصاص الولائي والنوعي والمكاني المتعلقة بالنظام العام، تختص المحكمة المحددة في بيانات هذا العقد — ودوائرها الجزئية بحسب الأحوال — بنظر المنازعات الناشئة عن هذا العقد أو المرتبطة به، وذلك في الحدود التي يجيزها القانون. وإذا تعذر انعقاد الاختصاص للمحكمة المختارة قانونًا، ينعقد الاختصاص للمحكمة المصرية المختصة وفقًا للقواعد الآمرة.
 رابعًا: المنازعات الفنية: إذا تعلق النزاع بمسألة فنية، بما في ذلك مدى مطابقة الأعمال أو المخرجات لنطاق الخدمات أو المواصفات أو معايير القبول المتفق عليها، أو تقييم مراحل التنفيذ أو نسب الإنجاز، أو تحديد ما إذا كان العمل يدخل ضمن نطاق الخدمات أو يُعد عملًا إضافيًا، جاز لأي من الطرفين الاستعانة بخبير فني متخصص قبل اللجوء إلى القضاء أو أثناء نظر النزاع، كما يجوز للمحكمة المختصة ندب خبير وفقًا للإجراءات المقررة قانونًا. ولا تكون لتقارير أو آراء الخبراء الذين يختارهم الطرفان أو أحدهما حجية ملزمة إلا إذا اتفق الطرفان كتابةً على ذلك، أو إذا كان الخبير معينًا أو منتدبًا من المحكمة المختصة وفقًا لأحكام القانون.
 خامسًا: الإجراءات الوقتية والتحفظية: لا يخل ما ورد في هذه المادة بحق أي من الطرفين في اللجوء إلى المحكمة المختصة لطلب اتخاذ أي إجراء وقتي أو تحفظي أو مستعجل يهدف إلى حماية حقوقه أو المحافظة على الأدلة أو منع وقوع ضرر يتعذر تداركه، بما في ذلك الإجراءات المتعلقة بحماية حقوق الملكية الفكرية، أو سرية المعلومات أو البيانات، أو المخرجات، أو أي حق آخر ناشئ عن هذا العقد، وذلك دون أن يُعد اتخاذ هذه الإجراءات تنازلًا عن أي حق آخر مقرر بموجب هذا العقد أو القانون.`,
       };
@@ -2408,9 +2457,9 @@ const freelancerLegalClauses: LegalClauseDefinition[] = [
 
 export const freelancerTemplateDefinition: ContractTemplateDefinition = {
   slug: "freelancer",
-  version: 6,
+  version: 10,
   nameAr: "عقود الخدمات والعمل الحر",
-  description: "عقود الهوية البصرية وتطوير المواقع وإدارة منصات التواصل مع ملاحق مستقلة قابلة للاختيار.",
+  description: "عقود الهوية البصرية وتطوير المواقع وإدارة منصات التواصل مع ملاحق اختيارية مستقلة وفارغة قابلة للطباعة والتعبئة اليدوية.",
   priceEgp: 0,
   variantPricing: {
     visual_identity_design: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 0 },
@@ -2419,5 +2468,5 @@ export const freelancerTemplateDefinition: ContractTemplateDefinition = {
   },
   variants,
   optionalClauses,
-  legalClauses: freelancerLegalClauses,
+  legalClauses: freelancerLegalClauses.map(normalizeLegalClauseDefinition),
 };

@@ -72,7 +72,6 @@ export const requestStatusLabels: Record<string, string> = {
 export const requestTypeLabels: Record<string, string> = {
   contract_drafting: "إعداد عقد",
   contract_review: "مراجعة عقد",
-  consultation: "استشارة قانونية",
 };
 
 export const communicationLabels: Record<string, string> = {

@@ -5,19 +5,16 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import VodafoneCashModal from "@/components/checkout/VodafoneCashModal";
-import ArabicCurrencyInput from "@/components/contract/ArabicCurrencyInput";
-import FieldLabel from "@/components/contract/FieldLabel";
 import {
-  Lock, ArrowRight, ArrowLeft, Upload, FileCheck,
-  ShieldCheck, CheckCircle2, Zap, ExternalLink, Camera, Receipt, FileText, Sparkles, Loader2,
+  Lock, ArrowRight, ArrowLeft,
+  ShieldCheck, CheckCircle2, Zap, ExternalLink, FileText, MousePointer2,
 } from "lucide-react";
-import { compressUploadFile } from "@/lib/compression";
 import { apiRequest, ApiClientError } from "@/lib/apiClient";
 import type { ContractSlug, CreationMode } from "@/types/zdraft";
 import type { ContractDetails } from "@/types/customer";
-import type { ContractFieldValue } from "@/features/contracts/domain/contractTemplate.types";
 import { useTemplateDefinition } from "@/features/contracts/hooks/useTemplateDefinition";
-import { evaluateCondition, resolveWizardDefinition } from "@/features/contracts/wizard/resolveWizardDefinition";
+import { renderLegalClauses, resolveWizardDefinition } from "@/features/contracts/wizard/resolveWizardDefinition";
+import { formatWizardFieldValue } from "@/features/contracts/domain/contractDisplay";
 import { useWizardStore } from "@/store/wizardStore";
 import VariantSelector from "@/features/contracts/wizard/VariantSelector";
 import OptionalClauseSelector from "@/features/contracts/wizard/OptionalClauseSelector";
@@ -46,36 +43,8 @@ const fieldHelp: Record<string, { help?: string; video?: string }> = {
   annual_increase_rate: { help: "تظهر هذه النسبة فقط إذا تم تفعيل الزيادة الدورية، وعندها تصبح النسبة إلزامية." },
 };
 
-type WizardFormValue = ContractFieldValue;
-
 const highlightClass = "ring-2 ring-[#986410] bg-[#986410]/5 rounded-xl transition-all duration-300";
 const normalClass = "rounded-xl border border-slate-200 bg-slate-50 transition-all duration-300";
-const competentCourts = ["القاهرة","شمال القاهرة","جنوب القاهرة","القاهرة الجديدة","شمال الجيزة","جنوب الجيزة","الإسكندرية","طنطا","دمنهور","كفر الشيخ","المنصورة","الزقازيق","بنها","شبين الكوم","بورسعيد","الإسماعيلية","السويس","دمياط","بني سويف","الفيوم","أسيوط","سوهاج","قنا","الأقصر","أسوان","البحر الأحمر","الوادي الجديد","شمال سيناء","جنوب سيناء","مرسى مطروح"] as const;
-
-function LiveField({ value, placeholder = "_______________" }: { value: WizardFormValue; placeholder?: string }) {
-  const display = value && String(value).trim() !== "" ? String(value) : placeholder;
-  const isPlaceholder = !value || String(value).trim() === "";
-  return (
-    <strong className={isPlaceholder ? "text-slate-400 font-normal" : "text-[#00102e] font-bold"}>
-      {display}
-    </strong>
-  );
-}
-
-function contractDurationText(amountValue: WizardFormValue, unitValue: WizardFormValue) {
-  const amount = Number(amountValue);
-  const unit = String(unitValue || "month");
-  if (!amount || amount <= 0) return "";
-
-  const months = unit === "year" ? amount * 12 : amount;
-  if (months === 1) return "شهر واحد";
-  if (months === 2) return "شهران";
-  if (months === 6) return "ستة أشهر";
-  if (months === 12) return "سنة واحدة (12 شهراً)";
-  if (months === 24) return "سنتان (24 شهراً)";
-  if (months === 36) return "ثلاث سنوات (36 شهراً)";
-  return `${months.toLocaleString("ar-EG")} شهراً`;
-}
 
 function defaultContractTitle(slug: string) {
   if (slug === "apartment_sale") return "عقد بيع وحدة سكنية";
@@ -110,11 +79,10 @@ export default function WizardPage() {
 
   const [isMobilePreviewOpen, setIsMobilePreviewOpen] = useState(false);
   const [previewTab, setPreviewTab] = useState<"document" | "summary">("document");
+  const [activePreviewField, setActivePreviewField] = useState<{ key: string; labelAr: string } | null>(null);
   const [actionDialog, setActionDialog] = useState<{ title: string; message: string; confirmOnly: boolean; confirmLabel?: string; onConfirm?: () => void } | null>(null);
   const showNotice = (message: string, title = "تنبيه") => setActionDialog({ title, message, confirmOnly: true });
-  const [autoSaveStatus, setAutoSaveStatus] = useState("محفوظ مؤقتًا في هذه الجلسة ✓");
-  const [isSaving, setIsSaving] = useState(false);
-  const lastSavedPayloadRef = useRef<string>("");
+  const [autoSaveStatus, setAutoSaveStatus] = useState("محفوظ مؤقتًا في هذه الجلسة");
   const [backendContract, setBackendContract] = useState<ContractDetails | null>(null);
   const [checkoutContract, setCheckoutContract] = useState<{ id: number; serialNumber: string } | null>(null);
   const loadedContractId = useRef<number | null>(null);
@@ -208,6 +176,7 @@ export default function WizardPage() {
 
   const setCurrentStep = (next: number | ((previous: number) => number)) => {
     if (activeSteps.length === 0) return;
+    setActivePreviewField(null);
     const requested = typeof next === "function" ? next(currentStep) : next;
     const normalized = Math.min(activeSteps.length, Math.max(1, requested));
     setStoredStepKey(contractSlug, activeSteps[normalized - 1].key);
@@ -239,6 +208,8 @@ export default function WizardPage() {
 
     const resolveTargetElement = (key: string): HTMLElement | null => {
       const k = key.toLowerCase();
+      const schemaStepTarget = document.getElementById(`doc-step-${key}`);
+      if (schemaStepTarget) return schemaStepTarget;
 
       // 1. Preamble & Meta
       if (k.includes("meta") || k.includes("start")) {
@@ -313,7 +284,16 @@ export default function WizardPage() {
         );
       }
 
-      // 10. Witnesses & Signatures & Review
+      // 10. Jurisdiction
+      if (k.includes("jurisdiction") || k.includes("court")) {
+        return (
+          document.querySelector<HTMLElement>("[data-preview-group='jurisdiction']") ||
+          document.querySelector<HTMLElement>("[data-target='jurisdiction']") ||
+          document.getElementById("doc-signatures")
+        );
+      }
+
+      // 11. Witnesses & Signatures & Review
       if (k.includes("witness") || k.includes("signature") || k.includes("review") || k.includes("closing") || k.includes("signing")) {
         return document.getElementById("doc-signatures");
       }
@@ -338,35 +318,35 @@ export default function WizardPage() {
     }
   }, [currentStepKey]);
 
+  // Keep the document pane aligned with the field the user is editing. The
+  // matching preview block stays highlighted, so the cue remains useful after
+  // the user scrolls the contract manually.
+  useEffect(() => {
+    if (!activePreviewField) return;
+    const previewContainer = document.getElementById("wizard-preview");
+    const target = previewContainer?.querySelector<HTMLElement>("[data-active-preview='exact']")
+      ?? previewContainer?.querySelector<HTMLElement>("[data-active-preview='true']");
+    if (!previewContainer || !target) return;
+    const containerRect = previewContainer.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const offsetTop = targetRect.top - containerRect.top + previewContainer.scrollTop - 52;
+    previewContainer.scrollTo({ top: Math.max(0, offsetTop), behavior: "smooth" });
+  }, [activePreviewField]);
+
   // ─── DEBOUNCED BACKEND AUTOSAVE ──────────────────────────────────────────
   useEffect(() => {
     if (!draft || !draft.updatedAt) return;
     const hasValues = Object.values(formData).some((v) => v !== "" && v !== null && v !== undefined);
     if (!hasValues) return;
 
-    const payloadToSave = JSON.stringify({
-      fieldValues: draft.fieldValues,
-      variantKey: draft.variantKey,
-      selectedOptionalClauseKeys: draft.selectedOptionalClauseKeys,
-      currentStepKey: draft.currentStepKey,
-    });
-
-    if (payloadToSave === lastSavedPayloadRef.current) {
-      return;
-    }
-
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
     }
 
-    setIsSaving(true);
     setAutoSaveStatus("جاري المزامنة مع السيرفر...");
-
     autosaveTimerRef.current = setTimeout(async () => {
       try {
         const saved = await saveDraftSnapshot(draft);
-        lastSavedPayloadRef.current = payloadToSave;
-        setIsSaving(false);
         if (saved && saved.id) {
           setBackendDraftReference(contractSlug, saved);
           setAutoSaveStatus("تم الحفظ في السيرفر ✓");
@@ -374,11 +354,9 @@ export default function WizardPage() {
           setAutoSaveStatus("محفوظ مؤقتًا في الجلسة ✓");
         }
       } catch {
-        lastSavedPayloadRef.current = payloadToSave;
-        setIsSaving(false);
         setAutoSaveStatus("محفوظ محليًا في المتصفح ✓");
       }
-    }, 1500);
+    }, 1800);
 
     return () => {
       if (autosaveTimerRef.current) {
@@ -399,12 +377,6 @@ export default function WizardPage() {
     ? (templateDefinition?.variantPricing?.[draft.variantKey]?.selfServicePriceEgp ?? 0)
     : 0;
   const selfServicePriceConfigured = priceEgp > 0;
-
-  const field = (key: string) => {
-    const v = formData[key];
-    return typeof v === "string" || typeof v === "number" ? v : "";
-  };
-
 
   const coreIdentityLocked = Boolean(backendContract?.core_identity_locked || draft?.coreIdentityLocked);
 
@@ -463,32 +435,66 @@ export default function WizardPage() {
     </div>
   );
 
-  const propertyLocationText = [
-    field("property_governorate"),
-    field("property_city"),
-    field("property_district"),
-    field("residential_compound_name") ? `كمبوند ${field("residential_compound_name")}` : "",
-    field("commercial_project_name") ? `مشروع/مول ${field("commercial_project_name")}` : "",
-    field("administrative_project_name") ? `مشروع/برج ${field("administrative_project_name")}` : "",
-    field("residential_plot_number") ? `قطعة ${field("residential_plot_number")}` : field("commercial_plot_number") ? `قطعة ${field("commercial_plot_number")}` : field("administrative_plot_number") ? `قطعة ${field("administrative_plot_number")}` : "",
-    field("residential_adjacency_number") ? `مجاورة ${field("residential_adjacency_number")}` : "",
-    field("property_street") ? `شارع ${field("property_street")}` : "",
-    field("building_number") ? `عقار ${field("building_number")}` : "",
-    field("building_name"),
-    field("floor_number") ? `دور ${field("floor_number")}` : "",
-    field("unit_number") ? `وحدة ${field("unit_number")}` : "",
-  ].filter(Boolean).join(" - ");
+  const requiredReviewItems = useMemo(() => (resolvedWizard?.steps ?? []).flatMap((step) =>
+    step.fields
+      .filter((field) => field.required)
+      .map((field) => {
+        const raw = field.type === "attachment"
+          ? draft?.attachmentRefs[field.key]
+          : formData[field.key];
+        const entries = Array.isArray(raw) ? raw.length : 0;
+        const complete = field.type === "checkbox"
+          ? raw === true
+          : field.type === "attachment"
+            ? entries > 0
+            : field.type === "repeater"
+              ? entries >= (field.minRows ?? 1)
+              : raw !== null && raw !== undefined && String(raw).trim() !== "";
+        const value = field.type === "attachment"
+          ? (entries ? `${entries} مرفق` : "—")
+          : field.type === "repeater"
+            ? (entries ? `${entries} بند` : "—")
+            : formatWizardFieldValue(field, raw, formData);
+        return { key: field.key, label: field.labelAr, value, complete };
+      }),
+  ), [draft?.attachmentRefs, formData, resolvedWizard]);
 
-  const requiredReviewItems = [
-    { key: "landlord_name", label: "الطرف الأول (المؤجر)", value: field("landlord_party_type") === "company" ? field("landlord_company_name") : field("landlord_name") },
-    { key: "tenant_name", label: "الطرف الثاني (المستأجر)", value: field("tenant_party_type") === "company" ? field("tenant_company_name") : field("tenant_name") },
-    { key: "property_location", label: "العين المؤجرة", value: propertyLocationText },
-    { key: "lease_duration_text", label: "مدة العقد", value: field("lease_duration_text") },
-    { key: "start_date", label: "تاريخ البداية", value: field("start_date") },
-    { key: "end_date", label: "تاريخ الانتهاء", value: field("end_date") },
-    { key: "rent_amount", label: "القيمة الإيجارية", value: field("rent_amount") ? `${field("rent_amount")} ج.م` : "" },
-    { key: "deposit_amount", label: "مبلغ التأمين", value: field("deposit_amount") ? `${field("deposit_amount")} ج.م` : "" },
-  ];
+  const clauseReview = useMemo(() => {
+    if (!templateDefinition || !selectedVariantDefinition || !draft?.variantKey) {
+      return { required: [], optional: [], activeCount: 0 };
+    }
+    let rendered: ReturnType<typeof renderLegalClauses> = [];
+    try {
+      rendered = renderLegalClauses(
+        templateDefinition,
+        draft.variantKey,
+        draft.selectedOptionalClauseKeys,
+        draft.fieldValues,
+      );
+    } catch {
+      rendered = [];
+    }
+    const activeKeys = new Set(rendered.map((clause) => clause.key));
+    const legalByKey = new Map((templateDefinition.legalClauses ?? []).map((clause) => [clause.key, clause] as const));
+    const required = selectedVariantDefinition.requiredClauseKeys.map((key) => {
+      const clause = legalByKey.get(key);
+      return {
+        key,
+        title: clause?.titleAr ?? key,
+        active: activeKeys.has(key),
+        conditional: Boolean(clause?.visibleWhen),
+      };
+    });
+    const optional = templateDefinition.optionalClauses
+      .filter((clause) => selectedVariantDefinition.allowedOptionalClauseKeys.includes(clause.key) && clause.applicableVariantKeys.includes(selectedVariantDefinition.key))
+      .map((clause) => ({
+        key: clause.key,
+        title: clause.nameAr,
+        selected: draft.selectedOptionalClauseKeys.includes(clause.key),
+      }));
+    return { required, optional, activeCount: rendered.length };
+  }, [draft, selectedVariantDefinition, templateDefinition]);
+
   const dynamicValidationIssues = resolvedWizard && draft
     ? validateDynamicDefinition(resolvedWizard, draft)
     : [];
@@ -531,10 +537,13 @@ export default function WizardPage() {
 
 
 
-  const requiredAnnexKeys = new Set(selectedVariantDefinition?.requiredAnnexKeys ?? []);
-  const selectedAnnexDefinitions = templateDefinition?.optionalClauses.filter(
-    (clause) => (requiredAnnexKeys.has(clause.key) || Boolean(clause.requiredWhen && evaluateCondition(clause.requiredWhen, draft?.fieldValues ?? {})) || draft?.selectedOptionalClauseKeys.includes(clause.key)) && clause.outputMode === "separate_annex",
-  ) ?? [];
+  const selectedAnnexDefinitions = templateDefinition?.optionalClauses.filter((clause) => {
+    if (!selectedVariantDefinition) return false;
+    return selectedVariantDefinition.allowedOptionalClauseKeys.includes(clause.key) &&
+      draft?.selectedOptionalClauseKeys.includes(clause.key) &&
+      clause.applicableVariantKeys.includes(selectedVariantDefinition.key) &&
+      clause.outputMode === "separate_annex";
+  }) ?? [];
 
 
   const renderSelectedAnnexCards = () => {
@@ -546,54 +555,20 @@ export default function WizardPage() {
           <div key={annex.key} className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-[11px] leading-6 text-emerald-950">
             <div className="flex items-center justify-between gap-3">
               <strong className="font-black">{annex.documentTitleAr ?? annex.nameAr}</strong>
-              <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black text-emerald-800">قالب فارغ</span>
+              <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black text-emerald-800">قالب فارغ للطباعة</span>
             </div>
-            <p className="mt-1 text-[10px] text-emerald-800">الملاحق لا تُملأ من بياناتك تلقائيًا. سيصدر هذا الملحق مع العقد كقالب فارغ جاهز للطباعة، ويُستكمل يدويًا بعد الطباعة.</p>
+            <p className="mt-1 text-[10px] text-emerald-800">يُضاف الملحق إلى ملف العقد كقالب فارغ للطباعة، ولا تُنقل إليه بيانات الـWizard؛ ويستكمله المستخدم يدويًا بملء جميع بياناته قبل اعتماده وتوقيعه.</p>
           </div>
         ))}
       </div>
     );
   };
 
-  const mobileCourtKey = contractSlug === "rental" || contractSlug === "apartment_sale" ? "" : draft?.variantKey === "visual_identity_design" ? "visual_competent_court" : draft?.variantKey === "website_development" ? "website_competent_court" : "social_competent_court";
-  // Translate known English field values to Arabic for preview display
-  const arabicValueMap: Record<string, string> = {
-    individual: "فرد",
-    company: "شركة / منشأة",
-    yes: "نعم",
-    no: "لا",
-    male: "ذكر",
-    female: "أنثى",
-    independent: "عداد مستقل",
-    shared: "عداد مشترك",
-    cash_full: "نقداً بالكامل",
-    bank_transfer: "تحويل بنكي",
-    down_payment_later: "دفعة مقدمة والباقي لاحقاً",
-    installments: "أقساط",
-    registered: "مسجل بالشهر العقاري",
-    unregistered: "غير مسجل",
-    seller: "البائع",
-    buyer: "المشتري",
-    split: "مناصفة",
-    zoom: "Zoom",
-    whatsapp: "واتساب",
-    monthly: "شهري",
-    quarterly: "ربع سنوي",
-    annual: "سنوي",
-    lump_sum: "دفعة واحدة",
-    egyptian: "مصري",
-    non_egyptian: "غير مصري",
-  };
-
   const mobilePreviewRows = activeSteps.flatMap((step) => step.fields).filter((item) => !["attachment", "repeater"].includes(item.type)).map((item) => {
     const raw = formData[item.key];
-    let value = typeof raw === "boolean" ? (raw ? "نعم" : "لا") : typeof raw === "string" || typeof raw === "number" ? String(raw) : "";
-    // Translate if the value is an English key
-    if (value && arabicValueMap[value]) value = arabicValueMap[value];
-    // Format ISO date (YYYY-MM-DD) to Arabic DD/MM/YYYY
-    if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) value = value.split("-").reverse().join("/");
+    const value = formatWizardFieldValue(item, raw, formData);
     return { label: item.labelAr, value };
-  }).filter((item) => item.value.trim() !== "");
+  }).filter((item) => item.value !== "—" && item.value.trim() !== "");
   const mobilePreviewControls = <>
     <div className="fixed bottom-5 right-4 z-40 xl:hidden">
       <button type="button" onClick={() => setIsMobilePreviewOpen(true)} className="inline-flex items-center gap-2 rounded-full border-2 border-[#986410] bg-[#00102e] px-5 py-3 text-xs font-black text-[#d9a84e] shadow-2xl"><FileText className="h-4 w-4"/>معاينة العقد</button>
@@ -710,14 +685,8 @@ export default function WizardPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold transition-colors ${
-              isSaving ? "text-amber-700" : "text-emerald-700"
-            }`}>
-              {isSaving ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-600" />
-              ) : (
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              )}
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+              <CheckCircle2 className="h-3.5 w-3.5" />
               {autoSaveStatus}
             </span>
             <span className="rounded-xl bg-[#00102e] px-3 py-1 text-xs font-black text-[#d9a84e]">
@@ -727,12 +696,18 @@ export default function WizardPage() {
         </div>
 
         {/* Steps Progress - Sleek and Compact */}
+        <div className="mb-2 flex items-center justify-between gap-3 text-[10px] font-black text-slate-500">
+          <span>مسار إعداد العقد</span>
+          <span aria-live="polite" className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[#00102e]">
+            الخطوة {currentStep} من {progressSteps.length}
+          </span>
+        </div>
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 hide-scrollbar">
           {progressSteps.map((s, i) => (
             <React.Fragment key={s.step}>
               <button
                 onClick={() => setCurrentStep(s.step)}
-                className={`flex shrink-0 items-center gap-2 px-3 py-2 rounded-xl text-center transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex max-w-[210px] shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-right transition-all cursor-pointer ${
                   currentStep === s.step
                     ? "bg-[#00102e] text-white shadow-sm"
                     : currentStep > s.step
@@ -743,7 +718,10 @@ export default function WizardPage() {
                 <span className={`text-[10px] font-black rounded-full w-5 h-5 shrink-0 flex items-center justify-center ${
                   currentStep === s.step ? "bg-[#986410] text-white" : currentStep > s.step ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-600"
                 }`}>{s.step}</span>
-                <span className="text-[11px] font-bold">{s.label}</span>
+                <span className="min-w-0 leading-tight">
+                  <span className="block text-[11px] font-bold">{s.label}</span>
+                  {s.articleRange && <span className="mt-0.5 block text-[8px] font-bold opacity-70">{s.articleRange}</span>}
+                </span>
               </button>
               {i < progressSteps.length - 1 && (
                 <div className={`h-0.5 flex-1 min-w-[8px] shrink-0 rounded-full ${currentStep > s.step ? "bg-emerald-400" : "bg-slate-200"}`} />
@@ -762,6 +740,10 @@ export default function WizardPage() {
                 step={activeStep}
                 fieldValues={formData}
                 onFieldChange={(fieldKey, value) => setStoredFieldValue(contractSlug, fieldKey, value)}
+                onFieldFocus={(fieldKey, labelAr) => {
+                  setPreviewTab("document");
+                  setActivePreviewField({ key: fieldKey, labelAr });
+                }}
               />
             )}
             {/* Rental fields are rendered directly from the reviewed template schema.
@@ -769,7 +751,7 @@ export default function WizardPage() {
 
             {/* REVIEW STEP */}
             {isReviewStep && (
-              <div className="rounded-2xl border border-[#986410]/30 bg-[#986410]/5 p-6 space-y-5">
+              <div className="space-y-4 rounded-2xl border border-[#986410]/30 bg-[#986410]/5 p-5">
                 <div className="flex items-center gap-3 border-b border-[#986410]/20 pb-3">
                   <ShieldCheck className="h-6 w-6 text-[#00102e]" />
                   <div>
@@ -777,26 +759,63 @@ export default function WizardPage() {
                     <p className="text-xs text-slate-600 mt-0.5">راجع بيانات العقد ثم اقرأ الإقرار وادفع</p>
                   </div>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-white p-4"><h4 className="text-xs font-black text-[#00102e]">اختر الملاحق المطلوبة</h4><p className="mt-1 text-[10px] leading-5 text-slate-500">يمكن اختيار أكثر من ملحق. يصدر الملحق كقالب فارغ مع العقد لتعبئته يدويًا بعد الطباعة.</p><div className="mt-3"><OptionalClauseSelector template={templateDefinition} variantKey={draft.variantKey!} selectedClauseKeys={draft.selectedOptionalClauseKeys} fieldValues={draft.fieldValues} onToggle={toggleOptionalClause} /></div></div>
+                <div className="rounded-xl border border-slate-200 bg-white p-3.5">
+                  <p className="text-[11px] font-semibold leading-5 text-slate-500">لا يوجد أي ملحق إجباري ولا يُضاف شيء تلقائيًا؛ اختر ما تحتاجه فقط، وسيُطبع كل اختيار كقالب فارغ مستقل.</p>
+                  <div className="mt-2.5"><OptionalClauseSelector compact template={templateDefinition} variantKey={draft.variantKey!} selectedClauseKeys={draft.selectedOptionalClauseKeys} fieldValues={draft.fieldValues} onToggle={toggleOptionalClause} /></div>
+                </div>
                 {selectedAnnexDefinitions.length > 0 && (
                   <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                    <div className="text-[10px] font-black text-emerald-800">الملاحق المختارة</div>
+                    <div className="text-[11px] font-black text-emerald-800">الملاحق المختارة</div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {selectedAnnexDefinitions.map((clause) => <span key={clause.key} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-emerald-800">{clause.nameAr}</span>)}
                     </div>
                   </div>
                 )}
-                <div className="space-y-2 text-xs">
-                  {requiredReviewItems.map(({ label, value }) => {
-                    const ok = !!String(value || "").trim();
-                    return (
-                    <div key={label} className={`flex items-center justify-between rounded-lg px-3 py-2 ${ok ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"}`}>
-                      <span className="text-slate-700">{label}</span>
-                      <span className={`font-bold ${ok ? "text-emerald-800" : "text-red-600"}`}>{ok ? value : "⚠ مطلوب"}</span>
+                <details open className="rounded-xl border border-slate-200 bg-white p-4 text-xs">
+                  <summary className="cursor-pointer font-black text-[#00102e]">
+                    البيانات الإجبارية — {requiredReviewItems.filter((item) => item.complete).length}/{requiredReviewItems.length} مكتملة
+                  </summary>
+                  <div className="mt-3 max-h-80 space-y-2 overflow-y-auto pl-1">
+                    {requiredReviewItems.map(({ key, label, value, complete }) => (
+                      <div key={key} className={`flex items-start justify-between gap-3 rounded-lg border px-3 py-2 ${complete ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
+                        <span className="text-slate-700">{label}</span>
+                        <span className={`max-w-[55%] text-left font-bold ${complete ? "text-emerald-800" : "text-red-600"}`}>{complete ? value : "⚠ مطلوب"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+
+                <details className="rounded-xl border border-slate-200 bg-white p-4 text-xs">
+                  <summary className="cursor-pointer font-black text-[#00102e]">
+                    البنود القانونية — {clauseReview.required.filter((item) => item.active).length}/{clauseReview.required.length} بندًا إجباريًا ظاهرًا
+                  </summary>
+                  <p className="mt-2 text-[11px] leading-5 text-slate-500">تظهر النصوص الكاملة في معاينة العقد. البنود الشرطية تُفعّل أو تُستبعد تلقائيًا وفق اختياراتك.</p>
+                  <div className="mt-3 max-h-80 space-y-1.5 overflow-y-auto pl-1">
+                    {clauseReview.required.map((clause) => (
+                      <div key={clause.key} className={`flex items-start justify-between gap-3 rounded-lg border px-3 py-2 ${clause.active ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"}`}>
+                        <span className="text-slate-700">{clause.title}</span>
+                        <span className={`shrink-0 text-[10.5px] font-bold ${clause.active ? "text-emerald-700" : "text-slate-500"}`}>
+                          {clause.active ? "مضاف للعقد" : clause.conditional ? "غير مفعّل حسب البيانات" : "غير ظاهر — يلزم مراجعة"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {clauseReview.optional.length > 0 && (
+                    <div className="mt-4 border-t border-slate-200 pt-3">
+                      <div className="mb-2 text-[11px] font-black text-[#00102e]">البنود والملاحق الاختيارية المتاحة</div>
+                      <div className="space-y-1.5">
+                        {clauseReview.optional.map((clause) => (
+                          <div key={clause.key} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2">
+                            <span>{clause.title}</span>
+                            <span className={`text-[10.5px] font-bold ${clause.selected ? "text-emerald-700" : "text-slate-500"}`}>
+                              {clause.selected ? "تم اختياره" : "غير مختار"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    );
-                  })}
-                </div>
+                  )}
+                </details>
 
                 {renderReviewLifecycleAndShare()}
 
@@ -870,15 +889,15 @@ export default function WizardPage() {
                     ملخص البيانات
                   </button>
                 </div>
-                <span className="rounded-full bg-[#986410]/20 px-2.5 py-0.5 text-[10px] font-bold text-[#d9a84e] border border-[#986410]/30 flex items-center gap-1">
-                  <Zap className="h-3 w-3 text-[#d9a84e]" />
-                  تحديث فوري
+                <span aria-live="polite" className="flex max-w-[50%] items-center gap-1 rounded-full border border-[#986410]/30 bg-[#986410]/20 px-2.5 py-0.5 text-[10px] font-bold leading-4 text-[#d9a84e]">
+                  {activePreviewField ? <MousePointer2 className="h-3 w-3 shrink-0" /> : <Zap className="h-3 w-3 shrink-0" />}
+                  <span className="truncate">{activePreviewField ? `يتحدّث الآن: ${activePreviewField.labelAr}` : "نفس مقاسات الطباعة — اضغط حقلًا لتحديد مكانه"}</span>
                 </span>
               </div>
 
               {/* Preview Content */}
               {previewTab === "document" ? (
-                <div className="p-3 sm:p-5 bg-slate-100/70 overflow-x-auto">
+                <div className="overflow-hidden bg-slate-100/70 p-3 sm:p-5">
                   <LegalDocumentSheet
                     serialNumber={displaySerial}
                     templateSlug={contractSlug}
@@ -887,6 +906,8 @@ export default function WizardPage() {
                     templateNameAr={contractTitle}
                     fieldValues={formData}
                     status="draft"
+                    activeFieldKey={activePreviewField?.key}
+                    activeFieldLabel={activePreviewField?.labelAr}
                   />
                 </div>
               ) : (

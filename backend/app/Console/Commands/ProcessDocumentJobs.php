@@ -168,8 +168,8 @@ final class ProcessDocumentJobs extends Command
         $prefix=match($variantKey){'visual_identity_design'=>'visual','website_development'=>'website','social_media_management'=>'social',default=>'website'};
         $second=match($variantKey){'visual_identity_design'=>'المصمم','website_development'=>'مقدم الخدمة / المطور','social_media_management'=>'مقدم الخدمة',default=>'مقدم الخدمة'};
         return[
-            ['label'=>'الطرف الأول – العميل','name'=>(string)($fields[$prefix.'_client_name']??'')],
-            ['label'=>'الطرف الثاني – '.$second,'name'=>(string)($fields[$prefix.'_provider_name']??'')],
+            ['label'=>'الطرف الأول – العميل','name'=>(string)($fields[$prefix.'_client_name']??''),'capacity'=>(string)(($fields[$prefix.'_client_party_type']??'individual')==='company'?($fields[$prefix.'_client_representative_capacity']??''):'العميل')],
+            ['label'=>'الطرف الثاني – '.$second,'name'=>(string)($fields[$prefix.'_provider_name']??''),'capacity'=>(string)(($fields[$prefix.'_provider_party_type']??'individual')==='company'?($fields[$prefix.'_provider_representative_capacity']??''):$second)],
         ];
     }
 
@@ -192,15 +192,8 @@ final class ProcessDocumentJobs extends Command
 
     private function effectiveOptionalKeys(array $definition,array $variant,array $selected,array $fields):array
     {
-        $keys=array_map('strval',$variant['requiredAnnexKeys']??[]);
-        $allowed=array_map('strval',$variant['allowedOptionalClauseKeys']??[]);
-        $variantKey=(string)($variant['key']??'');
-        foreach($definition['optionalClauses']??[] as$clause){
-            $key=(string)($clause['key']??'');
-            if($key===''||empty($clause['requiredWhen'])||!in_array($key,$allowed,true)||!in_array($variantKey,array_map('strval',$clause['applicableVariantKeys']??[]),true))continue;
-            if($this->evaluateCondition(is_array($clause['requiredWhen'])?$clause['requiredWhen']:null,$fields))$keys[]=$key;
-        }
-        return array_values(array_unique(array_merge($keys,array_map('strval',$selected))));
+        // Every annex is optional: only keys explicitly selected by the user are rendered.
+        return array_values(array_unique(array_map('strval',$selected)));
     }
 
     private function evaluateCondition(?array $condition,array $fields):bool
@@ -227,7 +220,11 @@ final class ProcessDocumentJobs extends Command
 
     private function displayOption(mixed $value,array $options):string
     {
-        $option=collect($options)->firstWhere('value',$value);return(string)($option['labelAr']??$value);
+        $option=collect($options)->firstWhere('value',$value);
+        if($option)return(string)$option['labelAr'];
+        $raw=(string)$value;
+        if($options&&preg_match('/^[a-z][a-z0-9_]*$/i',$raw)===1)return'قيمة غير معتمدة — يرجى إعادة الاختيار';
+        return$raw;
     }
 
     private function generate(string $key,string $html):array
@@ -236,6 +233,29 @@ final class ProcessDocumentJobs extends Command
     }
     private function persist(object $c,string $fileKey,string $type,?string $optional,string $title,string $storageKey,array $file):void{DB::statement("INSERT INTO contract_document_files(contract_id,contract_version_id,file_key,document_type,optional_clause_key,title_ar,storage_path,storage_driver,storage_key,sha256,file_size_bytes) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (contract_version_id,file_key) DO UPDATE SET document_type=EXCLUDED.document_type,optional_clause_key=EXCLUDED.optional_clause_key,title_ar=EXCLUDED.title_ar,storage_path=EXCLUDED.storage_path,storage_driver=EXCLUDED.storage_driver,storage_key=EXCLUDED.storage_key,sha256=EXCLUDED.sha256,file_size_bytes=EXCLUDED.file_size_bytes,updated_at=CURRENT_TIMESTAMP",[$c->contract_id,$c->contract_version_id,$fileKey,$type,$optional,$title,$file['path'],'local',$storageKey,$file['sha256'],$file['sizeBytes']]);}
     private function failJob(object $job,\Throwable $e):void{$message=mb_substr($e->getMessage()."\n".$e->getTraceAsString(),0,5000);$terminal=(int)$job->attempts>=5;$delay=min(30,2**max(1,(int)$job->attempts));DB::transaction(function()use($job,$message,$terminal,$delay){DB::statement("UPDATE document_jobs SET status=?,error_message=?,available_at=CURRENT_TIMESTAMP+(?::text || ' minutes')::interval WHERE id=?",[$terminal?'failed':'retry',$message,$delay,$job->id]);DB::statement('UPDATE contracts SET pdf_status=?,pdf_error_message=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',[$terminal?'failed':'queued',mb_substr($message,0,2000),$job->contract_id]);});}
-    private function display(mixed $value,array $field):string{if(is_bool($value))return$value?'نعم':'لا';if(is_array($value)){if(array_is_list($value)&&isset($field['options'])){$labels=[];foreach($value as$v){$o=collect($field['options'])->firstWhere('value',$v);$labels[]=$o['labelAr']??(string)$v;}return implode('، ',$labels);}return collect($value)->map(function($row,$i){if(!is_array($row))return(string)$row;return($i+1).') '.implode(' | ',array_map(fn($k,$v)=>$k.': '.$v,array_keys($row),$row));})->implode("\n");}$option=collect($field['options']??[])->firstWhere('value',$value);return(string)($option['labelAr']??$value);}
+    private function display(mixed $value,array $field):string
+    {
+        if(is_bool($value))return$value?'نعم':'لا';
+        if(is_array($value)){
+            if(array_is_list($value)&&isset($field['options'])){
+                $labels=[];
+                foreach($value as$v){
+                    $o=collect($field['options'])->firstWhere('value',$v);$raw=(string)$v;
+                    $labels[]=$o['labelAr']??(preg_match('/^[a-z][a-z0-9_]*$/i',$raw)===1?'قيمة غير معتمدة — يرجى إعادة الاختيار':$raw);
+                }
+                return implode('، ',$labels);
+            }
+            return collect($value)->map(function($row,$i){
+                if(!is_array($row))return(string)$row;
+                return($i+1).') '.implode(' | ',array_map(fn($k,$v)=>$k.': '.$v,array_keys($row),$row));
+            })->implode("\n");
+        }
+        $option=collect($field['options']??[])->firstWhere('value',$value);
+        if($option)return(string)$option['labelAr'];
+        $raw=(string)$value;
+        if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$raw)===1)return substr($raw,8,2).'/'.substr($raw,5,2).'/'.substr($raw,0,4);
+        if(!empty($field['options'])&&preg_match('/^[a-z][a-z0-9_]*$/i',$raw)===1)return'قيمة غير معتمدة — يرجى إعادة الاختيار';
+        return$raw;
+    }
     private function json(mixed $v):array{if(is_array($v))return$v;if(is_object($v))return(array)$v;if(is_string($v))return json_decode($v,true)?:[];return[];}private function list(mixed $v):array{return array_values($this->json($v));}private function empty(mixed$v):bool{return$v===null||$v===''||(is_array($v)&&!count($v));}private function safe(string$v):string{return trim(preg_replace('/[^A-Za-z0-9._-]+/','-',$v),'-')?:'document';}
 }

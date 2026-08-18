@@ -8,7 +8,7 @@ export interface CompressedResult {
 }
 
 /**
- * Automatically compresses image files (Vodafone Cash receipts, legal consultation case attachments)
+ * Automatically compresses image files (Vodafone Cash receipts, contract review attachments)
  * before uploading to the server to save bandwidth and ensure fast uploads.
  */
 export async function compressUploadFile(file: File): Promise<CompressedResult> {

@@ -21,17 +21,23 @@ def has_atomic(condition,field_key,operator=None,value_marker=None,check_value=F
     return False
 
 d=json.loads(txt('backend/database/template-definitions/freelancer.json'))
+check('freelancer_version_10',d.get('version')==10)
 website=next((v for v in d.get('variants',[]) if v.get('key')=='website_development'),None)
 check('website_variant_exists',website is not None)
 steps=website.get('steps',[]) if website else []
 fields={f.get('key'):f for s in steps for f in s.get('fields',[])}
+field_keys=[f.get('key') for s in steps for f in s.get('fields',[]) if f.get('key')]
+check('website_step_count_complete',len(steps)==9,str(len(steps)))
+check('website_steps_mapped_to_contract',all(str(s.get('articleRange','')).strip() for s in steps))
+check('website_no_duplicate_wizard_fields',len(field_keys)==len(set(field_keys)))
+check('website_court_penultimate',bool(steps) and steps[-2].get('key')=='website_jurisdiction')
 
 # Core main-form fields from the source.
 for key in ['contract_date','website_project_name','website_project_type','website_contact_email','website_project_manager','website_approval_person','website_billing_contact','website_execution_duration_value','website_execution_duration_unit','website_duration_basis','website_total_price','website_total_price_words','website_warranty_duration_value','website_warranty_duration_unit','website_confidentiality_years']:
     check(f'required_{key}',fields.get(key,{}).get('required') is True,key)
 check('old_duration_field_removed','website_execution_duration' not in fields)
 check('old_currency_field_removed','website_payment_currency' not in fields)
-check('price_is_actual_contract_value','سعر شراء' in fields.get('website_total_price',{}).get('helpText',''))
+check('price_guidance_is_contract_value','إجمالي المقابل المالي المتفق عليه' in fields.get('website_total_price',{}).get('helpText','') and 'سعر شراء' not in fields.get('website_total_price',{}).get('helpText',''))
 check('price_words_present','website_total_price_words' in fields)
 check('warranty_duration_dynamic',all(k in fields for k in ['website_warranty_duration_value','website_warranty_duration_unit']))
 check('confidentiality_default_three',website.get('defaultFieldValues',{}).get('website_confidentiality_years')==3)
@@ -41,10 +47,10 @@ check('main_project_type_exact_source',[o.get('labelAr') for o in fields.get('we
 other=fields.get('website_project_type_other',{})
 check('project_type_other_conditional',other.get('visibleWhen',{}).get('value')=='other' and other.get('requiredWhen',{}).get('value')=='other')
 
-# Court exactly matches source; source allows no selection.
-expected_courts=['شمال القاهرة','جنوب القاهرة','القاهرة الجديدة','شمال الجيزة','جنوب الجيزة','الإسكندرية','طنطا','دمنهور','كفر الشيخ','المنصورة','الزقازيق','بنها','شبين الكوم','بورسعيد','الإسماعيلية','السويس','دمياط','المنيا','بني سويف','الفيوم','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مرسى مطروح','شمال سيناء','جنوب سيناء','أخرى']
+# Court is mandatory and uses the shared reviewed list.
+expected_courts=['القاهرة','شمال القاهرة','جنوب القاهرة','القاهرة الجديدة','شمال الجيزة','جنوب الجيزة','الإسكندرية','طنطا','دمنهور','كفر الشيخ','المنصورة','الزقازيق','بنها','شبين الكوم','بورسعيد','الإسماعيلية','السويس','دمياط','المنيا','بني سويف','الفيوم','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','شمال سيناء','جنوب سيناء','مرسى مطروح','أخرى']
 court=fields.get('website_competent_court',{})
-check('court_optional',court.get('required') is not True)
+check('court_required',court.get('required') is True)
 check('court_exact_source_options',[o.get('value') for o in court.get('options',[])]==expected_courts)
 check('court_other_conditional',fields.get('website_competent_court_other',{}).get('requiredWhen',{}).get('value')=='أخرى')
 
@@ -121,6 +127,8 @@ minimum_steps={'website_scope_annex':8,'website_technical_annex':11,'website_pro
 for key,min_steps in minimum_steps.items():
     a=annexes.get(key,{})
     check(f'{key}_manual_blank',a.get('manualFillAnnex') is True and a.get('outputMode')=='separate_annex')
+    check(f'{key}_never_mandatory','requiredWhen' not in a)
+    check(f'{key}_explicit_selection_only','اختياري بالكامل' in a.get('description','') and 'لا يُضاف تلقائيًا' in a.get('description',''))
     check(f'{key}_step_depth',len(a.get('insertedSteps',[]))>=min_steps,str(len(a.get('insertedSteps',[]))))
     legal=[clauses.get(k,{}) for k in a.get('legalClauseKeys',[])]
     check(f'{key}_no_raw_placeholder',all('البيان المثبت بجدول بيانات العقد أو الملحق' not in c.get('bodyAr','') for c in legal))
@@ -142,6 +150,7 @@ check('ts_no_partial_source_delivery_field','website_ts_source_partial' not in t
 
 # Project Data and DAR core tables.
 pd={f.get('key'):f for s in annexes.get('website_project_data_annex',{}).get('insertedSteps',[]) for f in s.get('fields',[])}
+check('project_data_contact_blank_rows',pd.get('website_pd_contact',{}).get('blankRows')==9 and all(label in pd.get('website_pd_contact',{}).get('blankRowLabels',[]) for label in ['مسؤول المشروع لدى الطرف الأول','الشخص المسؤول عن الاعتماد','الشخص المسؤول عن الفواتير أو المدفوعات']))
 check('project_data_files_17_rows',len(pd.get('website_pd_files',{}).get('blankRowLabels',[]))==17)
 check('project_data_content_9_rows',len(pd.get('website_pd_content',{}).get('blankRowLabels',[]))==9)
 dar={f.get('key'):f for s in annexes.get('website_delivery_annex',{}).get('insertedSteps',[]) for f in s.get('fields',[])}
@@ -160,10 +169,16 @@ for k in ['website_future_request_description','website_future_study_fee','websi
     check(f'future_{k}_present',k in future)
 check('future_offer_validity_label_max_30','30' in future.get('website_future_offer_validity_days',{}).get('labelAr',''))
 
-# Website contract consistency decisions.
+# Website contract consistency decisions: all six annexes are optional.
 core_annexes=['website_scope_annex','website_technical_annex','website_project_data_annex','website_delivery_annex']
-check('four_core_annexes_mandatory',website.get('requiredAnnexKeys')==core_annexes)
-check('sla_and_future_remain_optional',all(k not in website.get('requiredAnnexKeys',[]) for k in ['website_sla_annex','website_future_development_annex']))
+all_website_annexes=core_annexes+['website_sla_annex','website_future_development_annex']
+check('website_has_no_required_annex_keys','requiredAnnexKeys' not in website)
+check('all_six_annexes_user_selectable',website.get('allowedOptionalClauseKeys')==all_website_annexes)
+check('all_six_annexes_never_mandatory',all('requiredWhen' not in annexes.get(k,{}) for k in all_website_annexes))
+article5=clauses.get('website_development_source_section_06',{})
+check('article_5_is_optional_annexes',article5.get('titleAr')=='المادة الخامسة: الملاحق الاختيارية')
+check('article_5_forbids_auto_add','جميع ملاحق هذا العقد اختيارية بالكامل' in article5.get('bodyAr','') and 'لا يُضاف أي ملحق تلقائيًا' in article5.get('bodyAr',''))
+check('article_5_no_old_mandatory_wording','الملاحق الأساسية' not in article5.get('bodyAr',''))
 article12=clauses.get('website_development_source_section_12',{}).get('bodyAr','')
 check('no_nonexistent_acceptance_criteria_annex','ملحق معايير القبول' not in article12 and 'Acceptance Criteria' not in article12)
 check('acceptance_grounded_in_existing_annexes',all(x in article12 for x in ['ملحق نطاق العمل (SOW)','ملحق المواصفات الفنية (TS)','محضر التسليم والاعتماد النهائي (DAR)']))
@@ -176,22 +191,32 @@ check('portfolio_rules_consistent','ما لم يتفق الطرفان كتابة
 engine=txt('packages/template-engine/src/resolver.ts'); php_engine=txt('backend/app/Services/TemplateEngineService.php')
 front=txt('frontend/src/features/contracts/wizard/DynamicFieldRenderer.tsx'); dash=txt('dashboard/src/features/contracts/components/DynamicFieldRenderer.tsx')
 proc=txt('backend/app/Console/Commands/ProcessDocumentJobs.php'); blade=txt('backend/resources/views/pdf/contract.blade.php')
+sheet=txt('frontend/src/components/contract/LegalDocumentSheet.tsx')
 check('ts_required_when_runtime','field.requiredWhen && evaluateCondition(field.requiredWhen' in engine)
 check('php_required_when_runtime',"isset($field['requiredWhen'])" in php_engine)
-check('ts_required_annex_runtime','variant.requiredAnnexKeys' in engine)
-check('php_required_annex_runtime',"$variant['requiredAnnexKeys']" in php_engine)
+check('ts_annexes_explicit_only','variant.requiredAnnexKeys' not in engine and 'new Set(selectedOptionalClauseKeys)' in engine)
+check('php_annexes_explicit_only',"$variant['requiredAnnexKeys']" not in php_engine and 'Every annex is optional' in php_engine and "array_map('strval',$selected)" in php_engine)
 check('composite_conditions_both_runtimes','"all" in condition' in engine and "isset($condition['all'])" in php_engine)
 check('frontend_required_orange','#c66b22' in front)
 check('dashboard_required_orange','#c66b22' in dash)
 check('website_full_signature_layout','identitySignatureLayout' in proc and "'website_development'" in proc)
 check('website_witness_pdf_support',"'website_development'=>'website'" in proc)
-check('manual_annex_metadata','قالب فارغ للتعبئة اليدوية' in blade and 'لا تُنقل إليه بيانات المستخدم تلقائيًا' in blade)
+check('website_project_contacts_visible_in_live_preview',all(x in sheet for x in ['مسؤول المشروع لدى الطرف الأول:','البريد المعتمد للتواصل:','الشخص المسؤول عن الاعتماد:','الشخص المسؤول عن الفواتير أو المدفوعات:']))
+check('website_annex_stays_blank','annexTargetTracksField' not in sheet and 'annexAutofillValue' not in sheet and 'قالب فارغ للطباعة والتعبئة اليدوية' in sheet)
+check('manual_annex_metadata_blank','قالب فارغ للتعبئة اليدوية' in blade and 'لم تُنقل إليه أي بيانات من العقد أو الـWizard' in blade)
 selector=txt('frontend/src/features/contracts/wizard/OptionalClauseSelector.tsx')
-check('mandatory_annex_ui_locked','أساسي — مضاف تلقائيًا' in selector and 'disabled={required}' in selector)
-check('pdf_worker_forces_required_annexes',"$variant['requiredAnnexKeys']" in proc and 'array_unique(array_merge' in proc)
+check('annex_ui_all_optional','جميع الملاحق اختيارية بالكامل' in selector and 'disabled={required}' not in selector and 'أساسي — مضاف تلقائيًا' not in selector)
+check('pdf_worker_renders_selected_only',"$variant['requiredAnnexKeys']" not in proc and 'Every annex is optional' in proc and "array_map('strval',$selected)" in proc)
 v5migration=txt('backend/database/migrations/2026_08_12_000100_publish_freelancer_website_v5.php')
 v4migration=txt('backend/database/migrations/2026_08_11_001000_publish_freelancer_visual_identity_v4.php')
 check('v5_publication_migration',"version_number', 5" in v5migration and 'different immutable definition' in v5migration)
+v8migration=txt('backend/database/migrations/2026_08_18_000200_publish_freelancer_preview_guidance_v8.php')
+check('v8_publication_migration',"version_number', 8" in v8migration and 'different immutable definition' in v8migration)
+v9migration=txt('backend/database/migrations/2026_08_18_000400_publish_blank_annex_template_versions.php')
+check('v9_publication_migration',"'slug' => 'freelancer'" in v9migration and "'version' => 9" in v9migration and 'different immutable definition' in v9migration)
+v10migration=txt('backend/database/migrations/2026_08_18_000500_publish_optional_annex_template_versions.php')
+check('v10_publication_migration',"'slug' => 'freelancer'" in v10migration and "'version' => 10" in v10migration and 'different immutable definition' in v10migration)
+check('v10_all_annexes_optional_summary','جميع ملاحق عقود العمل الحر اختيارية بالكامل' in v10migration)
 check('fresh_install_v4_migration_skips_newer_canonical',"> 4" in v4migration and 'return;' in v4migration)
 
 failed=[name for name,ok,_ in checks if not ok]

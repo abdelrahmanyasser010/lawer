@@ -55,7 +55,7 @@ final class ConsultationScheduleController extends Controller
             ]);
             $this->audit->write($request,'consultation.schedule_updated','consultation_schedule','weekly',null,['windowsCount'=>count($data['windows']),'updatedBy'=>$auth['id']??null]);
         });
-        return $this->ok($request,['updated'=>count($data['windows'])],'تم حفظ جدول مواعيد الاستشارات');
+        return $this->ok($request,['updated'=>count($data['windows'])],'تم حفظ جدول مواعيد مراجعة العقود');
     }
 
     public function addException(Request $request)

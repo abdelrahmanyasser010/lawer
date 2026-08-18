@@ -70,16 +70,19 @@ export default function MobileWizardPreview({
 
         <div className="mt-4">
           {activeTab === "document" ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2 sm:p-4">
-              <LegalDocumentSheet
-                serialNumber={serial}
-                templateSlug={contractSlug}
-                variantKey={variantKey}
-                selectedOptionalClauseKeys={selectedOptionalClauseKeys}
-                templateNameAr={title}
-                fieldValues={fieldValues}
-                status="draft"
-              />
+            <div>
+              <p className="mb-2 text-center text-[10.5px] font-bold text-slate-500">نفس مقاسات وخطوط ملف الطباعة؛ تُصغّر ورقة A4 كاملة لتناسب الشاشة.</p>
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 sm:p-4">
+                <LegalDocumentSheet
+                  serialNumber={serial}
+                  templateSlug={contractSlug}
+                  variantKey={variantKey}
+                  selectedOptionalClauseKeys={selectedOptionalClauseKeys}
+                  templateNameAr={title}
+                  fieldValues={fieldValues}
+                  status="draft"
+                />
+              </div>
             </div>
           ) : (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-xs leading-7 text-slate-700">

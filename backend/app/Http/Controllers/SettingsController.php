@@ -10,9 +10,9 @@ final class SettingsController extends Controller
 {
     use ApiResponse;
     private const EDITABLE = [
-        'office.display_name','office.support_email','office.address','office.whatsapp_number','office.consultation_whatsapp_number','office.support_whatsapp_number','office.support_phone','payments.vodafone_cash_number',
-        'contracts.self_service_edit_hours','services.contract_review.deposit_egp',
-        'services.consultation.fee_egp','services.consultation.deposit_egp','services.contract_drafting.deposit_egp','customer_portal.communication_channels',
+        'office.display_name','office.support_email','office.address','office.whatsapp_number','office.review_whatsapp_number','office.support_whatsapp_number','office.support_phone','payments.vodafone_cash_number',
+        'contracts.self_service_edit_hours','services.contract_review.fee_egp','services.contract_review.deposit_egp',
+        'services.contract_drafting.deposit_egp','customer_portal.communication_channels',
         'notifications.whatsapp_mode','notifications.web_push_enabled',
     ];
     public function __construct(private AuditService $audit) {}
@@ -43,9 +43,9 @@ final class SettingsController extends Controller
     private function validateValue(string $key,mixed $value): mixed
     {
         return match($key){
-            'office.display_name'=>$this->text($value,2,120),'office.support_email'=>$this->email($value),'office.address'=>$this->text($value,0,500),'office.whatsapp_number','office.consultation_whatsapp_number','office.support_whatsapp_number','office.support_phone','payments.vodafone_cash_number'=>$this->text($value,0,30),
+            'office.display_name'=>$this->text($value,2,120),'office.support_email'=>$this->email($value),'office.address'=>$this->text($value,0,500),'office.whatsapp_number','office.review_whatsapp_number','office.support_whatsapp_number','office.support_phone','payments.vodafone_cash_number'=>$this->text($value,0,30),
             'contracts.self_service_edit_hours'=>$this->number($value,1,168),
-            'services.contract_review.deposit_egp','services.consultation.fee_egp','services.contract_drafting.deposit_egp'=>$this->number($value,0,100000),
+            'services.contract_review.fee_egp','services.contract_review.deposit_egp','services.contract_drafting.deposit_egp'=>$this->number($value,0,100000),
             'customer_portal.communication_channels'=>$this->channels($value),'notifications.whatsapp_mode'=>$this->choice($value,['manual_wa_me','disabled']),
             'notifications.web_push_enabled'=>$value===false?false:throw new ApiException(400,'Web Push غير مفعل في إصدار MVP الحالي'),
             default=>throw new ApiException(400,'الإعداد غير مدعوم')};

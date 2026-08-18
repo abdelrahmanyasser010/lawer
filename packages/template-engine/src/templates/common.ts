@@ -19,6 +19,7 @@ export const competentCourtOptions: FieldOptionDefinition[] = [
   { value: "الإسماعيلية", labelAr: "الإسماعيلية" },
   { value: "السويس", labelAr: "السويس" },
   { value: "دمياط", labelAr: "دمياط" },
+  { value: "المنيا", labelAr: "المنيا" },
   { value: "بني سويف", labelAr: "بني سويف" },
   { value: "الفيوم", labelAr: "الفيوم" },
   { value: "أسيوط", labelAr: "أسيوط" },
@@ -46,4 +47,5 @@ export const competentCourtField = (key: string): WizardFieldDefinition => ({
   labelAr: "المحكمة المختصة",
   required: true,
   options: competentCourtOptions,
+  helpText: "اختر المحكمة المتفق عليها بين الطرفين، مع مراعاة قواعد الاختصاص القضائي الآمرة.",
 });

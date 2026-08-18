@@ -119,12 +119,12 @@ export default function RequestsPage() {
                 <Image src="/images/empty_requests.jpg" alt="No requests" width={100} height={100} className="opacity-80 mix-blend-multiply" />
               </div>
               <p className="text-base font-black text-[#00102e]">لا توجد طلبات في هذا القسم.</p>
-              <p className="mt-2 text-sm text-slate-500">يمكنك طلب مراجعة عقد جديد أو استشارة من القائمة العلوية.</p>
+              <p className="mt-2 text-sm text-slate-500">يمكنك طلب مراجعة عقد جديد أو متابعة طلبات إعداد العقود من هذه الصفحة.</p>
             </div>
           ) : (
             <div className="space-y-4">
               {filtered.map((item) => {
-                const Icon = item.requestType === "consultation" || item.requestType === "contract_review" ? Scale : FileText;
+                const Icon = item.requestType === "contract_review" ? Scale : FileText;
                 const nextAction = getRequestNextAction(item.status);
                 const statusConfig = statusStyles[item.status] || { bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-200" };
 

@@ -47,6 +47,12 @@ function RequestDetailsContent() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [receiptConfirmOpen, setReceiptConfirmOpen] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
+  const [rebookOpen, setRebookOpen] = useState(false);
+  const [rebookChannel, setRebookChannel] = useState<"whatsapp" | "zoom">("whatsapp");
+  const [rebookDays, setRebookDays] = useState<Array<{ date: string; label: string; slots: Array<{ slotKey: string; start: string; end: string; label: string; remaining: number; limited?: boolean }> }>>([]);
+  const [rebookDate, setRebookDate] = useState("");
+  const [rebookSlotKey, setRebookSlotKey] = useState("");
+  const [rebookLoading, setRebookLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,7 +74,11 @@ function RequestDetailsContent() {
   useEffect(() => { const timer=window.setInterval(()=>setClockNow(Date.now()),1000); return()=>window.clearInterval(timer); }, []);
   useEffect(() => {
     if (searchParams.get("payment") !== "retry" || !item) return;
-    const canRetry = item.status === "awaiting_payment" && !["pending_verification", "approved"].includes(item.paymentStatus || "");
+    const bookingExpired = item.requestType === "contract_review"
+      && (item.bookingStatus === "expired" || (item.bookingExpiresAt ? new Date(item.bookingExpiresAt).getTime() <= Date.now() : false));
+    const canRetry = item.status === "awaiting_payment"
+      && !bookingExpired
+      && !["pending_verification", "approved"].includes(item.paymentStatus || "");
     if (canRetry) setPaymentOpen(true);
     router.replace(`/requests/${params.id}`, { scroll: false });
   }, [item, params.id, router, searchParams]);
@@ -147,42 +157,136 @@ function RequestDetailsContent() {
     }
   }
 
+  async function loadRebookAvailability(channel: "whatsapp" | "zoom") {
+    setRebookLoading(true);
+    setError("");
+    setRebookDate("");
+    setRebookSlotKey("");
+    try {
+      const result = await apiRequest<{ days: Array<{ date: string; label: string; slots: Array<{ slotKey: string; start: string; end: string; label: string; remaining: number; limited?: boolean }> }> }>(
+        `/api/v1/review-availability?channel=${encodeURIComponent(channel)}`,
+      );
+      setRebookDays(result.days || []);
+    } catch (caught) {
+      setRebookDays([]);
+      setError(caught instanceof Error ? caught.message : "تعذر تحميل المواعيد المتاحة.");
+    } finally {
+      setRebookLoading(false);
+    }
+  }
+
+  async function openRebook() {
+    const channel = item?.communicationChannel === "zoom" ? "zoom" : "whatsapp";
+    setRebookChannel(channel);
+    setRebookOpen(true);
+    await loadRebookAvailability(channel);
+  }
+
+  async function changeRebookChannel(channel: "whatsapp" | "zoom") {
+    setRebookChannel(channel);
+    await loadRebookAvailability(channel);
+  }
+
+  async function submitRebook() {
+    if (!rebookSlotKey) {
+      setError("اختر موعدًا متاحًا جديدًا أولًا.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await apiRequest(`/api/v1/service-requests/${params.id}/rebook`, {
+        method: "POST",
+        body: JSON.stringify({
+          communicationChannel: rebookChannel,
+          availabilitySlotKey: rebookSlotKey,
+        }),
+      });
+      setRebookOpen(false);
+      setNotice("تم حفظ الموعد الجديد مؤقتًا. ارفع إثبات الدفع قبل انتهاء المهلة.");
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "تعذر حفظ الموعد الجديد.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading) return <div className="flex min-h-screen items-center justify-center bg-[#f8fafc]"><Loader2 className="h-8 w-8 animate-spin text-[#986410]" /></div>;
   if (!item) return <div className="p-10 text-center font-bold text-red-700">{error || "الطلب غير موجود"}</div>;
 
   const ContactIcon = item.communicationChannel === "zoom" ? Video : MessageCircle;
-  const contactWhatsapp = item.requestType === "consultation"
-    ? catalog.office.consultationWhatsappNumber
+  const contactWhatsapp = item.requestType === "contract_review"
+    ? catalog.office.reviewWhatsappNumber || catalog.office.supportWhatsappNumber || catalog.office.whatsappNumber
     : catalog.office.supportWhatsappNumber || catalog.office.whatsappNumber;
   const whatsappDigits = contactWhatsapp.replace(/\D/g, "").replace(/^0/, "20");
   const whatsappUrl = whatsappDigits
     ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(`مرحبًا، أتابع الطلب ${item.serialNumber}`)}`
     : "";
-  const fallbackServicePrice = item.requestType === "consultation"
-    ? catalog.services.consultationFeeEgp
-    : item.requestType === "contract_review"
-      ? catalog.services.contractReviewDepositEgp
-      : catalog.services.contractDraftingDepositEgp;
+  const serviceCopy = item.requestType === "contract_drafting"
+    ? {
+        attachmentsSubtitle: "المستندات المرجعية والبيانات التي أرفقتها لإعداد العقد.",
+        primaryAttachmentBadge: null,
+        uploadLabel: "إضافة مستندات مرجعية",
+        deliverablesTitle: "مخرجات إعداد العقد",
+        deliverablesSubtitle: "مسودات العقد والنسخ التي ينشرها المختص للمراجعة.",
+        deliverablesEmpty: "ستظهر هنا مسودة العقد أو النسخة المعدلة عند نشرها.",
+        confirmTitle: "تأكيد استلام العقد",
+        confirmMessage: "هل تؤكد أنك راجعت النسخة المتاحة ولا تحتاج إلى تعديلات أخرى؟ سيؤدي التأكيد إلى إنهاء الطلب الحالي.",
+        paymentTitle: "دفعات إعداد العقد",
+        workNoun: "إعداد العقد",
+      }
+    : {
+        attachmentsSubtitle: "العقد الأساسي وأي مستندات داعمة للمراجعة.",
+        primaryAttachmentBadge: "العقد الأساسي",
+        uploadLabel: "إضافة مستندات داعمة",
+        deliverablesTitle: "مخرجات مراجعة العقد",
+        deliverablesSubtitle: "تقرير المراجعة أو النسخة المعدلة من قبل المختص.",
+        deliverablesEmpty: "سيظهر تقرير المراجعة أو النسخة المعدلة هنا بعد اكتمال العمل.",
+        confirmTitle: "تأكيد استلام المراجعة",
+        confirmMessage: "هل تؤكد أنك راجعت تقرير ونسخة المراجعة ولا تحتاج إلى تعديلات أخرى؟ سيؤدي التأكيد إلى إنهاء الطلب الحالي.",
+        paymentTitle: "دفعات مراجعة العقد",
+        workNoun: "مراجعة العقد",
+      };
+  const fallbackServicePrice = item.requestType === "contract_review"
+    ? catalog.services.contractReviewDepositEgp
+    : catalog.services.contractDraftingDepositEgp;
   const paymentDue = item.status === "awaiting_payment"
     ? Number(item.expectedPaymentEgp ?? item.paymentAmountEgp ?? fallbackServicePrice)
     : 0;
   const approvedPaid = Number(item.approvedPaidEgp ?? (item.paymentStatus === "approved" ? item.paymentAmountEgp ?? 0 : 0));
-  const outstanding = Number(item.outstandingEgp ?? item.lawyerRemainingEgp ?? 0);
+  const outstanding = Number(item.outstandingEgp ?? item.serviceRemainingEgp ?? item.lawyerRemainingEgp ?? 0);
+  const supportsBooking = item.requestType === "contract_review";
+  const bookingSeconds = item.bookingExpiresAt ? Math.max(0, Math.floor((new Date(item.bookingExpiresAt).getTime() - clockNow) / 1000)) : null;
+  const bookingCountdown = bookingSeconds === null ? null : `${Math.floor(bookingSeconds / 60)}:${String(bookingSeconds % 60).padStart(2, "0")}`;
+  const bookingExpired = supportsBooking
+    && item.status === "awaiting_payment"
+    && item.paymentStage !== "balance"
+    && (item.bookingStatus === "expired" || bookingSeconds === 0);
   const canSubmitPayment = item.status === "awaiting_payment"
     && paymentDue > 0
+    && !bookingExpired
     && !["pending_verification"].includes(item.paymentStatus || "");
-  const isContractReviewRequest = item.requestType === "contract_review";
-  const paymentPanelTitle = isContractReviewRequest ? "الدفع المطلوب" : "الدفع والعربون";
+  const paymentPanelTitle = serviceCopy.paymentTitle;
   const communicationIsFollowUpOnly = item.status === "awaiting_payment" && item.paymentStatus !== "approved";
-  const bookingSeconds = item.bookingExpiresAt ? Math.max(0, Math.floor((new Date(item.bookingExpiresAt).getTime()-clockNow)/1000)) : null;
-  const bookingCountdown = bookingSeconds === null ? null : `${Math.floor(bookingSeconds/60)}:${String(bookingSeconds%60).padStart(2,"0")}`;
 
   function getDetailedNextStep() {
-    if (item?.status === "awaiting_payment") {
+    if (item.status === "awaiting_payment") {
+      if (bookingExpired) {
+        return {
+          title: "انتهت مهلة حفظ الموعد",
+          description: `اختر موعدًا جديدًا قبل رفع إثبات الدفع حتى يظل ${serviceCopy.workNoun} مرتبطًا بموعد صالح.`,
+          actionText: "اختيار موعد جديد",
+          actionType: "rebook",
+          bg: "bg-red-50 border-red-200 text-red-950",
+          badge: "bg-red-600 text-white",
+        };
+      }
       if (item.paymentStatus === "pending_verification") {
         return {
           title: "جاري مراجعة إيصال الدفع",
-          description: "تم استلام إثبات الدفع بنجاح ويجري تدقيقه بواسطة الإدارة. تبدأ المراجعة بعد اعتماد الدفع، ولا يلزم إجراء منك الآن.",
+          description: `تم استلام إثبات الدفع ويجري تدقيقه بواسطة الإدارة. يبدأ ${serviceCopy.workNoun} بعد اعتماد الدفعة، ولا يلزم إجراء منك الآن.`,
           actionText: null,
           actionType: null,
           bg: "bg-blue-50 border-blue-200 text-blue-950",
@@ -190,57 +294,69 @@ function RequestDetailsContent() {
         };
       }
       return {
-        title: "ارفع إثبات الدفع لتأكيد الطلب وبدء المراجعة",
-        description: `يرجى سداد المبلغ المطلوب (${paymentDue.toLocaleString("ar-EG")} ج.م) ورفع إيصال التحويل. بعد اعتماد الدفع يبدأ المختص دراسة الطلب ومتابعته.`,
+        title: item.paymentStage === "balance" ? "المتبقي مطلوب قبل التسليم النهائي" : "ارفع إثبات الدفع لتأكيد الطلب",
+        description: `يرجى سداد المبلغ المطلوب (${paymentDue.toLocaleString("ar-EG")} ج.م) ورفع إيصال التحويل. بعد اعتماد الدفعة يستكمل المكتب ${serviceCopy.workNoun}.`,
         actionText: "رفع إثبات الدفع",
         actionType: "payment",
         bg: "bg-amber-50/90 border-amber-200 text-amber-950",
         badge: "bg-amber-600 text-white",
       };
     }
-    if (item?.status === "awaiting_client_info") {
+    if (item.status === "awaiting_client_info") {
       return {
-        title: "مطلوب رفع مستندات أو بيانات إضافية",
-        description: "يحتاج المحامي إلى بعض البيانات أو المستندات المساعدة لاستكمال فحص وتدقيق العقد.",
-        actionText: "إضافة مستندات داعمة",
+        title: "مطلوب مستندات أو بيانات إضافية",
+        description: `يحتاج المختص إلى معلومات إضافية لاستكمال ${serviceCopy.workNoun}.`,
+        actionText: serviceCopy.uploadLabel,
         actionType: "upload",
         bg: "bg-rose-50/90 border-rose-200 text-rose-950",
         badge: "bg-rose-600 text-white",
       };
     }
-    if (item?.status === "meeting_scheduled") {
+    if (item.status === "meeting_scheduled") {
       return {
         title: "الموعد محدد ومؤكد في جدول المكتب",
-        description: `تم تثبيت موعد الجلسة الاستشارية لمناقشة تقرير المراجعة عبر ${communicationLabels[item.communicationChannel || "whatsapp"]}.`,
+        description: `تم تثبيت موعد مناقشة مراجعة العقد عبر ${communicationLabels[item.communicationChannel || "whatsapp"]}.`,
         actionText: item.communicationChannel === "whatsapp" ? "فتح WhatsApp للمتابعة" : item.communicationChannel === "zoom" ? "فتح Zoom" : null,
         actionType: "contact",
         bg: "bg-emerald-50/90 border-emerald-200 text-emerald-950",
         badge: "bg-emerald-600 text-white",
       };
     }
-    if (item?.status === "client_review") {
+    if (item.status === "client_review") {
       return {
-        title: "تقرير المراجعة جاهز للاطلاع والمراجعة",
-        description: "أنهى المحامي المختص مراجعة العقد وأودع تقرير الفحص؛ يمكنك الاطلاع على النتيجة وتأكيد الاستلام أو طلب تعديلات.",
-        actionText: "الاطلاع على النتيجة",
+        title: item.requestType === "contract_review" ? "نتيجة مراجعة العقد جاهزة" : "مسودة العقد جاهزة لمراجعتك",
+        description: item.requestType === "contract_review"
+          ? "أنهى المختص المراجعة ونشر النتيجة؛ يمكنك الاطلاع عليها وتأكيد الاستلام أو طلب تعديل."
+          : "نشر المختص نسخة العقد للمراجعة؛ يمكنك الاطلاع عليها وتأكيد الاستلام أو طلب تعديل.",
+        actionText: "الاطلاع على الملفات",
         actionType: "scroll_deliverables",
         bg: "bg-purple-50/90 border-purple-200 text-purple-950",
         badge: "bg-purple-600 text-white",
       };
     }
-    if (item?.status === "completed") {
+    if (item.status === "completed") {
       return {
-        title: "اكتمل الطلب وتم تسليم تقرير المراجعة بنجاح",
-        description: "تمت مراجعة العقد وتسليم كافة الملاحظات والملفات بنجاح وتأكيد الاستلام.",
+        title: `اكتمل ${serviceCopy.workNoun} بنجاح`,
+        description: "تم تسليم الملفات النهائية وتأكيد استلامها بنجاح.",
         actionText: null,
         actionType: null,
         bg: "bg-emerald-50/80 border-emerald-200 text-emerald-950",
         badge: "bg-emerald-700 text-white",
       };
     }
+    if (item.status === "cancelled") {
+      return {
+        title: "تم إلغاء الطلب",
+        description: "هذا الطلب مغلق ولا يمكن تنفيذ إجراءات تشغيلية جديدة عليه.",
+        actionText: null,
+        actionType: null,
+        bg: "bg-slate-50 border-slate-200 text-slate-800",
+        badge: "bg-slate-700 text-white",
+      };
+    }
     return {
-      title: "الطلب قيد المتابعة والدراسة",
-      description: "يقوم المحامي المختص حاليًا بدراسة وتدقيق بنود العقد وسيتم إشعارك فور توفر النتيجة أو موعد المناقشة.",
+      title: "الطلب قيد المتابعة",
+      description: `يعمل المختص حاليًا على ${serviceCopy.workNoun}، وسيتم إشعارك عند الحاجة إلى إجراء منك أو عند توفر مخرجات جديدة.`,
       actionText: null,
       actionType: null,
       bg: "bg-slate-50 border-slate-200 text-slate-800",
@@ -252,7 +368,13 @@ function RequestDetailsContent() {
   const paymentIsPrimaryNextAction = nextStep.actionType === "payment" && canSubmitPayment;
 
   let primaryMobileAction = null;
-  if (paymentIsPrimaryNextAction) {
+  if (nextStep.actionType === "rebook") {
+    primaryMobileAction = (
+      <button type="button" onClick={() => void openRebook()} className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-3.5 text-sm font-black text-white shadow-md active:scale-95 transition">
+        <RefreshCw className="h-4 w-4" /> اختيار موعد جديد
+      </button>
+    );
+  } else if (paymentIsPrimaryNextAction) {
     primaryMobileAction = (
       <button type="button" onClick={() => setPaymentOpen(true)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-4 py-3.5 text-sm font-black text-white shadow-md active:scale-95 transition">
         <Upload className="h-4 w-4 text-[#d9a84e]" /> رفع إثبات الدفع
@@ -285,10 +407,88 @@ function RequestDetailsContent() {
 
         {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">{error}</div>}
         {notice && <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-bold text-emerald-800">{notice}</div>}
-        {item.requestType === "consultation" && item.status === "awaiting_payment" && bookingCountdown !== null && (
-          <div className={`mb-4 rounded-xl border p-3 text-xs font-bold ${bookingSeconds===0?"border-red-200 bg-red-50 text-red-700":"border-amber-200 bg-amber-50 text-amber-900"}`}>
-            {bookingSeconds===0?"انتهت مهلة حفظ الموعد. عند محاولة الدفع سيُطلب منك اختيار موعد جديد.":<>الموعد محفوظ مؤقتًا لحين رفع إثبات الدفع — الوقت المتبقي <span dir="ltr" className="font-mono font-black">{bookingCountdown}</span></>}
+        {supportsBooking && item.status === "awaiting_payment" && item.paymentStage !== "balance" && (bookingCountdown !== null || item.bookingStatus === "expired") && (
+          <div className={`mb-4 rounded-xl border p-3 text-xs font-bold ${bookingExpired ? "border-red-200 bg-red-50 text-red-700" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+            {bookingExpired ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <span>انتهت مهلة حفظ الموعد. يجب اختيار موعد جديد قبل رفع إثبات الدفع.</span>
+                <button type="button" onClick={() => void openRebook()} className="rounded-lg bg-red-700 px-3 py-2 text-[11px] font-black text-white">اختيار موعد جديد</button>
+              </div>
+            ) : (
+              <>الموعد محفوظ مؤقتًا لحين رفع إثبات الدفع — الوقت المتبقي <span dir="ltr" className="font-mono font-black">{bookingCountdown}</span></>
+            )}
           </div>
+        )}
+
+        {rebookOpen && (
+          <section className="mb-4 rounded-2xl border border-red-200 bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-black text-[#00102e]">اختيار موعد جديد</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">اختر وسيلة التواصل ثم يومًا وموعدًا متاحًا. سيبدأ مؤقت الحجز من جديد بعد الحفظ.</p>
+              </div>
+              <button type="button" onClick={() => setRebookOpen(false)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-black text-slate-600">إغلاق</button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {["whatsapp", "zoom"].filter((channel) => catalog.policies.communicationChannels.includes(channel)).map((channel) => (
+                <button
+                  key={channel}
+                  type="button"
+                  disabled={rebookLoading || busy}
+                  onClick={() => void changeRebookChannel(channel as "whatsapp" | "zoom")}
+                  className={`rounded-xl border px-3 py-2 text-xs font-black ${rebookChannel === channel ? "border-[#986410] bg-[#986410]/10 text-[#7c500c]" : "border-slate-200 bg-white text-slate-600"}`}
+                >
+                  {communicationLabels[channel]}
+                </button>
+              ))}
+            </div>
+
+            {rebookLoading ? (
+              <div className="mt-5 flex items-center gap-2 text-xs font-bold text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> جاري تحميل المواعيد...</div>
+            ) : rebookDays.length === 0 ? (
+              <div className="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs font-bold text-slate-500">لا توجد مواعيد متاحة حاليًا لهذه الوسيلة.</div>
+            ) : (
+              <>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="text-xs font-black text-slate-700">
+                    اليوم
+                    <select
+                      value={rebookDate}
+                      onChange={(event) => { setRebookDate(event.target.value); setRebookSlotKey(""); }}
+                      className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs outline-none focus:border-[#986410]"
+                    >
+                      <option value="">اختر اليوم</option>
+                      {rebookDays.map((day) => <option key={day.date} value={day.date}>{day.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="text-xs font-black text-slate-700">
+                    الموعد
+                    <select
+                      value={rebookSlotKey}
+                      disabled={!rebookDate}
+                      onChange={(event) => setRebookSlotKey(event.target.value)}
+                      className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs outline-none focus:border-[#986410] disabled:bg-slate-100"
+                    >
+                      <option value="">اختر الموعد</option>
+                      {(rebookDays.find((day) => day.date === rebookDate)?.slots || []).map((slot) => (
+                        <option key={slot.slotKey} value={slot.slotKey}>{slot.label}{slot.limited ? " · متبقي قليل" : ""}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy || !rebookSlotKey}
+                  onClick={() => void submitRebook()}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-xs font-black text-white disabled:opacity-50"
+                >
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
+                  حفظ الموعد الجديد
+                </button>
+              </>
+            )}
+          </section>
         )}
 
         {/* Compact Workspace Header */}
@@ -323,6 +523,16 @@ function RequestDetailsContent() {
               <p className="text-xs leading-5 opacity-90">{nextStep.description}</p>
             </div>
 
+            {nextStep.actionType === "rebook" && (
+              <button
+                type="button"
+                onClick={() => void openRebook()}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-red-700 px-4 py-2 text-xs font-black text-white hover:bg-red-800 shadow-sm transition shrink-0"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>{nextStep.actionText}</span>
+              </button>
+            )}
             {nextStep.actionType === "payment" && canSubmitPayment && (
               <button
                 type="button"
@@ -373,12 +583,12 @@ function RequestDetailsContent() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base font-black text-[#00102e]">المستندات المرفوعة</h2>
-                  <p className="mt-0.5 text-xs text-slate-500">العقد الأساسي وأي مستندات داعمة للمراجعة.</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{serviceCopy.attachmentsSubtitle}</p>
                 </div>
                   {item.permissions.canUploadFiles && (
                     <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#00102e] px-3.5 py-2 text-xs font-black text-white hover:bg-[#00102e]/90 transition">
                       <Upload className="h-3.5 w-3.5 text-[#d9a84e]" />
-                    <span>إضافة مستندات داعمة</span>
+                    <span>{serviceCopy.uploadLabel}</span>
                     <input type="file" multiple accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.webp" className="hidden" disabled={busy} onChange={(event) => void uploadFiles(event.target.files)} />
                   </label>
                 )}
@@ -392,7 +602,7 @@ function RequestDetailsContent() {
                   </div>
                 ) : (
                   item.attachments.map((file, index) => {
-                    const isMainContract = index === 0;
+                    const isMainContract = index === 0 && Boolean(serviceCopy.primaryAttachmentBadge);
                     return (
                       <div key={file.id} className={`flex items-center justify-between gap-3 rounded-xl border p-3 transition ${isMainContract ? "border-[#986410]/30 bg-[#986410]/5" : "border-slate-200 bg-white"}`}>
                         <div className="flex min-w-0 items-center gap-3">
@@ -402,7 +612,7 @@ function RequestDetailsContent() {
                               <span className="truncate text-xs font-black text-slate-800">{file.fileName}</span>
                               {isMainContract && (
                                 <span className="rounded bg-[#986410]/15 px-1.5 py-0.5 text-[9px] font-black text-[#986410]">
-                                  العقد الأساسي
+                                  {serviceCopy.primaryAttachmentBadge}
                                 </span>
                               )}
                             </div>
@@ -421,8 +631,8 @@ function RequestDetailsContent() {
             <section className={`rounded-2xl border bg-white p-5 sm:p-6 shadow-sm transition ${item.deliverables.length > 0 ? "border-emerald-300" : "border-slate-200"}`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-black text-[#00102e]">مخرجات المراجعة</h2>
-                  <p className="mt-0.5 text-xs text-slate-500">تقرير المراجعة أو النسخة المعدلة من قبل المختص.</p>
+                  <h2 className="text-base font-black text-[#00102e]">{serviceCopy.deliverablesTitle}</h2>
+                  <p className="mt-0.5 text-xs text-slate-500">{serviceCopy.deliverablesSubtitle}</p>
                 </div>
                 {item.deliverables.length > 0 && (
                   <span className="rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-xs font-black text-emerald-700">
@@ -436,7 +646,7 @@ function RequestDetailsContent() {
                   <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center">
                     <Clock3 className="mx-auto h-7 w-7 text-slate-300" />
                     <p className="mt-2 text-xs font-bold text-slate-500">لم يرفع المكتب نتيجة بعد.</p>
-                    <p className="mt-0.5 text-[11px] text-slate-400">سيظهر تقرير المراجعة أو النسخة المعدلة هنا بعد اكتمال العمل.</p>
+                    <p className="mt-0.5 text-[11px] text-slate-400">{serviceCopy.deliverablesEmpty}</p>
                   </div>
                 ) : (
                   item.deliverables.map((file) => (
@@ -467,7 +677,7 @@ function RequestDetailsContent() {
               )}
 
               {item.permissions.canConfirmReceipt && (
-                <button type="button" disabled={busy} onClick={() => setReceiptConfirmOpen(true)} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 text-xs font-black text-white disabled:opacity-50"><CheckCircle2 className="h-4 w-4" /> تأكيد استلام ومراجعة النسخة</button>
+                <button type="button" disabled={busy} onClick={() => setReceiptConfirmOpen(true)} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 text-xs font-black text-white disabled:opacity-50"><CheckCircle2 className="h-4 w-4" /> {item.requestType === "contract_review" ? "تأكيد استلام المراجعة" : "تأكيد استلام النسخة"}</button>
               )}
             </section>
           </div>
@@ -500,10 +710,10 @@ function RequestDetailsContent() {
                 </div>
               </div>
 
-              {item.requestType === "contract_drafting" && item.lawyerTotalPriceEgp != null ? (
+              {item.serviceTotalPriceEgp != null || item.lawyerTotalPriceEgp != null ? (
                 <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-2.5 text-xs">
-                  <PaymentStat label="السعر الكامل" value={Number(item.lawyerTotalPriceEgp)} />
-                  <PaymentStat label="العربون" value={Number(item.lawyerDepositEgp ?? 0)} />
+                  <PaymentStat label="السعر الكامل" value={Number(item.serviceTotalPriceEgp ?? item.lawyerTotalPriceEgp ?? 0)} />
+                  <PaymentStat label="العربون" value={Number(item.serviceDepositEgp ?? item.lawyerDepositEgp ?? 0)} />
                   <PaymentStat label="المدفوع" value={approvedPaid} />
                   <PaymentStat label="المتبقي" value={outstanding} strong />
                 </div>
@@ -540,7 +750,7 @@ function RequestDetailsContent() {
                   <div className="text-xs font-black text-slate-800">{communicationLabels[item.communicationChannel || "whatsapp"]}</div>
                   <div className="mt-0.5 text-[11px] leading-5 text-slate-500">
                     {communicationIsFollowUpOnly
-                      ? "للمتابعة والاستفسار فقط. تبدأ المراجعة بعد اعتماد الدفع من الإدارة."
+                      ? `للمتابعة والاستفسار فقط. يبدأ ${serviceCopy.workNoun} بعد اعتماد الدفع من الإدارة.`
                       : "التواصل يتم مباشرة مع المختص بالطريقة المحددة لمتابعة الطلب."}
                   </div>
                 </div>
@@ -614,7 +824,7 @@ function RequestDetailsContent() {
         )}
       </main>
 
-      <ActionDialog open={receiptConfirmOpen} title="تأكيد استلام النسخة" message="هل تؤكد أنك راجعت النسخة المتاحة ولا تحتاج إلى تعديلات أخرى؟ سيؤدي التأكيد إلى إنهاء الطلب الحالي." confirmLabel="تأكيد الاستلام" onClose={() => setReceiptConfirmOpen(false)} onConfirm={() => void performConfirmReceipt()} />
+      <ActionDialog open={receiptConfirmOpen} title={serviceCopy.confirmTitle} message={serviceCopy.confirmMessage} confirmLabel="تأكيد الاستلام" onClose={() => setReceiptConfirmOpen(false)} onConfirm={() => void performConfirmReceipt()} />
 
       <Footer />
 

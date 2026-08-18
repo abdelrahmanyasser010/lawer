@@ -21,6 +21,16 @@ test("published sale and rental definitions have no structural publish errors", 
   assert.ok(rental.stats.legalClauses > 0);
 });
 
+test("all published legal text is free from recurring OCR and court-selection conflicts", () => {
+  const definitions = [rentalTemplateDefinition, apartmentSaleTemplateDefinition, freelancerTemplateDefinition];
+  const clauses = definitions.flatMap((definition) => definition.legalClauses ?? []);
+  assert.equal(clauses.length, 378);
+  const forbidden = /(?:^|[\s،؛:.(])و?ال\s+|اال|األ|اإل|اآل|العالقات?|استالم|إخالل|إخالء|إبالغ|خالل|قبولاباستمرار|المع\s+تمدة|جوالات المراجعة|ت\s+نظيم|أ\s+عمال|المحكمة المختصة الواقع في دائرتها العقار|للمحكمة (?:المختصة )?التي يقع في دائرتها العقار/m;
+  for (const clause of clauses) {
+    assert.doesNotMatch(`${clause.titleAr}\n${clause.bodyAr}`, forbidden, clause.key);
+  }
+});
+
 test("freelancer service definitions are publish-ready", () => {
   const result = inspectTemplateDefinition(freelancerTemplateDefinition);
   assert.deepEqual(result.errors, []);
@@ -65,7 +75,7 @@ test("freelancer party fields preserve required and optional color rules", () =>
   assert.equal(fields.visual_client_company_name.visibleWhen.value, "company");
 });
 
-test("website core manual annexes are always active without inserting wizard steps", async () => {
+test("website manual annexes are active only after explicit user selection and stay out of wizard steps", async () => {
   const { resolveWizardDefinition } = await import("../dist/index.js");
   const base = resolveWizardDefinition(
     freelancerTemplateDefinition,
@@ -73,23 +83,25 @@ test("website core manual annexes are always active without inserting wizard ste
     [],
     { website_client_party_type: "individual", website_provider_party_type: "individual" },
   );
-  const withFuture = resolveWizardDefinition(
+  const withScope = resolveWizardDefinition(
     freelancerTemplateDefinition,
     "website_development",
-    ["website_future_development_annex"],
+    ["website_scope_annex"],
     { website_client_party_type: "individual", website_provider_party_type: "individual" },
   );
   assert.equal(base.steps.some((step) => step.key === "website_scope_overview"), false);
-  assert.ok(base.activeClauseKeys.some((key) => key.startsWith("website_scope_annex_source_")));
-  assert.ok(base.activeClauseKeys.some((key) => key.startsWith("website_technical_annex_source_")));
-  assert.ok(base.activeClauseKeys.some((key) => key.startsWith("website_project_data_annex_source_")));
-  assert.ok(base.activeClauseKeys.some((key) => key.startsWith("website_delivery_annex_source_")));
-  assert.ok(withFuture.activeClauseKeys.length > base.activeClauseKeys.length);
+  assert.equal(base.activeClauseKeys.some((key) => key.startsWith("website_scope_annex_source_")), false);
+  assert.equal(base.activeClauseKeys.some((key) => key.startsWith("website_technical_annex_source_")), false);
+  assert.equal(base.activeClauseKeys.some((key) => key.startsWith("website_project_data_annex_source_")), false);
+  assert.equal(base.activeClauseKeys.some((key) => key.startsWith("website_delivery_annex_source_")), false);
+  assert.ok(withScope.activeClauseKeys.some((key) => key.startsWith("website_scope_annex_source_")));
+  assert.equal(withScope.activeClauseKeys.some((key) => key.startsWith("website_technical_annex_source_")), false);
+  assert.equal(withScope.steps.some((step) => step.key === "website_scope_overview"), false);
 });
 
 
-test("visual identity semantics remain intact in freelancer v6", () => {
-  assert.equal(freelancerTemplateDefinition.version, 6);
+test("visual identity semantics remain intact in freelancer v10", () => {
+  assert.equal(freelancerTemplateDefinition.version, 10);
   const visual = freelancerTemplateDefinition.variants.find((item) => item.key === "visual_identity_design");
   assert.ok(visual);
   const allFields = visual.steps.flatMap((step) => step.fields);
@@ -98,10 +110,10 @@ test("visual identity semantics remain intact in freelancer v6", () => {
   assert.equal(byKey.visual_execution_duration.required, true);
   assert.equal(byKey.visual_contract_value.required, true);
   assert.equal(byKey.visual_contract_value_words.required, true);
-  assert.equal(Boolean(byKey.visual_competent_court.required), false);
+  assert.equal(byKey.visual_competent_court.required, true);
   assert.ok(byKey.visual_competent_court.options.some((option) => option.value === "المنيا"));
   assert.ok(byKey.visual_competent_court.options.some((option) => option.value === "أخرى"));
-  assert.equal(byKey.visual_competent_court.options.some((option) => option.value === "القاهرة"), false);
+  assert.ok(byKey.visual_competent_court.options.some((option) => option.value === "القاهرة"));
   assert.equal(Boolean(byKey.visual_project_brief.required), false);
   assert.equal(Boolean(byKey.visual_target_audience), false);
   assert.equal(Boolean(byKey.visual_review_rounds), false);
@@ -237,11 +249,27 @@ test("social media main contract has explicit scope and source-backed commercial
   const social = freelancerTemplateDefinition.variants.find((item) => item.key === "social_media_management");
   const fields = Object.fromEntries(social.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
   for (const key of ["social_managed_platforms", "social_scope_summary", "social_contract_duration", "social_fee", "social_fee_words"]) assert.equal(fields[key].required, true, key);
-  assert.equal(Boolean(fields.social_competent_court.required), false);
+  assert.equal(fields.social_competent_court.required, true);
   assert.ok(fields.social_competent_court.options.some((option) => option.value === "المنيا"));
   assert.ok(fields.social_competent_court.options.some((option) => option.value === "أخرى"));
   assert.equal(Boolean(fields.social_account_access_attachment), false);
   assert.equal(Boolean(fields.social_brand_assets_attachment), false);
+});
+
+test("all freelancer variants require an explicit competent court before review", () => {
+  const courtKeyByVariant = {
+    visual_identity_design: "visual_competent_court",
+    website_development: "website_competent_court",
+    social_media_management: "social_competent_court",
+  };
+  for (const variant of freelancerTemplateDefinition.variants) {
+    const courtStep = variant.steps.at(-2);
+    assert.equal(courtStep?.titleAr, "المحكمة المختصة", `${variant.key}: court step order`);
+    const courtField = courtStep.fields.find((field) => field.key === courtKeyByVariant[variant.key]);
+    assert.equal(courtField?.required, true, `${variant.key}: court is required`);
+    assert.ok(courtField?.options.some((option) => option.value === "القاهرة"), `${variant.key}: Cairo option`);
+    assert.ok(courtField?.options.some((option) => option.value === "المنيا"), `${variant.key}: Minya option`);
+  }
 });
 
 test("social media delay penalty uses exactly one source-backed calculation path", () => {
@@ -279,8 +307,8 @@ test("social media delay penalty uses exactly one source-backed calculation path
   assert.equal(Boolean(percentageFields.social_delay_penalty_amount), false);
 });
 
-test("rental v8 exposes the three reviewed lease variants without legacy fields", () => {
-  assert.equal(rentalTemplateDefinition.version, 8);
+test("rental v12 exposes the three reviewed lease variants without legacy fields", () => {
+  assert.equal(rentalTemplateDefinition.version, 12);
   assert.deepEqual(
     rentalTemplateDefinition.variants.map((variant) => variant.key),
     ["residential_lease", "commercial_lease", "administrative_lease"],
@@ -296,7 +324,7 @@ test("rental v8 exposes the three reviewed lease variants without legacy fields"
   }
 });
 
-test("rental v8 core finance, duration and source-specific payment fields are required with no fake defaults", () => {
+test("rental v12 core finance, duration and source-specific payment fields are required with no fake defaults", () => {
   const coreRequiredKeys = [
     "contract_date", "contract_copies_count", "lease_duration_text", "start_date", "end_date", "property_delivery_date",
     "deposit_amount", "deposit_amount_words", "rent_period", "rent_amount", "rent_amount_words", "rent_due_day",
@@ -352,21 +380,25 @@ test("rental company and optional contact children become required only when the
   assert.equal(fields.rental_messaging_tenant_phone.required, true);
 });
 
-test("furnished residential lease makes the blank handover inventory annex mandatory", () => {
+test("furnished residential lease never auto-adds the optional handover inventory annex", () => {
   const baseValues = { ...rentalTemplateDefinition.variants.find((v) => v.key === "residential_lease").defaultFieldValues };
   const without = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], { ...baseValues, residential_is_furnished: false });
   assert.equal(without.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), false);
   const withFurnished = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], { ...baseValues, residential_is_furnished: true });
-  assert.equal(withFurnished.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), true);
+  assert.equal(withFurnished.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), false);
+  const selected = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", ["rental_handover_inventory_report"], { ...baseValues, residential_is_furnished: true });
+  assert.equal(selected.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), true);
 });
 
-test("administrative inventory-report delivery condition makes the handover annex mandatory", () => {
+test("administrative inventory-report delivery condition never auto-adds the optional handover annex", () => {
   const variant = rentalTemplateDefinition.variants.find((v) => v.key === "administrative_lease");
   const base = { ...variant.defaultFieldValues, administrative_delivery_condition: "vacant" };
   const without = resolveWizardDefinition(rentalTemplateDefinition, "administrative_lease", [], base);
   assert.equal(without.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), false);
   const withReport = resolveWizardDefinition(rentalTemplateDefinition, "administrative_lease", [], { ...base, administrative_delivery_condition: "inventory_report" });
-  assert.equal(withReport.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), true);
+  assert.equal(withReport.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), false);
+  const selected = resolveWizardDefinition(rentalTemplateDefinition, "administrative_lease", ["rental_handover_inventory_report"], { ...base, administrative_delivery_condition: "inventory_report" });
+  assert.equal(selected.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), true);
 });
 
 test("commercial and administrative optional legal paragraphs enforce dependent values", () => {
@@ -433,7 +465,7 @@ test("rental handover annex mirrors the blank source tables and remains manual-f
   assert.ok(annex);
   assert.equal(annex.manualFillAnnex, true);
   assert.equal(annex.outputMode, "separate_annex");
-  assert.ok(annex.requiredWhen?.any?.length >= 2);
+  assert.equal(annex.requiredWhen, undefined);
   const byStep = Object.fromEntries(annex.insertedSteps.map((step) => [step.key, step]));
   assert.equal(byStep.rental_handover_condition.fields[0].blankRows, 15);
   assert.equal(byStep.rental_handover_access.fields[0].blankRows, 6);
@@ -477,8 +509,8 @@ test("rental residential repeater makes other payment details required in the sa
   assert.equal(cashIssues.some((issue) => issue.fieldKey === "rental_payment_methods.0.details"), false);
 });
 
-test("sale v7 exposes three source-specific variants without legacy sale fields", () => {
-  assert.equal(apartmentSaleTemplateDefinition.version, 7);
+test("sale v11 exposes three source-specific variants without legacy sale fields", () => {
+  assert.equal(apartmentSaleTemplateDefinition.version, 11);
   assert.deepEqual(apartmentSaleTemplateDefinition.variants.map((item) => item.key), ["preliminary_sale", "registrable_sale", "inherited_sale"]);
   const legacy = new Set(["sale_competent_court", "sale_payment_method", "sale_installment_rows", "sale_seller_id_front", "sale_buyer_id_front"]);
   for (const variant of apartmentSaleTemplateDefinition.variants) {
@@ -512,19 +544,22 @@ test("sale source-fixed terms stay fixed while only true blanks remain editable"
   assert.match(clauses.inherited_sale_source_article_23.bodyAr, /\(2\).*نسختين/);
 });
 
-test("sale installment schedule is automatic but remains a blank manual-print annex", () => {
+test("sale installment schedule remains an explicitly selected blank manual-print annex", () => {
   const annex = apartmentSaleTemplateDefinition.optionalClauses.find((item) => item.key === "sale_installment_schedule");
   assert.ok(annex);
   assert.equal(annex.manualFillAnnex, true);
   assert.equal(annex.outputMode, "separate_annex");
-  assert.deepEqual(annex.requiredWhen, { fieldKey: "sale_payment_plan", operator: "equals", value: "installments" });
+  assert.equal(annex.requiredWhen, undefined);
   assert.equal(Boolean(annex.defaultFieldValues), false);
   const rows = annex.insertedSteps.find((step) => step.key === "sale_installment_schedule_rows").fields[0];
   assert.equal(rows.blankRows, 12);
   assert.equal(rows.columns.length, 8);
-  const resolved = resolveWizardDefinition(apartmentSaleTemplateDefinition, "preliminary_sale", [], { sale_payment_plan: "installments" });
-  assert.equal(resolved.steps.some((step) => step.key.startsWith("sale_installment_schedule_")), false);
-  assert.ok(resolved.activeClauseKeys.includes("sale_installment_schedule_manual_clause"));
+  const withoutSelection = resolveWizardDefinition(apartmentSaleTemplateDefinition, "preliminary_sale", [], { sale_payment_plan: "installments" });
+  assert.equal(withoutSelection.steps.some((step) => step.key.startsWith("sale_installment_schedule_")), false);
+  assert.equal(withoutSelection.activeClauseKeys.includes("sale_installment_schedule_manual_clause"), false);
+  const selected = resolveWizardDefinition(apartmentSaleTemplateDefinition, "preliminary_sale", ["sale_installment_schedule"], { sale_payment_plan: "installments" });
+  assert.equal(selected.steps.some((step) => step.key.startsWith("sale_installment_schedule_")), false);
+  assert.ok(selected.activeClauseKeys.includes("sale_installment_schedule_manual_clause"));
 });
 
 test("sale conditional company, notices, inheritance and meter rules resolve in the engine", () => {

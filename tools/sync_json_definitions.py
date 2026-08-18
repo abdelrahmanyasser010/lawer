@@ -1,27 +1,47 @@
+import argparse
 import json
-import subprocess
 from pathlib import Path
 
-ROOT = Path(r"d:\android tog\laywer")
+from template_source_runtime import load_template_definitions
 
-# Run node script to output json definitions from dist
-node_script = """
-import { rentalTemplateDefinition, apartmentSaleTemplateDefinition, freelancerTemplateDefinition } from '../packages/template-engine/dist/index.js';
-import fs from 'fs';
-import path from 'path';
 
-fs.writeFileSync('backend/database/template-definitions/rental.json', JSON.stringify(rentalTemplateDefinition, null, 2), 'utf8');
-fs.writeFileSync('backend/database/template-definitions/apartment_sale.json', JSON.stringify(apartmentSaleTemplateDefinition, null, 2), 'utf8');
-fs.writeFileSync('backend/database/template-definitions/freelancer.json', JSON.stringify(freelancerTemplateDefinition, null, 2), 'utf8');
-console.log('Template definitions JSON updated successfully.');
-"""
+ROOT = Path(__file__).resolve().parents[1]
+TARGETS = {
+    "rental": ROOT / "backend/database/template-definitions/rental.json",
+    "apartment_sale": ROOT / "backend/database/template-definitions/apartment_sale.json",
+    "freelancer": ROOT / "backend/database/template-definitions/freelancer.json",
+}
 
-script_path = ROOT / "tools/dump_definitions.mjs"
-script_path.write_text(node_script, encoding='utf-8')
 
-res = subprocess.run(["node", "tools/dump_definitions.mjs"], cwd=str(ROOT), capture_output=True, text=True)
-print("Node dump output:", res.stdout, res.stderr)
-if res.returncode != 0:
-    raise RuntimeError("Failed to dump definitions")
+def serialized(value: dict) -> str:
+    return json.dumps(value, ensure_ascii=False, indent=2) + "\n"
 
-print("JSON files successfully updated from TypeScript template-engine.")
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Synchronize backend template JSON from template-engine source.")
+    parser.add_argument("--check", action="store_true", help="Only report whether files are synchronized.")
+    parser.add_argument("--write", action="store_true", help="Write synchronized JSON files (default action).")
+    args = parser.parse_args()
+
+    definitions = load_template_definitions(ROOT)
+    mismatches: list[str] = []
+    for slug, path in TARGETS.items():
+        expected = serialized(definitions[slug])
+        current = path.read_text(encoding="utf-8") if path.exists() else ""
+        if current != expected:
+            mismatches.append(path.name)
+            if not args.check:
+                path.write_text(expected, encoding="utf-8")
+
+    if args.check and mismatches:
+        print("Out of sync:", ", ".join(mismatches))
+        return 1
+    if mismatches:
+        print("Updated:", ", ".join(mismatches))
+    else:
+        print("Template definitions are already synchronized.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

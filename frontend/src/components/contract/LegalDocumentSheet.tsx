@@ -1,8 +1,18 @@
 "use client";
 
-import React, { useMemo } from "react";
-import { ShieldCheck, FileCheck } from "lucide-react";
-import { localTemplateRegistry, renderLegalClauses, RenderedLegalClause } from "@zdraft/template-engine";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { MousePointer2 } from "lucide-react";
+import {
+  localTemplateRegistry,
+  renderLegalClauses,
+  resolveWizardDefinition,
+  type FieldOptionDefinition,
+  type OptionalClauseDefinition,
+  type RenderedLegalClause,
+  type WizardFieldDefinition,
+  type WizardStepDefinition,
+} from "@zdraft/template-engine";
+import { formatContractFieldValue } from "@/features/contracts/domain/contractDisplay";
 
 interface Props {
   serialNumber: string;
@@ -13,10 +23,70 @@ interface Props {
   fieldValues?: Record<string, any>;
   status?: string;
   isPaid?: boolean;
+  activeFieldKey?: string | null;
+  activeFieldLabel?: string | null;
+}
+
+const A4_PREVIEW_WIDTH_PX = 794;
+const A4_PREVIEW_MIN_HEIGHT_PX = 1123;
+
+function A4PreviewScaler({ children }: { children: React.ReactNode }) {
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const [layout, setLayout] = useState({ scale: 1, height: A4_PREVIEW_MIN_HEIGHT_PX });
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const canvas = canvasRef.current;
+    if (!viewport || !canvas) return;
+
+    const update = () => {
+      const availableWidth = Math.max(1, viewport.clientWidth);
+      const scale = Math.min(1, availableWidth / A4_PREVIEW_WIDTH_PX);
+      const height = Math.max(A4_PREVIEW_MIN_HEIGHT_PX, canvas.scrollHeight);
+      setLayout((current) => current.scale === scale && current.height === height ? current : { scale, height });
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(viewport);
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={viewportRef} className="relative w-full overflow-hidden" data-a4-preview-scaler="true">
+      <div className="relative w-full" style={{ height: `${layout.height * layout.scale}px` }}>
+        <div
+          ref={canvasRef}
+          className="absolute left-1/2 top-0"
+          style={{
+            width: `${A4_PREVIEW_WIDTH_PX}px`,
+            transform: `translateX(-50%) scale(${layout.scale})`,
+            transformOrigin: "top center",
+          }}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export const legalLabelDictionary: Record<string, string> = {
   // Parties
+  seller_name: "البائع (الطرف الأول)",
+  seller_party_type: "الصفة القانونية للبائع",
+  seller_national_id: "الرقم القومي للبائع",
+  seller_address: "محل إقامة البائع",
+  seller_phone: "هاتف البائع",
+  seller_email: "بريد البائع",
+  buyer_name: "المشتري (الطرف الثاني)",
+  buyer_party_type: "الصفة القانونية للمشتري",
+  buyer_national_id: "الرقم القومي للمشتري",
+  buyer_address: "محل إقامة المشتري",
+  buyer_phone: "هاتف المشتري",
+  buyer_email: "بريد المشتري",
   sale_seller_name: "البائع (الطرف الأول)",
   sale_seller_party_type: "الصفة القانونية للبائع",
   sale_seller_national_id: "الرقم القومي للبائع",
@@ -38,7 +108,7 @@ export const legalLabelDictionary: Record<string, string> = {
   landlord_phone: "هاتف المؤجر",
   landlord_email: "بريد المؤجر",
   tenant_name: "المستأجر (الطرف الثاني)",
-  tenant_party_type: "الصفة ",
+  tenant_party_type: "الصفة القانونية للمستأجر",
   client_name: "العميل (الطرف الأول)",
   provider_name: "مقدم الخدمة (الطرف الثاني)",
 
@@ -118,6 +188,9 @@ export const legalLabelDictionary: Record<string, string> = {
   sale_unit_governorate: "محافظة الوحدة المبيعة",
   sale_unit_city: "مدينة / حي الوحدة المبيعة",
   sale_unit_street: "عنوان الوحدة المبيعة",
+  sale_building_number: "رقم العقار",
+  sale_floor_number: "الطابق",
+  sale_unit_area: "مساحة الوحدة (م²)",
   sale_unit_building_number: "رقم العقار",
   sale_unit_floor: "الطابق",
   sale_unit_area_sqm: "مساحة الوحدة (م²)",
@@ -133,6 +206,11 @@ export const legalLabelDictionary: Record<string, string> = {
   commercial_unit_type: "نوع الوحدة التجارية",
   commercial_activity_name: "اسم النشاط التجاري",
   commercial_activity_type: "نوع النشاط التجاري",
+  commercial_site_type: "نوع الموقع التجاري",
+  commercial_frontage_width: "عرض الواجهة التجارية",
+  commercial_has_storage: "وجود مخزن ملحق",
+  commercial_project_name: "اسم المشروع / المول",
+  administrative_activity_name: "النشاط الإداري المتفق عليه",
   rooms_count: "عدد الغرف",
   reception_count: "صالات الاستقبال",
   bathrooms_count: "عدد الحمامات",
@@ -189,7 +267,8 @@ export const legalValueDictionary: Record<string, string> = {
   commercial_lease: "إيجار تجاري",
   administrative_lease: "إيجار إداري",
   preliminary_sale: "بيع ابتدائي",
-  final_sale: "بيع نهائي",
+  registrable_sale: "بيع قابل للتسجيل بالشهر العقاري",
+  inherited_sale: "بيع وحدة آلت بالميراث",
   visual_identity_design: "تصميم الهوية البصرية",
   website_development: "تصميم وتطوير المواقع",
   social_media_management: "إدارة منصات التواصل",
@@ -201,39 +280,383 @@ export const legalValueDictionary: Record<string, string> = {
   no: "لا",
 };
 
-export function formatLegalValue(key: string, value: any): string {
-  if (value === null || value === undefined || value === "") return "—";
-  if (typeof value === "boolean") return value ? "مشمول بالاتفاق" : "غير مشمول";
+export function formatLegalValue(
+  key: string,
+  value: any,
+  options: FieldOptionDefinition[] = [],
+  type?: WizardFieldDefinition["type"] | string,
+): string {
+  return formatContractFieldValue(key, value, options, type);
+}
 
-  const strVal = String(value).trim();
-  if (legalValueDictionary[strVal]) {
-    return legalValueDictionary[strVal];
+function LegalTextBody({ text, className = "" }: { text: string; className?: string }) {
+  const paragraphs = text
+    .replace(/\r\n?/g, "\n")
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  return (
+    <div className={className}>
+      {paragraphs.map((paragraph, paragraphIndex) => (
+        <p key={paragraphIndex} className="text-justify leading-[1.46]">
+          {paragraph.split("\n").map((line, lineIndex) => {
+            const trimmed = line.trim();
+            const numbered = trimmed.match(/^(\d{1,3})\.(?:\s+|$)(.*)$/) || trimmed.match(/^\.(\d{1,3})(?:\s+|$)(.*)$/);
+            return numbered ? (
+              <span key={lineIndex} dir="rtl" className="flex items-start gap-1">
+                <bdi dir="ltr" className="w-[1.9rem] shrink-0 text-right font-semibold [unicode-bidi:isolate]">{numbered[1]}.</bdi>
+                {numbered[2] ? <span dir="rtl" className="min-w-0 flex-1">{numbered[2]}</span> : null}
+              </span>
+            ) : (
+              <span key={lineIndex} className="block">{trimmed || "\u00a0"}</span>
+            );
+          })}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function LiveFieldMarker({ label }: { label?: string | null }) {
+  return (
+    <span className="pointer-events-none absolute -top-3 right-2 z-30 inline-flex items-center gap-1 rounded-full border border-[#d9a84e] bg-[#00102e] px-2 py-1 text-[8.5px] font-black text-[#f2c45f] shadow-md">
+      <MousePointer2 className="h-3 w-3" />
+      {label ? `${label} يظهر هنا` : "التعديل يظهر هنا"}
+    </span>
+  );
+}
+
+function hasDocumentValue(value: unknown): boolean {
+  return value !== null && value !== undefined && value !== "" && (!Array.isArray(value) || value.length > 0);
+}
+
+function isPartyStepKey(stepKey: string): boolean {
+  return ["rental_landlord", "rental_tenant", "sale_seller", "sale_buyer"].includes(stepKey)
+    || stepKey.endsWith("_client_party")
+    || stepKey.endsWith("_provider_party");
+}
+
+function isLtrDocumentField(key: string, type: string): boolean {
+  return ["number", "money", "date"].includes(type)
+    || /(?:phone|email|national_id|passport|register|tax|meter|serial|url|link|iban|account|code|number)$/.test(key);
+}
+
+function formatPrintDocumentValue(
+  field: { key: string; type?: string; options?: FieldOptionDefinition[] },
+  value: unknown,
+): string {
+  if (!hasDocumentValue(value)) return "....................";
+  if (typeof value === "boolean") return value ? "نعم" : "لا";
+  if (Array.isArray(value)) {
+    return value.map((item) => {
+      if (item && typeof item === "object") return Object.values(item).filter(hasDocumentValue).join(" | ");
+      const option = field.options?.find((candidate) => String(candidate.value) === String(item));
+      const rawItem = String(item ?? "");
+      if (option) return option.labelAr;
+      if ((field.options?.length ?? 0) > 0 && /^[a-z][a-z0-9_]*$/i.test(rawItem)) return "قيمة غير معتمدة — يرجى إعادة الاختيار";
+      return rawItem;
+    }).filter(Boolean).join("، ");
   }
 
-  if (
-    key.includes("price") ||
-    key.includes("amount") ||
-    key.includes("deposit") ||
-    key.includes("fee") ||
-    key.includes("salary") ||
-    key.includes("compensation") ||
-    key.includes("value")
-  ) {
-    const num = Number(value);
-    if (!Number.isNaN(num) && num > 0) {
-      return `${num.toLocaleString("ar-EG")} ج.م`;
-    }
+  const raw = String(value).trim();
+  const option = field.options?.find((candidate) => String(candidate.value) === raw);
+  if (option) return option.labelAr;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw.split("-").reverse().join("/");
+  if ((field.options?.length ?? 0) > 0 && /^[a-z][a-z0-9_]*$/i.test(raw)) {
+    return "قيمة غير معتمدة — يرجى إعادة الاختيار";
   }
+  return raw;
+}
 
-  if (key.includes("area") || key.includes("sqm")) {
-    return `${value} متر مربع`;
+function DocumentDataSections({
+  steps,
+  fieldValues,
+  activeFieldKey,
+  activeFieldLabel,
+}: {
+  steps: WizardStepDefinition[];
+  fieldValues: Record<string, any>;
+  activeFieldKey?: string | null;
+  activeFieldLabel?: string | null;
+}) {
+  return (
+    <div className="zd-doc-contract-data">
+      {steps.map((step) => {
+        const printableFields = step.fields.filter((field) => field.printInDocument !== false && field.type !== "attachment");
+        const itemFields = printableFields.filter((field) => {
+          const value = fieldValues[field.key];
+          const active = field.key === activeFieldKey;
+          return field.type !== "repeater" && (hasDocumentValue(value) || active) && !(field.type === "checkbox" && value !== true && !active);
+        });
+        const repeaterFields = printableFields.filter((field) => field.type === "repeater" && (hasDocumentValue(fieldValues[field.key]) || field.key === activeFieldKey));
+        if (!itemFields.length && !repeaterFields.length) return null;
+
+        const partyPresentation = isPartyStepKey(step.key);
+        return (
+          <section id={`doc-step-${step.key}`} data-step-preview-key={step.key} key={step.key} className="zd-doc-data-section-block scroll-mt-28">
+            <h2 className="zd-doc-section-title">{step.titleAr}</h2>
+
+            {partyPresentation ? (
+              <p className="zd-doc-party-line">
+                {itemFields.map((field) => {
+                  const active = field.key === activeFieldKey;
+                  return (
+                    <span
+                      key={field.key}
+                      data-field-preview-key={field.key}
+                      data-active-preview={active ? "exact" : undefined}
+                      className={`zd-doc-party-item ${active ? "relative rounded-sm outline outline-2 outline-[#d9a84e]" : ""}`}
+                    >
+                      {active && <LiveFieldMarker label={activeFieldLabel ?? field.labelAr} />}
+                      <span className="zd-doc-data-label">{field.labelAr}:</span>{" "}
+                      <span className={`zd-doc-data-value ${isLtrDocumentField(field.key, field.type) ? "inline-block" : ""}`} dir={isLtrDocumentField(field.key, field.type) ? "ltr" : undefined}>
+                        {formatPrintDocumentValue(field, fieldValues[field.key])}
+                      </span>
+                    </span>
+                  );
+                })}
+              </p>
+            ) : itemFields.length > 0 ? (
+              <table className="zd-doc-data-grid">
+                <tbody>
+                  {Array.from({ length: Math.ceil(itemFields.length / 2) }, (_, rowIndex) => {
+                    const pair = itemFields.slice(rowIndex * 2, rowIndex * 2 + 2);
+                    return (
+                      <tr key={`${step.key}-${rowIndex}`}>
+                        {pair.map((field) => {
+                          const active = field.key === activeFieldKey;
+                          const ltr = isLtrDocumentField(field.key, field.type);
+                          return (
+                            <td
+                              key={field.key}
+                              data-field-preview-key={field.key}
+                              data-active-preview={active ? "exact" : undefined}
+                              className={active ? "relative outline outline-2 outline-[#d9a84e]" : ""}
+                            >
+                              {active && <LiveFieldMarker label={activeFieldLabel ?? field.labelAr} />}
+                              <div className="zd-doc-data-label">{field.labelAr}</div>
+                              <div className="zd-doc-data-value" dir={ltr ? "ltr" : undefined}>
+                                {formatPrintDocumentValue(field, fieldValues[field.key])}
+                              </div>
+                            </td>
+                          );
+                        })}
+                        {pair.length === 1 && <td className="empty" />}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : null}
+
+            {repeaterFields.map((field) => {
+              const active = field.key === activeFieldKey;
+              const rows = Array.isArray(fieldValues[field.key]) ? fieldValues[field.key] : [];
+              return (
+                <div
+                  key={field.key}
+                  data-field-preview-key={field.key}
+                  data-active-preview={active ? "exact" : undefined}
+                  className={`zd-doc-repeater-wrap ${active ? "relative rounded-sm outline outline-2 outline-[#d9a84e]" : ""}`}
+                >
+                  {active && <LiveFieldMarker label={activeFieldLabel ?? field.labelAr} />}
+                  <div className="zd-doc-repeater-title">{field.labelAr}</div>
+                  <table className="zd-doc-repeater">
+                    <thead>
+                      <tr>{field.columns?.map((column) => <th key={column.key}>{column.labelAr}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row: Record<string, any>, rowIndex: number) => (
+                        <tr key={rowIndex}>
+                          {field.columns?.map((column) => (
+                            <td key={column.key}>
+                              {formatPrintDocumentValue(column, row?.[column.key])}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function DraftWatermark({ serialNumber }: { serialNumber: string }) {
+  const text = `معاينة غير صالحة للاستخدام • ${serialNumber}`;
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20 flex select-none flex-col justify-around overflow-hidden opacity-[0.075]">
+      {Array.from({ length: 14 }, (_, row) => (
+        <div key={row} className="-mx-32 flex -rotate-[24deg] items-center justify-center gap-16 whitespace-nowrap text-[20px] font-black tracking-wide text-[#00102e] sm:text-[24px]">
+          <span>{text}</span><span>{text}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function blankFieldValue(field: WizardFieldDefinition): string {
+  if (field.manualCheckbox || field.type === "checkbox") return "□";
+  if ((field.type === "select" || field.type === "radio") && field.options?.length) {
+    return field.options.map((option) => `□ ${option.labelAr}`).join("   ");
   }
+  return "........................................................";
+}
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(strVal)) {
-    return strVal.split("-").reverse().join("/");
-  }
+function BlankDocumentDataSections({ steps }: { steps: WizardStepDefinition[] }) {
+  return (
+    <div className="zd-doc-contract-data">
+      {steps.map((step) => {
+        const printableFields = step.fields.filter((field) => field.type !== "attachment");
+        const itemFields = printableFields.filter((field) => field.type !== "repeater");
+        const repeaterFields = printableFields.filter((field) => field.type === "repeater");
+        if (!itemFields.length && !repeaterFields.length) return null;
 
-  return strVal;
+        return (
+          <section key={step.key} className="zd-doc-data-section-block">
+            <h2 className="zd-doc-section-title">{step.titleAr}</h2>
+            {itemFields.length > 0 && (
+              <table className="zd-doc-data-grid">
+                <tbody>
+                  {Array.from({ length: Math.ceil(itemFields.length / 2) }, (_, rowIndex) => {
+                    const pair = itemFields.slice(rowIndex * 2, rowIndex * 2 + 2);
+                    return (
+                      <tr key={`${step.key}-${rowIndex}`}>
+                        {pair.map((field) => (
+                          <td key={field.key}>
+                            <div className="zd-doc-data-label">{field.labelAr}</div>
+                            <div className="zd-doc-data-value">{blankFieldValue(field)}</div>
+                          </td>
+                        ))}
+                        {pair.length === 1 && <td className="empty" />}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+            {repeaterFields.map((field) => {
+              const rowLabels = field.blankRowLabels ?? [];
+              const rowCount = Math.max(1, Math.min(20, field.blankRows ?? (rowLabels.length || 3)));
+              return (
+                <div key={field.key} className="zd-doc-repeater-wrap">
+                  <div className="zd-doc-repeater-title">{field.labelAr}</div>
+                  <table className="zd-doc-repeater">
+                    <thead><tr>{field.columns?.map((column) => <th key={column.key}>{column.labelAr}</th>)}</tr></thead>
+                    <tbody>
+                      {Array.from({ length: rowCount }, (_, rowIndex) => (
+                        <tr key={rowIndex}>
+                          {field.columns?.map((column, columnIndex) => (
+                            <td key={column.key}>
+                              {columnIndex === 0 && rowLabels[rowIndex]
+                                ? rowLabels[rowIndex]
+                                : (column.type === "select" || column.type === "radio") && column.options?.length
+                                  ? column.options.map((option) => `□ ${option.labelAr}`).join("   ")
+                                  : "................................"}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function AnnexPreviewSheet({
+  annex,
+  clauses,
+  serialNumber,
+  isDraft,
+  annexNumber,
+  partyOneRole,
+  partyTwoRole,
+}: {
+  annex: OptionalClauseDefinition;
+  clauses: RenderedLegalClause[];
+  serialNumber: string;
+  isDraft: boolean;
+  annexNumber: number;
+  partyOneRole: string;
+  partyTwoRole: string;
+}) {
+  return (
+    <article
+      data-annex-number={annexNumber}
+      className={`zdraft-document-page relative mx-auto min-h-[297mm] w-[210mm] min-w-[210mm] overflow-hidden border border-slate-200 bg-white px-[15mm] py-[16mm] text-[#1a1a1a] shadow-sm print:break-before-page print:border-none print:shadow-none ${isDraft ? "select-none print:hidden" : "select-text"}`}
+      onCopy={isDraft ? (event) => event.preventDefault() : undefined}
+      onCut={isDraft ? (event) => event.preventDefault() : undefined}
+      onContextMenu={isDraft ? (event) => event.preventDefault() : undefined}
+      onDragStart={isDraft ? (event) => event.preventDefault() : undefined}
+    >
+      {isDraft && <DraftWatermark serialNumber={serialNumber} />}
+      <div className="relative z-10">
+        <div className="zd-doc-masthead">
+          <div>
+            <div className="zd-doc-office">Z draft</div>
+            <div className="zd-doc-kind">ملحق تعاقدي — قالب فارغ للتعبئة اليدوية</div>
+          </div>
+          <img src="/zdraft-logo-transparent.png" alt="Z draft" className="zd-doc-logo" />
+        </div>
+        <h2 className="zd-doc-title">{annex.documentTitleAr ?? annex.nameAr}</h2>
+        <div className="zd-doc-meta">
+          رقم الملحق: <span dir="ltr">................................</span>
+          <span className="mx-2">|</span>
+          تابع للعقد رقم: <span dir="ltr">................................</span>
+          <span className="mx-2">|</span>
+          تاريخ العقد: <span dir="ltr">.... / .... / ........</span>
+        </div>
+
+        <div className="zd-doc-annex-ref">
+          هذا الملحق قالب فارغ للطباعة والتعبئة اليدوية؛ لم تُنقل إليه أي بيانات من العقد أو الـWizard، ويُستكمل بالكامل قبل اعتماده وتوقيعه.
+        </div>
+
+        <BlankDocumentDataSections steps={annex.insertedSteps} />
+
+        {clauses.length > 0 && (
+          <div className="zd-doc-clauses">
+            {clauses.map((clause) => (
+              <section key={clause.key} className="zd-doc-clause">
+                <h3 className="zd-doc-clause-title">{clause.titleAr}</h3>
+                <LegalTextBody text={clause.bodyAr} className="zd-doc-clause-body" />
+              </section>
+            ))}
+          </div>
+        )}
+
+        <div className="zd-doc-signatures">
+          <div className="zd-doc-signatures-title">التوقيعات على الملحق</div>
+          <div className="zd-doc-signature-grid grid grid-cols-2 text-center">
+            {[partyOneRole, partyTwoRole].map((role) => (
+              <div key={role} className="zd-doc-signature-box space-y-1.5">
+                <strong className="zd-doc-signature-role block">{role}</strong>
+                <p>الاسم: ................................................</p>
+                <p>الصفة: ................................................</p>
+                <p>التوقيع: ................................................</p>
+                <p>البصمة: ................................................</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <footer className="zd-doc-final-note">
+          هذا الملحق قالب فارغ؛ لم تُدرج فيه بيانات المستخدم تلقائيًا، ويجب استكماله يدويًا قبل اعتماده.
+        </footer>
+      </div>
+    </article>
+  );
 }
 
 export default function LegalDocumentSheet({
@@ -244,12 +667,18 @@ export default function LegalDocumentSheet({
   selectedOptionalClauseKeys = [],
   fieldValues = {},
   status,
+  activeFieldKey,
+  activeFieldLabel,
 }: Props) {
   const missingPreviewValue = "....................";
 
   const effectiveSlug =
     templateSlug ||
-    (fieldValues.landlord_name || fieldValues.property_city ? "rental" : fieldValues.sale_seller_name || fieldValues.sale_unit_city ? "apartment_sale" : "freelancer");
+    (fieldValues.landlord_name || fieldValues.property_city
+      ? "rental"
+      : fieldValues.seller_name || fieldValues.sale_seller_name || fieldValues.sale_unit_city
+        ? "apartment_sale"
+        : "freelancer");
 
   const templateDef = useMemo(() => {
     return (
@@ -267,72 +696,103 @@ export default function LegalDocumentSheet({
       return "residential_lease";
     }
     if (effectiveSlug === "apartment_sale") {
-      return fieldValues.sale_payment_plan === "installments" ? "preliminary_sale" : "final_sale";
+      return "preliminary_sale";
     }
     return templateDef.variants[0]?.key || "visual_identity_design";
   }, [variantKey, effectiveSlug, fieldValues, templateDef]);
 
+  const resolvedDefinition = useMemo(() => {
+    try {
+      return resolveWizardDefinition(
+        templateDef,
+        effectiveVariantKey,
+        selectedOptionalClauseKeys || [],
+        fieldValues,
+      );
+    } catch {
+      return null;
+    }
+  }, [effectiveVariantKey, fieldValues, selectedOptionalClauseKeys, templateDef]);
+
+  const fieldDefinitionMap = useMemo(() => new Map<string, WizardFieldDefinition>(
+    (resolvedDefinition?.steps ?? []).flatMap((step) => step.fields).map((field) => [field.key, field] as const),
+  ), [resolvedDefinition]);
+
+  const previewValue = (key: string, value: unknown) => {
+    const definition = fieldDefinitionMap.get(key);
+    return formatLegalValue(key, value, definition?.options ?? [], definition?.type);
+  };
+
   const isRental = effectiveSlug === "rental";
   const isSale = effectiveSlug === "apartment_sale";
   const isFreelancer = effectiveSlug === "freelancer";
+  const freelancerPartyTwoRole = effectiveVariantKey === "visual_identity_design"
+    ? "المصمم"
+    : effectiveVariantKey === "website_development"
+      ? "مقدم الخدمة / المطور"
+      : "مقدم الخدمة";
+  const partyOneRole = isRental ? "الطرف الأول – المؤجر" : isSale ? "الطرف الأول – البائع" : "الطرف الأول – العميل";
+  const partyTwoRole = isRental ? "الطرف الثاني – المستأجر" : isSale ? "الطرف الثاني – المشتري" : `الطرف الثاني – ${freelancerPartyTwoRole}`;
 
   // ─── Party 1 (Landlord / Seller / Client) ──────────────────────────────────
-  const isPartyOneCompany = (fieldValues.landlord_party_type || fieldValues.sale_seller_party_type || fieldValues.client_party_type || fieldValues.visual_client_party_type || fieldValues.website_client_party_type || fieldValues.social_client_party_type) === "company";
+  const isPartyOneCompany = (fieldValues.landlord_party_type || fieldValues.seller_party_type || fieldValues.sale_seller_party_type || fieldValues.client_party_type || fieldValues.visual_client_party_type || fieldValues.website_client_party_type || fieldValues.social_client_party_type) === "company";
   const p1Name = isPartyOneCompany
-    ? (fieldValues.landlord_company_name || fieldValues.sale_seller_company_name || fieldValues.client_company_name || fieldValues.visual_client_company_name || fieldValues.website_client_company_name || fieldValues.social_client_company_name || "الشركة (الطرف الأول)")
-    : (fieldValues.landlord_name || fieldValues.sale_seller_name || fieldValues.client_name || fieldValues.visual_client_name || fieldValues.website_client_name || fieldValues.social_client_name || "الطرف الأول");
-  const p1Nationality = fieldValues.landlord_nationality || fieldValues.sale_seller_nationality || fieldValues.client_nationality || fieldValues.visual_client_nationality || fieldValues.website_client_nationality || fieldValues.social_client_nationality || missingPreviewValue;
+    ? (fieldValues.landlord_company_name || fieldValues.seller_company_name || fieldValues.sale_seller_company_name || fieldValues.client_company_name || fieldValues.visual_client_company_name || fieldValues.website_client_company_name || fieldValues.social_client_company_name || "الشركة (الطرف الأول)")
+    : (fieldValues.landlord_name || fieldValues.seller_name || fieldValues.sale_seller_name || fieldValues.client_name || fieldValues.visual_client_name || fieldValues.website_client_name || fieldValues.social_client_name || "الطرف الأول");
+  const p1Nationality = fieldValues.landlord_nationality || fieldValues.seller_nationality || fieldValues.sale_seller_nationality || fieldValues.client_nationality || fieldValues.visual_client_nationality || fieldValues.website_client_nationality || fieldValues.social_client_nationality || missingPreviewValue;
   const isP1NonEgyptian = p1Nationality !== "مصري" && p1Nationality !== "مصري الجنسية" && p1Nationality !== "egyptian" && p1Nationality !== "مصرية" && p1Nationality !== missingPreviewValue;
-  const p1NationalId = fieldValues.landlord_national_id || fieldValues.sale_seller_national_id || fieldValues.client_national_id || fieldValues.visual_client_national_id || fieldValues.website_client_national_id || fieldValues.social_client_national_id || "";
-  const p1IdIssuer = fieldValues.landlord_id_issuer || fieldValues.sale_seller_id_issuer || fieldValues.visual_client_id_issuer || fieldValues.website_client_id_issuer || fieldValues.social_client_id_issuer || "";
-  const p1IdIssueDate = fieldValues.landlord_id_issue_date || fieldValues.visual_client_id_issue_date || fieldValues.website_client_id_issue_date || fieldValues.social_client_id_issue_date ? formatLegalValue("date", fieldValues.landlord_id_issue_date || fieldValues.visual_client_id_issue_date || fieldValues.website_client_id_issue_date || fieldValues.social_client_id_issue_date) : "";
+  const p1NationalId = fieldValues.landlord_national_id || fieldValues.seller_national_id || fieldValues.sale_seller_national_id || fieldValues.client_national_id || fieldValues.visual_client_national_id || fieldValues.website_client_national_id || fieldValues.social_client_national_id || "";
+  const p1IdIssuer = fieldValues.landlord_id_issuer || fieldValues.seller_id_issuer || fieldValues.sale_seller_id_issuer || fieldValues.visual_client_id_issuer || fieldValues.website_client_id_issuer || fieldValues.social_client_id_issuer || "";
+  const p1IdIssueDateRaw = fieldValues.landlord_id_issue_date || fieldValues.seller_id_issue_date || fieldValues.sale_seller_id_issue_date || fieldValues.visual_client_id_issue_date || fieldValues.website_client_id_issue_date || fieldValues.social_client_id_issue_date;
+  const p1IdIssueDate = p1IdIssueDateRaw ? formatLegalValue("date", p1IdIssueDateRaw) : "";
   const p1Address = isPartyOneCompany
-    ? (fieldValues.landlord_company_address || fieldValues.sale_seller_company_address || fieldValues.client_company_address || fieldValues.visual_client_company_address || fieldValues.website_client_company_address || fieldValues.social_client_company_address || fieldValues.landlord_address || missingPreviewValue)
-    : (fieldValues.landlord_address || fieldValues.sale_seller_address || fieldValues.client_address || fieldValues.visual_client_address || fieldValues.website_client_address || fieldValues.social_client_address || missingPreviewValue);
-  const p1Phone = fieldValues.landlord_phone || fieldValues.sale_seller_phone || fieldValues.client_phone || fieldValues.visual_client_phone || fieldValues.website_client_phone || fieldValues.social_client_phone || "";
+    ? (fieldValues.landlord_company_address || fieldValues.seller_company_address || fieldValues.sale_seller_company_address || fieldValues.client_company_address || fieldValues.visual_client_company_address || fieldValues.website_client_company_address || fieldValues.social_client_company_address || fieldValues.landlord_address || fieldValues.seller_address || missingPreviewValue)
+    : (fieldValues.landlord_address || fieldValues.seller_address || fieldValues.sale_seller_address || fieldValues.client_address || fieldValues.visual_client_address || fieldValues.website_client_address || fieldValues.social_client_address || missingPreviewValue);
+  const p1Phone = fieldValues.landlord_phone || fieldValues.seller_phone || fieldValues.sale_seller_phone || fieldValues.client_phone || fieldValues.visual_client_phone || fieldValues.website_client_phone || fieldValues.social_client_phone || "";
   const p1Email = isPartyOneCompany
-    ? (fieldValues.landlord_company_email || fieldValues.sale_seller_company_email || fieldValues.client_company_email || fieldValues.visual_client_company_email || fieldValues.website_client_company_email || fieldValues.social_client_company_email || "")
-    : (fieldValues.landlord_email || fieldValues.sale_seller_email || fieldValues.client_email || fieldValues.visual_client_email || fieldValues.website_client_email || fieldValues.social_client_email || "");
-  const p1Rep = isPartyOneCompany ? (fieldValues.landlord_legal_representative || fieldValues.sale_seller_legal_representative || fieldValues.client_legal_representative || fieldValues.visual_client_legal_representative || fieldValues.website_client_legal_representative || fieldValues.social_client_legal_representative || "") : "";
-  const p1RepCapacity = isPartyOneCompany ? (fieldValues.landlord_representative_capacity || fieldValues.sale_seller_representative_capacity || fieldValues.visual_client_representative_capacity || fieldValues.website_client_representative_capacity || fieldValues.social_client_representative_capacity || "") : "";
-  const p1CommercialRegister = isPartyOneCompany ? (fieldValues.landlord_commercial_register || fieldValues.sale_seller_commercial_register || fieldValues.visual_client_commercial_register || fieldValues.website_client_commercial_register || fieldValues.social_client_commercial_register || "") : "";
-  const p1TaxCard = isPartyOneCompany ? (fieldValues.landlord_tax_card || fieldValues.sale_seller_tax_card || fieldValues.visual_client_tax_number || fieldValues.website_client_tax_number || fieldValues.social_client_tax_number || "") : "";
-  const p1LegalForm = isPartyOneCompany ? (fieldValues.landlord_company_legal_form || fieldValues.sale_seller_company_legal_form || fieldValues.visual_client_company_legal_form || fieldValues.website_client_company_legal_form || fieldValues.social_client_company_legal_form || "") : "";
+    ? (fieldValues.landlord_company_email || fieldValues.seller_company_email || fieldValues.sale_seller_company_email || fieldValues.client_company_email || fieldValues.visual_client_company_email || fieldValues.website_client_company_email || fieldValues.social_client_company_email || "")
+    : (fieldValues.landlord_email || fieldValues.seller_email || fieldValues.sale_seller_email || fieldValues.client_email || fieldValues.visual_client_email || fieldValues.website_client_email || fieldValues.social_client_email || "");
+  const p1Rep = isPartyOneCompany ? (fieldValues.landlord_legal_representative || fieldValues.seller_legal_representative || fieldValues.sale_seller_legal_representative || fieldValues.client_legal_representative || fieldValues.visual_client_legal_representative || fieldValues.website_client_legal_representative || fieldValues.social_client_legal_representative || "") : "";
+  const p1RepCapacity = isPartyOneCompany ? (fieldValues.landlord_representative_capacity || fieldValues.seller_representative_capacity || fieldValues.sale_seller_representative_capacity || fieldValues.visual_client_representative_capacity || fieldValues.website_client_representative_capacity || fieldValues.social_client_representative_capacity || "") : "";
+  const p1CommercialRegister = isPartyOneCompany ? (fieldValues.landlord_commercial_register || fieldValues.seller_commercial_register || fieldValues.sale_seller_commercial_register || fieldValues.visual_client_commercial_register || fieldValues.website_client_commercial_register || fieldValues.social_client_commercial_register || "") : "";
+  const p1TaxCard = isPartyOneCompany ? (fieldValues.landlord_tax_card || fieldValues.seller_tax_card || fieldValues.sale_seller_tax_card || fieldValues.visual_client_tax_number || fieldValues.website_client_tax_number || fieldValues.social_client_tax_number || "") : "";
+  const p1LegalForm = isPartyOneCompany ? (fieldValues.landlord_company_legal_form || fieldValues.seller_company_legal_form || fieldValues.sale_seller_company_legal_form || fieldValues.visual_client_company_legal_form || fieldValues.website_client_company_legal_form || fieldValues.social_client_company_legal_form || "") : "";
 
   // ─── Party 2 (Tenant / Buyer / Provider) ───────────────────────────────────
-  const isPartyTwoCompany = (fieldValues.tenant_party_type || fieldValues.sale_buyer_party_type || fieldValues.provider_party_type || fieldValues.visual_provider_party_type || fieldValues.website_provider_party_type || fieldValues.social_provider_party_type) === "company";
+  const isPartyTwoCompany = (fieldValues.tenant_party_type || fieldValues.buyer_party_type || fieldValues.sale_buyer_party_type || fieldValues.provider_party_type || fieldValues.visual_provider_party_type || fieldValues.website_provider_party_type || fieldValues.social_provider_party_type) === "company";
   const p2Name = isPartyTwoCompany
-    ? (fieldValues.tenant_company_name || fieldValues.sale_buyer_company_name || fieldValues.provider_company_name || fieldValues.visual_provider_company_name || fieldValues.website_provider_company_name || fieldValues.social_provider_company_name || "الشركة (الطرف الثاني)")
-    : (fieldValues.tenant_name || fieldValues.sale_buyer_name || fieldValues.provider_name || fieldValues.visual_provider_name || fieldValues.website_provider_name || fieldValues.social_provider_name || "الطرف الثاني");
-  const p2Nationality = fieldValues.tenant_nationality || fieldValues.sale_buyer_nationality || fieldValues.provider_nationality || fieldValues.visual_provider_nationality || fieldValues.website_provider_nationality || fieldValues.social_provider_nationality || missingPreviewValue;
+    ? (fieldValues.tenant_company_name || fieldValues.buyer_company_name || fieldValues.sale_buyer_company_name || fieldValues.provider_company_name || fieldValues.visual_provider_company_name || fieldValues.website_provider_company_name || fieldValues.social_provider_company_name || "الشركة (الطرف الثاني)")
+    : (fieldValues.tenant_name || fieldValues.buyer_name || fieldValues.sale_buyer_name || fieldValues.provider_name || fieldValues.visual_provider_name || fieldValues.website_provider_name || fieldValues.social_provider_name || "الطرف الثاني");
+  const p2Nationality = fieldValues.tenant_nationality || fieldValues.buyer_nationality || fieldValues.sale_buyer_nationality || fieldValues.provider_nationality || fieldValues.visual_provider_nationality || fieldValues.website_provider_nationality || fieldValues.social_provider_nationality || missingPreviewValue;
   const isP2NonEgyptian = p2Nationality !== "مصري" && p2Nationality !== "مصري الجنسية" && p2Nationality !== "egyptian" && p2Nationality !== "مصرية" && p2Nationality !== missingPreviewValue;
-  const p2NationalId = fieldValues.tenant_national_id || fieldValues.sale_buyer_national_id || fieldValues.provider_national_id || fieldValues.visual_provider_national_id || fieldValues.website_provider_national_id || fieldValues.social_provider_national_id || "";
-  const p2IdIssuer = fieldValues.tenant_id_issuer || fieldValues.sale_buyer_id_issuer || fieldValues.visual_provider_id_issuer || fieldValues.website_provider_id_issuer || fieldValues.social_provider_id_issuer || "";
-  const p2IdIssueDate = fieldValues.tenant_id_issue_date || fieldValues.visual_provider_id_issue_date || fieldValues.website_provider_id_issue_date || fieldValues.social_provider_id_issue_date ? formatLegalValue("date", fieldValues.tenant_id_issue_date || fieldValues.visual_provider_id_issue_date || fieldValues.website_provider_id_issue_date || fieldValues.social_provider_id_issue_date) : "";
+  const p2NationalId = fieldValues.tenant_national_id || fieldValues.buyer_national_id || fieldValues.sale_buyer_national_id || fieldValues.provider_national_id || fieldValues.visual_provider_national_id || fieldValues.website_provider_national_id || fieldValues.social_provider_national_id || "";
+  const p2IdIssuer = fieldValues.tenant_id_issuer || fieldValues.buyer_id_issuer || fieldValues.sale_buyer_id_issuer || fieldValues.visual_provider_id_issuer || fieldValues.website_provider_id_issuer || fieldValues.social_provider_id_issuer || "";
+  const p2IdIssueDateRaw = fieldValues.tenant_id_issue_date || fieldValues.buyer_id_issue_date || fieldValues.sale_buyer_id_issue_date || fieldValues.visual_provider_id_issue_date || fieldValues.website_provider_id_issue_date || fieldValues.social_provider_id_issue_date;
+  const p2IdIssueDate = p2IdIssueDateRaw ? formatLegalValue("date", p2IdIssueDateRaw) : "";
   const p2Address = isPartyTwoCompany
-    ? (fieldValues.tenant_company_address || fieldValues.sale_buyer_company_address || fieldValues.provider_company_address || fieldValues.visual_provider_company_address || fieldValues.website_provider_company_address || fieldValues.social_provider_company_address || fieldValues.tenant_address || missingPreviewValue)
-    : (fieldValues.tenant_address || fieldValues.sale_buyer_address || fieldValues.provider_address || fieldValues.visual_provider_address || fieldValues.website_provider_address || fieldValues.social_provider_address || missingPreviewValue);
-  const p2Phone = fieldValues.tenant_phone || fieldValues.sale_buyer_phone || fieldValues.provider_phone || fieldValues.visual_provider_phone || fieldValues.website_provider_phone || fieldValues.social_provider_phone || "";
+    ? (fieldValues.tenant_company_address || fieldValues.buyer_company_address || fieldValues.sale_buyer_company_address || fieldValues.provider_company_address || fieldValues.visual_provider_company_address || fieldValues.website_provider_company_address || fieldValues.social_provider_company_address || fieldValues.tenant_address || fieldValues.buyer_address || missingPreviewValue)
+    : (fieldValues.tenant_address || fieldValues.buyer_address || fieldValues.sale_buyer_address || fieldValues.provider_address || fieldValues.visual_provider_address || fieldValues.website_provider_address || fieldValues.social_provider_address || missingPreviewValue);
+  const p2Phone = fieldValues.tenant_phone || fieldValues.buyer_phone || fieldValues.sale_buyer_phone || fieldValues.provider_phone || fieldValues.visual_provider_phone || fieldValues.website_provider_phone || fieldValues.social_provider_phone || "";
   const p2Email = isPartyTwoCompany
-    ? (fieldValues.tenant_company_email || fieldValues.sale_buyer_company_email || fieldValues.provider_company_email || fieldValues.visual_provider_company_email || fieldValues.website_provider_company_email || fieldValues.social_provider_company_email || "")
-    : (fieldValues.tenant_email || fieldValues.sale_buyer_email || fieldValues.provider_email || fieldValues.visual_provider_email || fieldValues.website_provider_email || fieldValues.social_provider_email || "");
-  const p2Rep = isPartyTwoCompany ? (fieldValues.tenant_legal_representative || fieldValues.sale_buyer_legal_representative || fieldValues.provider_legal_representative || fieldValues.visual_provider_legal_representative || fieldValues.website_provider_legal_representative || fieldValues.social_provider_legal_representative || "") : "";
-  const p2RepCapacity = isPartyTwoCompany ? (fieldValues.tenant_representative_capacity || fieldValues.sale_buyer_representative_capacity || fieldValues.visual_provider_representative_capacity || fieldValues.website_provider_representative_capacity || fieldValues.social_provider_representative_capacity || "") : "";
-  const p2CommercialRegister = isPartyTwoCompany ? (fieldValues.tenant_commercial_register || fieldValues.sale_buyer_commercial_register || fieldValues.visual_provider_commercial_register || fieldValues.website_provider_commercial_register || fieldValues.social_provider_commercial_register || "") : "";
-  const p2TaxCard = isPartyTwoCompany ? (fieldValues.tenant_tax_card || fieldValues.sale_buyer_tax_card || fieldValues.visual_provider_tax_number || fieldValues.website_provider_tax_number || fieldValues.social_provider_tax_number || "") : "";
-  const p2LegalForm = isPartyTwoCompany ? (fieldValues.tenant_company_legal_form || fieldValues.sale_buyer_company_legal_form || fieldValues.visual_provider_company_legal_form || fieldValues.website_provider_company_legal_form || fieldValues.social_provider_company_legal_form || "") : "";
+    ? (fieldValues.tenant_company_email || fieldValues.buyer_company_email || fieldValues.sale_buyer_company_email || fieldValues.provider_company_email || fieldValues.visual_provider_company_email || fieldValues.website_provider_company_email || fieldValues.social_provider_company_email || "")
+    : (fieldValues.tenant_email || fieldValues.buyer_email || fieldValues.sale_buyer_email || fieldValues.provider_email || fieldValues.visual_provider_email || fieldValues.website_provider_email || fieldValues.social_provider_email || "");
+  const p2Rep = isPartyTwoCompany ? (fieldValues.tenant_legal_representative || fieldValues.buyer_legal_representative || fieldValues.sale_buyer_legal_representative || fieldValues.provider_legal_representative || fieldValues.visual_provider_legal_representative || fieldValues.website_provider_legal_representative || fieldValues.social_provider_legal_representative || "") : "";
+  const p2RepCapacity = isPartyTwoCompany ? (fieldValues.tenant_representative_capacity || fieldValues.buyer_representative_capacity || fieldValues.sale_buyer_representative_capacity || fieldValues.visual_provider_representative_capacity || fieldValues.website_provider_representative_capacity || fieldValues.social_provider_representative_capacity || "") : "";
+  const p2CommercialRegister = isPartyTwoCompany ? (fieldValues.tenant_commercial_register || fieldValues.buyer_commercial_register || fieldValues.sale_buyer_commercial_register || fieldValues.visual_provider_commercial_register || fieldValues.website_provider_commercial_register || fieldValues.social_provider_commercial_register || "") : "";
+  const p2TaxCard = isPartyTwoCompany ? (fieldValues.tenant_tax_card || fieldValues.buyer_tax_card || fieldValues.sale_buyer_tax_card || fieldValues.visual_provider_tax_number || fieldValues.website_provider_tax_number || fieldValues.social_provider_tax_number || "") : "";
+  const p2LegalForm = isPartyTwoCompany ? (fieldValues.tenant_company_legal_form || fieldValues.buyer_company_legal_form || fieldValues.sale_buyer_company_legal_form || fieldValues.visual_provider_company_legal_form || fieldValues.website_provider_company_legal_form || fieldValues.social_provider_company_legal_form || "") : "";
 
   // ─── Real Estate & Subject Details ─────────────────────────────────────────
   const governorate = fieldValues.property_governorate || fieldValues.sale_unit_governorate || missingPreviewValue;
   const city = fieldValues.property_city || fieldValues.sale_unit_city || "";
   const district = fieldValues.property_district || fieldValues.sale_unit_district || "";
   const street = fieldValues.property_street || fieldValues.sale_unit_street || "";
-  const buildingNum = fieldValues.building_number || fieldValues.property_building_number || fieldValues.sale_unit_building_number || "";
-  const floorNum = fieldValues.floor_number || fieldValues.property_floor || fieldValues.sale_unit_floor || "";
+  const buildingNum = fieldValues.building_number || fieldValues.property_building_number || fieldValues.sale_building_number || fieldValues.sale_unit_building_number || "";
+  const floorNum = fieldValues.floor_number || fieldValues.property_floor || fieldValues.sale_floor_number || fieldValues.sale_unit_floor || "";
   const unitNum = fieldValues.unit_number || fieldValues.property_unit_number || fieldValues.sale_unit_number || "";
-  const area = fieldValues.property_area || fieldValues.property_area_sqm || fieldValues.sale_unit_area_sqm || "";
+  const area = fieldValues.property_area || fieldValues.property_area_sqm || fieldValues.sale_unit_area || fieldValues.sale_unit_area_sqm || "";
   const resPropertyType = fieldValues.residential_property_type || fieldValues.commercial_unit_type || "وحدة";
-  const compoundName = fieldValues.residential_compound_name || fieldValues.commercial_mall_name || "";
+  const compoundName = fieldValues.residential_compound_name || fieldValues.sale_compound_name || fieldValues.commercial_project_name || fieldValues.administrative_project_name || fieldValues.commercial_mall_name || "";
   
   // Specific Commercial / Purpose Handling
   const commercialActivityName = fieldValues.commercial_activity_name || fieldValues.trade_name || fieldValues.commercial_activity_type || "";
@@ -341,26 +801,32 @@ export default function LegalDocumentSheet({
     ? (effectiveVariantKey === "commercial_lease"
         ? [commercialUnitType, commercialActivityName].filter(Boolean).join(" — ") || "وحدة تجارية"
         : effectiveVariantKey === "administrative_lease"
-        ? [fieldValues.administrative_purpose, fieldValues.administrative_activity_type].filter(Boolean).join(" — ") || "مقر إداري"
+        ? [fieldValues.administrative_activity_name, fieldValues.administrative_purpose, fieldValues.administrative_activity_type].filter(Boolean).join(" — ") || "مقر إداري"
         : resPropertyType || "سكن خاص")
     : isSale
     ? fieldValues.sale_unit_type || resPropertyType || "وحدة سكنية"
     : "خدمات مهنية";
 
   const mezzanine = fieldValues.commercial_has_mezzanine;
-  const facadeMeters = fieldValues.commercial_facade_length_meters;
-  const hasStorage = fieldValues.commercial_has_attached_storage;
+  const facadeMeters = fieldValues.commercial_frontage_width || fieldValues.commercial_facade_length_meters;
+  const hasStorage = fieldValues.commercial_has_storage ?? fieldValues.commercial_has_attached_storage;
   const hasLoading = fieldValues.commercial_has_loading_area;
-  const locationType = fieldValues.commercial_location_type ? formatLegalValue("location", fieldValues.commercial_location_type) : "";
+  const rawLocationType = fieldValues.commercial_site_type || fieldValues.commercial_location_type;
+  const locationType = rawLocationType ? previewValue("commercial_site_type", rawLocationType) : "";
 
   // Freelancer project variables
   const projectName = fieldValues.visual_project_name || fieldValues.website_project_name || fieldValues.social_project_name || "";
-  const projectType = fieldValues.website_project_type ? formatLegalValue("project_type", fieldValues.website_project_type) : fieldValues.social_business_nature || fieldValues.visual_project_brief || "";
+  const projectType = fieldValues.website_project_type ? previewValue("website_project_type", fieldValues.website_project_type) : fieldValues.social_business_nature || fieldValues.visual_project_brief || "";
   const managedPlatforms = fieldValues.social_managed_platforms || "";
-  const scopeSummary = fieldValues.visual_project_scope_summary || fieldValues.website_project_scope_summary || fieldValues.social_scope_summary || "";
+  const scopeSummary = fieldValues.visual_project_purpose || fieldValues.visual_project_scope_summary || fieldValues.website_project_scope_summary || fieldValues.social_scope_summary || "";
   const duration = fieldValues.visual_execution_duration || fieldValues.website_contract_duration || fieldValues.social_contract_duration || (fieldValues.website_execution_duration_value ? `${fieldValues.website_execution_duration_value} ${fieldValues.website_execution_duration_unit || 'يوم عمل'}` : "");
+  const durationBasis = fieldValues.website_duration_basis ? previewValue("website_duration_basis", fieldValues.website_duration_basis) : "";
   const feeAmount = fieldValues.visual_contract_value || fieldValues.website_total_price || fieldValues.social_fee || "";
   const feeNature = fieldValues.visual_fee_nature || fieldValues.social_fee_nature || "";
+  const projectManager = fieldValues.website_project_manager || fieldValues.visual_project_manager || fieldValues.social_project_manager || "";
+  const projectContactEmail = fieldValues.website_contact_email || fieldValues.visual_contact_email || fieldValues.social_contact_email || "";
+  const approvalPerson = fieldValues.website_approval_person || fieldValues.visual_approval_person || fieldValues.social_approval_person || "";
+  const billingContact = fieldValues.website_billing_contact || fieldValues.visual_billing_contact || fieldValues.social_billing_contact || "";
 
   // Jurisdiction Court
   const jurisdictionCourt =
@@ -370,14 +836,28 @@ export default function LegalDocumentSheet({
     (fieldValues.website_competent_court === "أخرى" ? fieldValues.website_competent_court_other : fieldValues.website_competent_court) ||
     (fieldValues.social_competent_court === "أخرى" ? fieldValues.social_competent_court_other : fieldValues.social_competent_court) ||
     "";
+  const isCustomJurisdictionCourt = [
+    fieldValues.visual_competent_court,
+    fieldValues.website_competent_court,
+    fieldValues.social_competent_court,
+  ].includes("أخرى");
+  const jurisdictionCourtLabel = jurisdictionCourt
+    ? (String(jurisdictionCourt).trim().startsWith("محكمة") ? String(jurisdictionCourt).trim() : `محكمة ${String(jurisdictionCourt).trim()}`)
+    : "";
+  const jurisdictionCourtDisplay = jurisdictionCourtLabel
+    ? (isCustomJurisdictionCourt ? jurisdictionCourtLabel : `${jurisdictionCourtLabel} الابتدائية ودوائرها الجزئية بحسب الأحوال`)
+    : "";
 
   // Meters
   const electricityMeter = fieldValues.electricity_meter || fieldValues.sale_electricity_meter || "";
-  const electricityMeterType = formatLegalValue("meter_type", fieldValues.electricity_meter_type || fieldValues.sale_electricity_meter_type || "");
+  const electricityMeterTypeKey = fieldValues.electricity_meter_type ? "electricity_meter_type" : "sale_electricity_meter_type";
+  const electricityMeterType = previewValue(electricityMeterTypeKey, fieldValues[electricityMeterTypeKey] || "");
   const waterMeter = fieldValues.water_meter || fieldValues.sale_water_meter || "";
-  const waterMeterType = formatLegalValue("meter_type", fieldValues.water_meter_type || fieldValues.sale_water_meter_type || "");
+  const waterMeterTypeKey = fieldValues.water_meter_type ? "water_meter_type" : "sale_water_meter_type";
+  const waterMeterType = previewValue(waterMeterTypeKey, fieldValues[waterMeterTypeKey] || "");
   const gasMeter = fieldValues.gas_meter || fieldValues.sale_gas_meter || "";
-  const gasMeterType = formatLegalValue("meter_type", fieldValues.gas_meter_type || fieldValues.sale_gas_meter_type || "");
+  const gasMeterTypeKey = fieldValues.gas_meter_type ? "gas_meter_type" : "sale_gas_meter_type";
+  const gasMeterType = previewValue(gasMeterTypeKey, fieldValues[gasMeterTypeKey] || "");
 
   // ─── Financials & Duration ────────────────────────────────────────────────
   const rawContractDate = String(fieldValues.contract_date || fieldValues.visual_contract_date || fieldValues.website_contract_date || fieldValues.social_contract_date || "");
@@ -386,10 +866,13 @@ export default function LegalDocumentSheet({
     : rawContractDate || missingPreviewValue;
 
   // ─── Witnesses ────────────────────────────────────────────────────────────
-  const witness1Name = fieldValues.rental_witness_1_name || fieldValues.sale_witness_1_name || "";
-  const witness1Id = fieldValues.rental_witness_1_national_id || fieldValues.sale_witness_1_national_id || "";
-  const witness2Name = fieldValues.rental_witness_2_name || fieldValues.sale_witness_2_name || "";
-  const witness2Id = fieldValues.rental_witness_2_national_id || fieldValues.sale_witness_2_national_id || "";
+  const witnessPrefix = isRental ? "rental" : isSale ? "sale" : effectiveVariantKey === "visual_identity_design" ? "visual" : effectiveVariantKey === "website_development" ? "website" : "social";
+  const witness1Enabled = fieldValues[`${witnessPrefix}_witness_1_enabled`] === true;
+  const witness2Enabled = fieldValues[`${witnessPrefix}_witness_2_enabled`] === true;
+  const witness1Name = fieldValues[`${witnessPrefix}_witness_1_name`] || "";
+  const witness1Id = fieldValues[`${witnessPrefix}_witness_1_national_id`] || "";
+  const witness2Name = fieldValues[`${witnessPrefix}_witness_2_name`] || "";
+  const witness2Id = fieldValues[`${witnessPrefix}_witness_2_national_id`] || "";
 
   // ─── Render All Authoritative Legal Clauses ───────────────────────────────
   const renderedClauses: RenderedLegalClause[] = useMemo(() => {
@@ -401,7 +884,61 @@ export default function LegalDocumentSheet({
     }
   }, [templateDef, effectiveVariantKey, selectedOptionalClauseKeys, fieldValues]);
 
+  const separateAnnexes = useMemo<OptionalClauseDefinition[]>(() => {
+    const variant = resolvedDefinition?.variant;
+    if (!variant) return [];
+    return templateDef.optionalClauses.filter((annex) => {
+      if (annex.outputMode !== "separate_annex") return false;
+      if (!variant.allowedOptionalClauseKeys.includes(annex.key) || !annex.applicableVariantKeys.includes(variant.key)) return false;
+      return Boolean(selectedOptionalClauseKeys?.includes(annex.key));
+    });
+  }, [resolvedDefinition, selectedOptionalClauseKeys, templateDef]);
+
+  const separateClauseKeys = useMemo(
+    () => new Set(separateAnnexes.flatMap((annex) => annex.legalClauseKeys)),
+    [separateAnnexes],
+  );
+  const mainRenderedClauses = useMemo(
+    () => renderedClauses.filter((clause) => !separateClauseKeys.has(clause.key)),
+    [renderedClauses, separateClauseKeys],
+  );
+
+  const activeKey = (activeFieldKey ?? "").toLowerCase();
+  const activePreamble = Boolean(activeKey) && /(?:^|_)contract_date$/.test(activeKey);
+  const activePartyOne = Boolean(activeKey) && (
+    activeKey.startsWith("landlord_") ||
+    activeKey.startsWith("seller_") ||
+    activeKey.startsWith("sale_seller_") ||
+    activeKey.includes("_client_") ||
+    activeKey.startsWith("client_")
+  );
+  const activePartyTwo = Boolean(activeKey) && (
+    activeKey.startsWith("tenant_") ||
+    activeKey.startsWith("buyer_") ||
+    activeKey.startsWith("sale_buyer_") ||
+    activeKey.includes("_provider_") ||
+    activeKey.startsWith("provider_")
+  );
+  const activeJurisdiction = Boolean(activeKey) && (activeKey.includes("court") || activeKey.includes("jurisdiction"));
+  const activeWitnesses = Boolean(activeKey) && activeKey.includes("witness");
+  const activeCommunications = Boolean(activeKey) && /(notice|messaging|communication|email_notices|project_platform)/.test(activeKey);
+  const activeOptionalTerms = Boolean(activeKey) && /(optional|legal_fees|tax|vat|penalty)/.test(activeKey);
+  const activeUnit = Boolean(activeKey) && !isFreelancer && /(?:^|_)(?:property|building|floor|unit|rooms|reception|bathrooms|balconies|electricity|water|gas|commercial|administrative|residential)(?:_|$)|meter/.test(activeKey);
+  const activeProject = Boolean(activeKey) && isFreelancer && /project_name|project_type|project_brief|project_purpose|scope_summary|managed_platforms|business_nature|execution_duration|duration_basis|contract_duration|contract_value|total_price|social_fee|fee_nature|project_manager|contact_email|approval_person|billing_contact/.test(activeKey);
+
+  const activeClauseKeys = useMemo(() => {
+    if (!activeFieldKey) return new Set<string>();
+    return new Set(
+      (templateDef.legalClauses ?? [])
+        .filter((clause) => clause.variables?.includes(activeFieldKey))
+        .map((clause) => clause.key),
+    );
+  }, [activeFieldKey, templateDef]);
+  const primaryActiveClauseKey = mainRenderedClauses.find((clause) => activeClauseKeys.has(clause.key))?.key;
+  const activeBlockClass = "relative rounded-sm ring-2 ring-[#d9a84e] ring-offset-2 ring-offset-white transition-shadow duration-200";
+
   const docTitle =
+    resolvedDefinition?.variant.documentTitleAr ||
     templateNameAr ||
     (effectiveVariantKey === "commercial_lease"
       ? "عقد إيجار تجاري خاضع لأحكام القانون المدني"
@@ -416,57 +953,75 @@ export default function LegalDocumentSheet({
       : "عقد رسمي معتمد");
 
   const hasPropertyData = Boolean(governorate !== missingPreviewValue || street || area || unitNum || buildingNum);
+  const isDraft = status !== "issued";
 
   return (
-    <div className="relative mx-auto w-full max-w-[850px] rounded-none sm:rounded-lg border border-slate-200 bg-white p-8 sm:p-14 shadow-sm print:shadow-none print:border-none font-sans select-text overflow-hidden text-[#1a1a1a]">
-
-      {/* Repeating Subtle Watermark in Draft Mode */}
-      {status !== "issued" && (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-around overflow-hidden opacity-[0.035] select-none z-0 rotate-[-28deg] scale-125">
-          <div className="text-5xl sm:text-6xl font-black text-slate-900 tracking-widest whitespace-nowrap">
-            مسودة عقد • DRAFT PREVIEW
-          </div>
-          <div className="text-5xl sm:text-6xl font-black text-slate-900 tracking-widest whitespace-nowrap">
-            نسخة للمعاينة فقط • NOT OFFICIAL
-          </div>
-          <div className="text-5xl sm:text-6xl font-black text-slate-900 tracking-widest whitespace-nowrap">
-            مسودة عقد • DRAFT PREVIEW
-          </div>
+    <A4PreviewScaler>
+    <div className="space-y-5">
+      {isDraft && (
+        <div className="hidden border-2 border-red-700 p-8 text-center text-xl font-black text-red-800 print:block">
+          هذه معاينة محمية وغير صالحة للطباعة أو الاستخدام. تُتاح النسخة النهائية بعد إصدار العقد.
         </div>
       )}
+      <article
+        className={`zdraft-document-page relative mx-auto min-h-[297mm] w-[210mm] min-w-[210mm] overflow-hidden border border-slate-200 bg-white px-[15mm] pb-[16mm] pt-[13mm] text-[#1a1a1a] shadow-sm print:border-none print:shadow-none ${isDraft ? "select-none print:hidden" : "select-text"}`}
+        onCopy={isDraft ? (event) => event.preventDefault() : undefined}
+        onCut={isDraft ? (event) => event.preventDefault() : undefined}
+        onContextMenu={isDraft ? (event) => event.preventDefault() : undefined}
+        onDragStart={isDraft ? (event) => event.preventDefault() : undefined}
+      >
 
-      {/* Official Islamic Header & Seal */}
-      <div id="doc-preamble" className="relative z-10 text-center pb-4 border-b border-slate-300 scroll-mt-28">
-        <p className="text-[11.5px] sm:text-[12px] font-serif font-bold text-slate-600 tracking-widest">
-          بِسْمِ اللَّـهِ الرَّحْمَـٰنِ الرَّحِيمِ
-        </p>
-        <h1 className="mt-2.5 text-lg sm:text-[21px] font-bold text-[#00102e] tracking-tight">
-          {docTitle}
-        </h1>
-        <div className="mt-2 flex items-center justify-center gap-3 text-[10.5px] text-slate-500 font-mono">
-          <span>رقم الوثيقة: {serialNumber}</span>
-          <span>•</span>
-          <span>تاريخ التحرير: {formattedContractDate}</span>
+      {isDraft && <DraftWatermark serialNumber={serialNumber} />}
+
+      {/* Print-faithful header: matches the WeasyPrint document hierarchy. */}
+      <div
+        id="doc-preamble"
+        data-active-preview={activePreamble ? "exact" : undefined}
+        className={`relative z-10 scroll-mt-28 ${activePreamble ? activeBlockClass : ""}`}
+      >
+        {activePreamble && <LiveFieldMarker label={activeFieldLabel} />}
+        <div className="zd-doc-masthead">
+          <div>
+            <div className="zd-doc-office">Z draft</div>
+            <div className="zd-doc-kind">محرر تعاقدي</div>
+          </div>
+          <img src="/zdraft-logo-transparent.png" alt="Z draft" className="zd-doc-logo" />
+        </div>
+        <h1 className="zd-doc-title">{docTitle}</h1>
+        <div className="zd-doc-meta">
+          رقم المستند: <span dir="ltr" className="font-bold">{serialNumber}</span>
+          <span className="mx-2">|</span>
+          تاريخ العقد: <span dir="ltr">{formattedContractDate}</span>
         </div>
       </div>
 
       {/* Contract Body */}
-      <div className="relative z-10 mt-5 space-y-4 text-[11.5px] sm:text-[12px] leading-[1.85] text-slate-800 text-justify">
+      <div className="zd-doc-body relative z-10 text-justify text-slate-800">
 
-        {/* Preamble Opening */}
-        <p className="font-semibold text-slate-900 leading-relaxed pt-1">
-          إنه في يوم الموافق <strong className="text-[#00102e] font-bold underline decoration-[#986410]/50 underline-offset-4">{formattedContractDate}</strong>، بجمهورية مصر العربية، تم الاتفاق والتراضي بين كل من:
-        </p>
+        {resolvedDefinition ? (
+          <DocumentDataSections
+            steps={resolvedDefinition.steps}
+            fieldValues={fieldValues}
+            activeFieldKey={activeFieldKey}
+            activeFieldLabel={activeFieldLabel}
+          />
+        ) : (
+        <>
 
         {/* Parties Block */}
-        <div className="space-y-3 pt-1 border-b border-slate-200 pb-4">
+        <div className="space-y-2 border-b border-slate-200 pb-3 pt-0.5">
           {/* Party 1 */}
-          <div id="doc-party-1" className="space-y-1 scroll-mt-28">
-            <strong className="block text-[12.5px] sm:text-[13px] font-bold text-[#00102e]">
+          <div
+            id="doc-party-1"
+            data-active-preview={activePartyOne ? "exact" : undefined}
+            className={`space-y-1 scroll-mt-28 ${activePartyOne ? activeBlockClass : ""}`}
+          >
+            {activePartyOne && <LiveFieldMarker label={activeFieldLabel} />}
+            <strong className="zd-doc-party-title block">
               أولاً: {isPartyOneCompany ? "السادة / " : "السيد / "}{isRental ? "المؤجر" : isSale ? "البائع" : "العميل"} (الطرف الأول):
             </strong>
             {isPartyOneCompany ? (
-              <p className="text-[11.5px] text-slate-700 leading-6">
+              <p className="zd-doc-party-line">
                 <b>الشركة:</b> {p1Name} {p1LegalForm ? `(${p1LegalForm})` : ""}
                 {p1CommercialRegister && <> — <b>سجل تجاري:</b> <span dir="ltr" className="font-mono font-bold">{p1CommercialRegister}</span></>}
                 {p1TaxCard && <> — <b>بطاقة ضريبية:</b> <span dir="ltr" className="font-mono font-bold">{p1TaxCard}</span></>}
@@ -476,7 +1031,7 @@ export default function LegalDocumentSheet({
                 {p1Email && <> — <b>البريد:</b> <span dir="ltr">{p1Email}</span></>}.
               </p>
             ) : (
-              <p className="text-[11.5px] text-slate-700 leading-6">
+              <p className="zd-doc-party-line">
                 <b>الاسم:</b> {p1Name} — <b>الجنسية:</b> {p1Nationality}
                 {p1NationalId && <> — <b>{isP1NonEgyptian ? "رقم جواز السفر" : "الرقم القومي"}:</b> <span dir="ltr" className="font-mono font-bold">{p1NationalId}</span></>}
                 {p1IdIssuer && <> (صادر من: {p1IdIssuer}{p1IdIssueDate ? ` بتاريخ ${p1IdIssueDate}` : ""})</>}
@@ -488,12 +1043,17 @@ export default function LegalDocumentSheet({
           </div>
 
           {/* Party 2 */}
-          <div id="doc-party-2" className="space-y-1 scroll-mt-28 pt-1">
-            <strong className="block text-[12.5px] sm:text-[13px] font-bold text-[#00102e]">
-              ثانياً: {isPartyTwoCompany ? "السادة / " : "السيد / "}{isRental ? "المستأجر" : isSale ? "المشتري" : "مقدم الخدمة"} (الطرف الثاني):
+          <div
+            id="doc-party-2"
+            data-active-preview={activePartyTwo ? "exact" : undefined}
+            className={`space-y-1 scroll-mt-28 pt-1 ${activePartyTwo ? activeBlockClass : ""}`}
+          >
+            {activePartyTwo && <LiveFieldMarker label={activeFieldLabel} />}
+            <strong className="zd-doc-party-title block">
+              ثانياً: {isPartyTwoCompany ? "السادة / " : "السيد / "}{isRental ? "المستأجر" : isSale ? "المشتري" : freelancerPartyTwoRole} (الطرف الثاني):
             </strong>
             {isPartyTwoCompany ? (
-              <p className="text-[11.5px] text-slate-700 leading-6">
+              <p className="zd-doc-party-line">
                 <b>الشركة:</b> {p2Name} {p2LegalForm ? `(${p2LegalForm})` : ""}
                 {p2CommercialRegister && <> — <b>سجل تجاري:</b> <span dir="ltr" className="font-mono font-bold">{p2CommercialRegister}</span></>}
                 {p2TaxCard && <> — <b>بطاقة ضريبية:</b> <span dir="ltr" className="font-mono font-bold">{p2TaxCard}</span></>}
@@ -503,7 +1063,7 @@ export default function LegalDocumentSheet({
                 {p2Email && <> — <b>البريد:</b> <span dir="ltr">{p2Email}</span></>}.
               </p>
             ) : (
-              <p className="text-[11.5px] text-slate-700 leading-6">
+              <p className="zd-doc-party-line">
                 <b>الاسم:</b> {p2Name} — <b>الجنسية:</b> {p2Nationality}
                 {p2NationalId && <> — <b>{isP2NonEgyptian ? "رقم جواز السفر" : "الرقم القومي"}:</b> <span dir="ltr" className="font-mono font-bold">{p2NationalId}</span></>}
                 {p2IdIssuer && <> (صادر من: {p2IdIssuer}{p2IdIssueDate ? ` بتاريخ ${p2IdIssueDate}` : ""})</>}
@@ -516,16 +1076,21 @@ export default function LegalDocumentSheet({
         </div>
 
         {/* ─── DATA GRID SECTION (جدول المواصفات والبيانات المعتمدة) ─── */}
-        {(isRental || isSale) && hasPropertyData && (
-          <div id="doc-unit-specs" className="mt-3 mb-4 scroll-mt-28">
-            <div className="border border-slate-300 rounded-sm overflow-hidden bg-white">
-              <div className="bg-slate-100/80 px-3 py-1.5 border-b border-slate-300 flex items-center justify-between">
+        {(isRental || isSale) && (hasPropertyData || activeUnit || activeJurisdiction) && (
+          <div
+            id="doc-unit-specs"
+            data-active-preview={activeUnit ? "exact" : undefined}
+            className={`mb-3 mt-2 scroll-mt-28 ${activeUnit ? activeBlockClass : ""}`}
+          >
+            {activeUnit && <LiveFieldMarker label={activeFieldLabel} />}
+            <div className="zd-doc-data-section border border-slate-300 rounded-sm overflow-hidden bg-white">
+              <div className="zd-doc-data-heading bg-slate-100/80 px-3 py-1.5 border-b border-slate-300 flex items-center justify-between">
                 <strong className="text-[11.5px] font-bold text-[#00102e]">
                   {isRental ? "جدول بيانات ومواصفات العين المؤجرة وملحقاتها" : "جدول بيانات ومواصفات الوحدة المبيعة"}
                 </strong>
                 {compoundName && <span className="text-[10.5px] text-slate-600 font-bold">{compoundName}</span>}
               </div>
-              <table className="w-full text-[11px] text-slate-800 border-collapse">
+              <table className="zd-doc-data-grid">
                 <tbody>
                   <tr className="border-b border-slate-200">
                     <td className="py-1.5 px-3 w-1/2 align-top">
@@ -588,11 +1153,12 @@ export default function LegalDocumentSheet({
                   )}
 
                   {/* Court Jurisdiction Row in Specs Table */}
-                  <tr className="border-b border-slate-200 bg-slate-50/40">
+                  <tr data-preview-group="jurisdiction" data-active-preview={activeJurisdiction ? "exact" : undefined} className={`border-b border-slate-200 bg-slate-50/40 ${activeJurisdiction ? "outline outline-2 outline-[#d9a84e]" : ""}`}>
                     <td colSpan={2} className="py-1.5 px-3 align-top">
+                      {activeJurisdiction && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#00102e] px-2 py-0.5 text-[8.5px] font-black text-[#f2c45f]"><MousePointer2 className="h-3 w-3" />{activeFieldLabel || "المحكمة المختصة"} يظهر هنا</span>}
                       <span className="text-slate-500 text-[10px] block">المحكمة المختصة بنظر أي نزاع:</span>
                       <span className="font-bold text-[#00102e]">
-                        {jurisdictionCourt ? `محكمة ${jurisdictionCourt} الابتدائية وجزئياتها` : "المحكمة المختصة التابع لها العقار"}
+                        {jurisdictionCourtDisplay || "⚠ مطلوب تحديد المحكمة المختصة"}
                       </span>
                     </td>
                   </tr>
@@ -615,16 +1181,21 @@ export default function LegalDocumentSheet({
         )}
 
         {/* ─── FREELANCER PROJECT & SERVICES SPECIFICATIONS TABLE ─── */}
-        {isFreelancer && Boolean(projectName || scopeSummary || managedPlatforms || feeAmount) && (
-          <div id="doc-project-specs" className="mt-3 mb-4 scroll-mt-28">
-            <div className="border border-slate-300 rounded-sm overflow-hidden bg-white">
-              <div className="bg-slate-100/80 px-3 py-1.5 border-b border-slate-300 flex items-center justify-between">
+        {isFreelancer && Boolean(projectName || scopeSummary || managedPlatforms || feeAmount || activeProject || activeJurisdiction) && (
+          <div
+            id="doc-project-specs"
+            data-active-preview={activeProject ? "exact" : undefined}
+            className={`mb-3 mt-2 scroll-mt-28 ${activeProject ? activeBlockClass : ""}`}
+          >
+            {activeProject && <LiveFieldMarker label={activeFieldLabel} />}
+            <div className="zd-doc-data-section border border-slate-300 rounded-sm overflow-hidden bg-white">
+              <div className="zd-doc-data-heading bg-slate-100/80 px-3 py-1.5 border-b border-slate-300 flex items-center justify-between">
                 <strong className="text-[11.5px] font-bold text-[#00102e]">
                   جدول بيانات المشروع ونطاق الخدمات المعتمد
                 </strong>
                 {projectName && <span className="text-[10.5px] text-slate-700 font-bold">{projectName}</span>}
               </div>
-              <table className="w-full text-[11px] text-slate-800 border-collapse">
+              <table className="zd-doc-data-grid">
                 <tbody>
                   <tr className="border-b border-slate-200">
                     <td className="py-1.5 px-3 w-1/2 align-top">
@@ -652,26 +1223,49 @@ export default function LegalDocumentSheet({
                       </td>
                     </tr>
                   )}
+                  {(projectManager || projectContactEmail || /project_manager|contact_email/.test(activeKey)) && (
+                    <tr className="border-b border-slate-200">
+                      <td className="py-1.5 px-3 w-1/2 align-top">
+                        <span className="text-slate-500 text-[10px] block">مسؤول المشروع لدى الطرف الأول:</span>
+                        <span className="font-bold">{projectManager || "—"}</span>
+                      </td>
+                      <td className="py-1.5 px-3 w-1/2 align-top">
+                        <span className="text-slate-500 text-[10px] block">البريد المعتمد للتواصل:</span>
+                        <span dir="ltr" className="font-bold">{projectContactEmail || "—"}</span>
+                      </td>
+                    </tr>
+                  )}
+                  {(approvalPerson || billingContact || /approval_person|billing_contact/.test(activeKey)) && (
+                    <tr className="border-b border-slate-200">
+                      <td className="py-1.5 px-3 w-1/2 align-top">
+                        <span className="text-slate-500 text-[10px] block">الشخص المسؤول عن الاعتماد:</span>
+                        <span className="font-bold">{approvalPerson || "—"}</span>
+                      </td>
+                      <td className="py-1.5 px-3 w-1/2 align-top">
+                        <span className="text-slate-500 text-[10px] block">الشخص المسؤول عن الفواتير أو المدفوعات:</span>
+                        <span className="font-bold">{billingContact || "—"}</span>
+                      </td>
+                    </tr>
+                  )}
                   <tr className="border-b border-slate-200">
                     <td className="py-1.5 px-3 w-1/2 align-top">
                       <span className="text-slate-500 text-[10px] block">مدة العقد والتنفيذ:</span>
-                      <span className="font-bold">{duration || "—"}</span>
+                      <span className="font-bold">{duration || "—"}{durationBasis ? ` — ${durationBasis}` : ""}</span>
                     </td>
                     <td className="py-1.5 px-3 w-1/2 align-top">
                       <span className="text-slate-500 text-[10px] block">المقابل المالي المتفق عليه:</span>
                       <span className="font-bold text-[#00102e]">
-                        {feeAmount ? `${Number(feeAmount).toLocaleString("ar-EG")} ج.م` : "—"}{" "}
-                        {feeNature ? `(${feeNature})` : ""}
+                        {feeAmount ? previewValue(effectiveVariantKey === "visual_identity_design" ? "visual_contract_value" : effectiveVariantKey === "website_development" ? "website_total_price" : "social_fee", feeAmount) : "—"}{" "}
+                        {feeNature ? `(${previewValue("social_fee_nature", feeNature)})` : ""}
                       </span>
                     </td>
                   </tr>
-                  <tr className="bg-slate-50/40">
+                  <tr data-preview-group="jurisdiction" data-active-preview={activeJurisdiction ? "exact" : undefined} className={`bg-slate-50/40 ${activeJurisdiction ? "outline outline-2 outline-[#d9a84e]" : ""}`}>
                     <td colSpan={2} className="py-1.5 px-3 align-top">
+                      {activeJurisdiction && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#00102e] px-2 py-0.5 text-[8.5px] font-black text-[#f2c45f]"><MousePointer2 className="h-3 w-3" />{activeFieldLabel || "المحكمة المختصة"} يظهر هنا</span>}
                       <span className="text-slate-500 text-[10px] block">المحكمة المختصة بنظر أي نزاع:</span>
                       <span className="font-bold text-[#00102e]">
-                        {jurisdictionCourt
-                          ? `محكمة ${jurisdictionCourt} الابتدائية وجزئياتها`
-                          : "المحكمة المختصة وفق قواعد الاختصاص المقررة قانونًا"}
+                        {jurisdictionCourtDisplay || "⚠ مطلوب تحديد المحكمة المختصة"}
                       </span>
                     </td>
                   </tr>
@@ -681,15 +1275,13 @@ export default function LegalDocumentSheet({
           </div>
         )}
 
-        {/* ─── FULL OFFICIAL LEGAL CLAUSES (المواد القانونية الرسمية الكاملة) ─── */}
-        <div className="space-y-4 pt-1">
-          {renderedClauses.length > 0 ? (
-            renderedClauses.map((clause) => {
-              // Skip raw source article 01 text since the parties box above formats it professionally
-              if (clause.key.endsWith("_source_article_01")) {
-                return null;
-              }
+        </>
+        )}
 
+        {/* ─── FULL OFFICIAL LEGAL CLAUSES (المواد القانونية الرسمية الكاملة) ─── */}
+        <div className="zd-doc-clauses">
+          {mainRenderedClauses.length > 0 ? (
+            mainRenderedClauses.map((clause) => {
               const k = clause.key.toLowerCase();
               const dataTarget =
                 k.includes("delay_penalty") || k.endsWith("_source_article_05") || k.includes("penalty")
@@ -700,20 +1292,34 @@ export default function LegalDocumentSheet({
                   ? "project-scope"
                   : k.endsWith("_source_article_04") || k.includes("financial") || k.includes("payment") || k.includes("fee") || k.includes("deposit")
                   ? "financials"
+                  : k.includes("jurisdiction") || k.includes("court") || k.endsWith("_source_article_21")
+                  ? "jurisdiction"
                   : k.includes("optional") || k.includes("fees") || k.includes("vat")
                   ? "optional-clauses"
                   : undefined;
 
+              const groupActive =
+                (activeCommunications && dataTarget === "communications") ||
+                (activeOptionalTerms && (dataTarget === "optional-clauses" || dataTarget === "delay-penalty")) ||
+                (activeJurisdiction && dataTarget === "jurisdiction");
+              const clauseActive = activeClauseKeys.has(clause.key) || groupActive;
+              const showClauseMarker = clauseActive && (clause.key === primaryActiveClauseKey || (!primaryActiveClauseKey && groupActive));
+
               return (
-                <div key={clause.key} id={`doc-clause-${clause.key}`} data-target={dataTarget} className="space-y-1 pt-2 scroll-mt-28">
-                  <h3 className="font-bold text-[#00102e] text-[13px] sm:text-[13.5px] pb-0.5">
+                <div
+                  key={clause.key}
+                  id={`doc-clause-${clause.key}`}
+                  data-target={dataTarget}
+                  data-active-preview={activeClauseKeys.has(clause.key) ? "exact" : clauseActive ? "true" : undefined}
+                  className={`zd-doc-clause scroll-mt-28 ${clauseActive ? activeBlockClass : ""}`}
+                >
+                  {showClauseMarker && <LiveFieldMarker label={activeFieldLabel} />}
+                  <h3 className="zd-doc-clause-title">
                     {clause.titleAr}
                   </h3>
 
                   {/* Render Article Body */}
-                  <p className="text-slate-800 leading-[1.85] text-justify whitespace-pre-line text-[11.5px] sm:text-[12px]">
-                    {clause.bodyAr}
-                  </p>
+                  <LegalTextBody text={clause.bodyAr} className="zd-doc-clause-body" />
                 </div>
               );
             })
@@ -726,56 +1332,70 @@ export default function LegalDocumentSheet({
         </div>
 
         {/* ─── SIGNATURES & WITNESSES BLOCK ─── */}
-        <div id="doc-signatures" className="mt-10 pt-6 border-t border-slate-300 space-y-6 scroll-mt-28">
-          <div className="grid grid-cols-2 gap-8 text-center">
-            <div className="space-y-1.5 p-3 border border-slate-200 rounded-sm">
-              <strong className="block text-[12px] font-bold text-slate-900">
-                توقيع وبصمة الطرف الأول ({isRental ? "المؤجر" : isSale ? "البائع" : "العميل"})
+        <div
+          id="doc-signatures"
+          data-active-preview={activeWitnesses ? "exact" : undefined}
+          className={`zd-doc-signatures scroll-mt-28 ${activeWitnesses ? activeBlockClass : ""}`}
+        >
+          {activeWitnesses && <LiveFieldMarker label={activeFieldLabel} />}
+          <div className="zd-doc-signatures-title">التوقيعات</div>
+          <div className="zd-doc-signature-grid grid grid-cols-2 text-center">
+            <div className="zd-doc-signature-box space-y-1.5">
+              <strong className="zd-doc-signature-role block">
+                {partyOneRole}
               </strong>
               <p className="text-[11px] text-slate-700 font-bold">{p1Rep ? `${p1Rep} (عن ${p1Name})` : p1Name}</p>
               <div className="h-10 border-b border-dashed border-slate-400 w-3/4 mx-auto" />
             </div>
 
-            <div className="space-y-1.5 p-3 border border-slate-200 rounded-sm">
-              <strong className="block text-[12px] font-bold text-slate-900">
-                توقيع وبصمة الطرف الثاني ({isRental ? "المستأجر" : isSale ? "المشتري" : "مقدم الخدمة"})
+            <div className="zd-doc-signature-box space-y-1.5">
+              <strong className="zd-doc-signature-role block">
+                {partyTwoRole}
               </strong>
               <p className="text-[11px] text-slate-700 font-bold">{p2Rep ? `${p2Rep} (عن ${p2Name})` : p2Name}</p>
               <div className="h-10 border-b border-dashed border-slate-400 w-3/4 mx-auto" />
             </div>
           </div>
 
-          {/* Witnesses Block (if filled or rental standard) */}
-          <div className="grid grid-cols-2 gap-8 text-center pt-1">
-            <div className="space-y-1 p-2.5 border border-slate-200 rounded-sm text-[11px]">
+          {(witness1Enabled || witness2Enabled) && (
+          <div className="grid grid-cols-2 gap-8 pt-1 text-center">
+            {witness1Enabled && <div className="space-y-1 rounded-sm border border-slate-200 p-2.5 text-[11px]">
               <strong className="block font-bold text-slate-900">الشاهد الأول:</strong>
               <p className="text-slate-700">{witness1Name || missingPreviewValue}</p>
               <p className="font-mono text-[10px] text-slate-500">الرقم القومي: {witness1Id || missingPreviewValue}</p>
               <div className="h-6 border-b border-dotted border-slate-400 w-1/2 mx-auto mt-1" />
-            </div>
-            <div className="space-y-1 p-2.5 border border-slate-200 rounded-sm text-[11px]">
+            </div>}
+            {witness2Enabled && <div className="space-y-1 rounded-sm border border-slate-200 p-2.5 text-[11px]">
               <strong className="block font-bold text-slate-900">الشاهد الثاني:</strong>
               <p className="text-slate-700">{witness2Name || missingPreviewValue}</p>
               <p className="font-mono text-[10px] text-slate-500">الرقم القومي: {witness2Id || missingPreviewValue}</p>
               <div className="h-6 border-b border-dotted border-slate-400 w-1/2 mx-auto mt-1" />
-            </div>
+            </div>}
           </div>
+          )}
         </div>
 
       </div>
 
-      {/* Security & Verification Footer */}
-      <div className="mt-8 pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-[10px] text-slate-400">
-        <div className="flex items-center gap-1.5">
-          <ShieldCheck className="h-3.5 w-3.5 text-[#986410]" />
-          <span>مُعد ومحفوظ إلكترونيًا ومحمي بسجل نسخ رقمي وفق أحكام القانون عبر منصة Z Draft</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <FileCheck className="h-3.5 w-3.5 text-emerald-600" />
-          <span className="font-mono font-bold text-slate-500">{serialNumber}</span>
-        </div>
+      <div className="zd-doc-final-note relative z-10">
+        النسخة الإلكترونية المرجعية لهذا المحرر محفوظة في سجل العقد برقم المستند المبين أعلاه.
       </div>
 
+      </article>
+
+      {separateAnnexes.map((annex, index) => (
+        <AnnexPreviewSheet
+          key={annex.key}
+          annex={annex}
+          clauses={renderedClauses.filter((clause) => annex.legalClauseKeys.includes(clause.key))}
+          serialNumber={serialNumber}
+          isDraft={isDraft}
+          annexNumber={index + 1}
+          partyOneRole={partyOneRole}
+          partyTwoRole={partyTwoRole}
+        />
+      ))}
     </div>
+    </A4PreviewScaler>
   );
 }

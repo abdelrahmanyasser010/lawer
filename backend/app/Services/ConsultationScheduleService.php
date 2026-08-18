@@ -16,7 +16,7 @@ final class ConsultationScheduleService
 
     public function pendingPaymentHoldMinutes(): int
     {
-        $raw = DB::table('platform_settings')->where('setting_key','services.consultation.pending_payment_hold_minutes')->value('setting_value_json');
+        $raw = DB::table('platform_settings')->where('setting_key','services.contract_review.pending_payment_hold_minutes')->value('setting_value_json');
         if (is_string($raw)) $raw = json_decode($raw, true);
         return max(5, min(120, (int) ($raw ?? 30)));
     }
@@ -155,10 +155,26 @@ final class ConsultationScheduleService
         });
     }
 
+    public function assertPaymentHoldActive(int $serviceRequestId): void
+    {
+        $error=DB::transaction(function()use($serviceRequestId){
+            $booking=DB::table('consultation_bookings')->where('service_request_id',$serviceRequestId)->lockForUpdate()->first();
+            if(!$booking)return ['message'=>'الحجز المرتبط بالطلب غير موجود. اختر موعدًا جديدًا','code'=>'BOOKING_MISSING'];
+            $status=(string)$booking->status;
+            if($status==='pending_payment'&&$booking->expires_at&&CarbonImmutable::parse($booking->expires_at)->isPast()){
+                DB::table('consultation_bookings')->where('service_request_id',$serviceRequestId)->update(['status'=>'expired','expires_at'=>null,'updated_at'=>now()]);
+                return ['message'=>'انتهت مهلة حفظ الموعد قبل إكمال الدفع. اختر موعدًا جديدًا','code'=>'BOOKING_EXPIRED'];
+            }
+            if(in_array($status,['expired','cancelled','completed'],true))return ['message'=>'الموعد السابق لم يعد صالحًا. اختر موعدًا جديدًا','code'=>'BOOKING_REBOOK_REQUIRED'];
+            return null;
+        });
+        if($error)throw new ApiException(409,$error['message'],$error['code']);
+    }
+
     public function reactivateExisting(int $serviceRequestId, string $status = 'pending_verification'): void
     {
         $booking=DB::table('consultation_bookings')->where('service_request_id',$serviceRequestId)->first();
-        if(!$booking)throw new ApiException(409,'الحجز المرتبط بالاستشارة غير موجود. اختر موعدًا جديدًا','BOOKING_MISSING');
+        if(!$booking)throw new ApiException(409,'الحجز المرتبط بمراجعة العقد غير موجود. اختر موعدًا جديدًا','BOOKING_MISSING');
         if((string)$booking->status==='pending_payment' && $booking->expires_at && CarbonImmutable::parse($booking->expires_at)->isPast()){
             DB::table('consultation_bookings')->where('service_request_id',$serviceRequestId)->update(['status'=>'expired','expires_at'=>null,'updated_at'=>now()]);
             throw new ApiException(409,'انتهت مهلة حفظ الموعد قبل إكمال الدفع. اختر موعدًا جديدًا','BOOKING_EXPIRED');

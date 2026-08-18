@@ -149,8 +149,8 @@ final class TemplateEngineService
                 }
             }
         }
-        // Separate annexes marked manualFillAnnex are printed as blank templates.
-        // Their internal form fields are intentionally not validated in the customer wizard.
+        // Separate annexes marked manualFillAnnex are printed as blank templates and excluded from wizard validation.
+        // Their internal fields are completed manually after printing, not inside the customer wizard.
         return ['steps'=>$resolved['steps'],'issues'=>array_values(array_unique($issues))];
     }
 
@@ -160,30 +160,42 @@ final class TemplateEngineService
         $resolved=$this->resolve($definition,$variantKey,$optionalKeys,$fieldValues);
         $variant=$resolved['variant'];
         $effectiveOptionalKeys=$this->effectiveOptionalKeys($definition,$variant,$optionalKeys,$fieldValues);
-        $available=[];$clauseByKey=[];$clauses=[];$missing=[];$manualClauseKeys=[];
+        $available=[];$clauseByKey=[];$clauses=[];$missing=[];$manualClauseKeys=[];$fieldByKey=[];
+        foreach($resolved['steps'] as$step)foreach($step['fields']??[]as$field){$fieldKey=(string)($field['key']??'');if($fieldKey!=='')$fieldByKey[$fieldKey]=$field;}
         foreach($definition['optionalClauses']??[] as$optional){if(in_array((string)($optional['key']??''),$effectiveOptionalKeys,true)&&($optional['manualFillAnnex']??false)){foreach($optional['legalClauseKeys']??[] as$key)$manualClauseKeys[(string)$key]=true;}}
         foreach($definition['legalClauses']??[] as$clause){$key=(string)($clause['key']??'');if(($clause['enabled']??true)!==false){$available[$key]=true;$clauseByKey[$key]=$clause;}}
         $missingKeys=array_values(array_filter($resolved['activeClauseKeys'],fn($key)=>!isset($available[$key])));
         foreach($resolved['activeClauseKeys'] as$key){
             $key=(string)$key;$clause=$clauseByKey[$key]??null;if(!$clause||!$this->evaluate($clause['visibleWhen']??null,$fieldValues))continue;
             $manual=isset($manualClauseKeys[$key]);$body=(string)($clause['bodyAr']??'');$vars=$manual?[]:($clause['variables']??[]);
-            foreach($vars as$var){$token='{{'.$var.'}}';$value=$fieldValues[$var]??null;if($this->emptyValue($value)){$missing[]=(string)$var;continue;}$body=str_replace($token,(string)$value,$body);}
+            foreach($vars as$var){$token='{{'.$var.'}}';$value=$fieldValues[$var]??null;if($this->emptyValue($value)){$missing[]=(string)$var;continue;}$body=str_replace($token,$this->displayClauseValue((string)$var,$value,$fieldByKey[(string)$var]??null,$fieldValues),$body);}
             $clauses[]=['key'=>$key,'titleAr'=>$clause['titleAr']??$key,'bodyAr'=>$body,'sourceDocumentName'=>$clause['sourceDocumentName']??null,'sourcePageStart'=>$clause['sourcePageStart']??null,'sourcePageEnd'=>$clause['sourcePageEnd']??null];
         }
         return ['clauses'=>$clauses,'missingVariables'=>array_values(array_unique($missing)),'missingClauseKeys'=>$missingKeys];
     }
 
+    private function displayClauseValue(string $key,mixed $value,?array $field,array $fieldValues):string
+    {
+        if($value==='أخرى'){$other=$fieldValues[$key.'_other']??null;if(!$this->emptyValue($other))return trim((string)$other);}
+        foreach($field['options']??[]as$option)if((string)($option['value']??'')===(string)$value)return(string)($option['labelAr']??$value);
+        if(is_bool($value))return$value?'نعم':'لا';
+        if(is_array($value)){
+            $parts=[];
+            foreach($value as$item){
+                if(is_array($item)){$row=array_values(array_filter(array_map('strval',$item),fn($entry)=>trim($entry)!==''));if($row)$parts[]=implode(' — ',$row);}
+                elseif($item!==null&&trim((string)$item)!=='')$parts[]=(string)$item;
+            }
+            return implode('، ',$parts);
+        }
+        $text=trim((string)$value);
+        if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$text)===1){$parts=explode('-',$text);return implode('/',array_reverse($parts));}
+        return$text;
+    }
+
     private function effectiveOptionalKeys(array $definition,array $variant,array $selected,array $fieldValues):array
     {
-        $keys=array_map('strval',$variant['requiredAnnexKeys']??[]);
-        foreach($definition['optionalClauses']??[] as $clause){
-            $key=(string)($clause['key']??'');
-            if($key===''||empty($clause['requiredWhen']))continue;
-            if(!in_array($key,array_map('strval',$variant['allowedOptionalClauseKeys']??[]),true))continue;
-            if(!in_array((string)($variant['key']??''),array_map('strval',$clause['applicableVariantKeys']??[]),true))continue;
-            if($this->evaluate(is_array($clause['requiredWhen'])?$clause['requiredWhen']:null,$fieldValues))$keys[]=$key;
-        }
-        return array_values(array_unique(array_merge($keys,array_map('strval',$selected))));
+        // Every annex is optional: only keys explicitly selected by the user are effective.
+        return array_values(array_unique(array_map('strval',$selected)));
     }
 
     private function normalizeLegalSourceText(string $body,string $title):string

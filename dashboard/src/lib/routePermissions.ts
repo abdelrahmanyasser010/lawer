@@ -10,7 +10,6 @@ const routePermissions: RoutePermission[] = [
   { prefix: "/contracts", permission: "contracts.view" },
   { prefix: "/work", permission: "requests.view" },
   { prefix: "/reviews", permission: "contracts.review" },
-  { prefix: "/consultations", permission: "consultations.manage" },
   { prefix: "/payments", permission: "payments.review" },
   { prefix: "/users", permission: "clients.view" },
   { prefix: "/templates", permission: "templates.manage" },

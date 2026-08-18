@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, Loader2, MailWarning, RefreshCw, ShieldCheck } from "lucide-react";
 import AuthShell from "@/components/auth/AuthShell";
 import { frontendApi, ApiClientError } from "@/lib/apiClient";
+import { safeInternalRedirect } from "@/lib/safeRedirect";
 
 type ViewState = "waiting" | "loading" | "success" | "error";
 
@@ -16,8 +17,8 @@ export default function VerifyEmailPage() {
   const [resendAfter,setResendAfter]=useState(60);
   const nextUrl=useMemo(()=>{
     if(typeof window==="undefined")return "/contracts";
-    const raw=new URLSearchParams(window.location.search).get("next")||"/contracts";
-    return raw.startsWith("/")&&!raw.startsWith("//")?raw:"/contracts";
+    const raw=new URLSearchParams(window.location.search).get("next");
+    return safeInternalRedirect(raw,"/contracts");
   },[]);
 
   useEffect(()=>{

@@ -2,9 +2,9 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Tests\TestCase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
 
 final class DatabaseWorkflowSmokeTest extends TestCase
 {
@@ -16,13 +16,15 @@ final class DatabaseWorkflowSmokeTest extends TestCase
         if (!filter_var(env('RUN_DATABASE_TESTS', false), FILTER_VALIDATE_BOOL)) {
             $this->markTestSkipped('Set RUN_DATABASE_TESTS=true against an isolated PostgreSQL test database.');
         }
-        $this->withCredentials();
-        $this->disableCookieEncryption();
     }
 
     public function test_registration_otp_catalog_and_service_request_flow(): void
     {
+        $this->setSetting('services.contract_review.fee_egp', 300);
+        $this->setSetting('services.contract_review.deposit_egp', 100);
         $auth = $this->registerAndVerifyClient();
+        $profile = $auth->getJson('/api/v1/users/profile')->assertOk()->json('data');
+        $userId = (int) $profile['id'];
 
         $auth->getJson('/api/v1/catalog')
             ->assertOk()
@@ -30,102 +32,107 @@ final class DatabaseWorkflowSmokeTest extends TestCase
             ->assertJsonCount(3, 'data.templates');
 
         $auth->getJson('/api/v1/dashboard/summary')
-            ->assertStatus(401); // assertJsonPath('code', 'FORBIDDEN') for unprivileged access
+            ->assertForbidden()
+            ->assertJsonPath('code', 'FORBIDDEN');
 
-        $slotKey = $this->ensureConsultationSchedule();
-
+        $slot = $this->firstAvailableSlot($auth, 'whatsapp');
+        $sourceAttachment = $this->createPendingAttachment($userId, 'review-source.pdf');
         $created = $auth->postJson('/api/v1/service-requests', [
-            'requestType' => 'consultation',
-            'title' => 'استشارة اختبار الربط',
-            'description' => 'هذا طلب اختبار تكامل لقاعدة البيانات وواجهات Laravel.',
+            'requestType' => 'contract_review',
+            'title' => 'مراجعة عقد لاختبار الربط',
+            'description' => 'هذا طلب اختبار تكامل لمراجعة عقد من خلال Laravel وقاعدة البيانات.',
             'communicationChannel' => 'whatsapp',
-            'availabilitySlotKey' => $slotKey,
-            'paymentRequired' => false,
+            'availabilitySlotKey' => $slot['slotKey'],
+            'attachmentIds' => [$sourceAttachment],
         ]);
-        $created->assertCreated()->assertJsonPath('data.status', fn ($s) => in_array($s, ['new', 'awaiting_payment'], true));
+        $created->assertCreated()
+            ->assertJsonPath('data.status', 'awaiting_payment')
+            ->assertJsonPath('data.paymentAmountEgp', 100)
+            ->assertJsonPath('data.totalPriceEgp', 300);
         $requestId = (int) $created->json('data.id');
 
         $auth->getJson('/api/v1/service-requests/my')
             ->assertOk()
-            ->assertJsonFragment(['title' => 'استشارة اختبار الربط']);
+            ->assertJsonFragment(['title' => 'مراجعة عقد لاختبار الربط']);
         $auth->getJson('/api/v1/service-requests/'.$requestId)
             ->assertOk()
-            ->assertJsonPath('data.id', $requestId);
+            ->assertJsonPath('data.id', $requestId)
+            ->assertJsonPath('data.requestType', 'contract_review')
+            ->assertJsonPath('data.status', 'awaiting_payment')
+            ->assertJsonPath('data.bookingStatus', 'pending_payment')
+            ->assertJsonPath('data.expectedPaymentEgp', 100);
     }
 
-    public function test_consultation_channels_catalog_and_office_rejection(): void
+    public function test_review_channels_catalog_and_payment_instructions_gate(): void
     {
+        $this->setSetting('payments.vodafone_cash_number', '01012345678');
+        $this->setSetting('services.contract_review.fee_egp', 300);
+        $this->setSetting('services.contract_review.deposit_egp', 100);
         $auth = $this->registerAndVerifyClient();
-        $slotKey = $this->ensureConsultationSchedule();
+        $profile = $auth->getJson('/api/v1/users/profile')->assertOk()->json('data');
+        $userId = (int) $profile['id'];
 
         $catalog = $auth->getJson('/api/v1/catalog')->assertOk();
         $channels = $catalog->json('data.policies.communicationChannels');
         $this->assertSame(['zoom', 'whatsapp'], array_values($channels));
         $catalog->assertJsonStructure(['data' => [
-            'services' => ['consultationFeeEgp'],
-            'office' => ['consultationWhatsappNumber', 'supportWhatsappNumber', 'supportPhone', 'supportEmail'],
+            'services' => ['contractReviewFeeEgp', 'contractReviewDepositEgp', 'contractDraftingDepositEgp'],
+            'office' => ['reviewWhatsappNumber', 'supportWhatsappNumber', 'supportPhone', 'supportEmail'],
             'payment' => ['vodafoneCashNumber'],
         ]]);
+        $catalog->assertJsonMissingPath('data.services.consultationFeeEgp');
+        $catalog->assertJsonPath('data.payment.vodafoneCashNumber', '');
+
+        $auth->getJson('/api/v1/payments/instructions')
+            ->assertOk()
+            ->assertJsonPath('data.vodafoneCashNumber', '01012345678');
 
         $auth->postJson('/api/v1/service-requests', [
-            'requestType' => 'consultation',
-            'title' => 'استشارة بقناة غير متاحة',
-            'description' => 'يجب أن يرفض Laravel قناة المكتب للاستشارات الجديدة.',
+            'requestType' => 'contract_review',
+            'title' => 'مراجعة بقناة غير متاحة',
+            'description' => 'يجب أن يرفض Laravel قناة المكتب لطلبات مراجعة العقود.',
             'communicationChannel' => 'office',
-            'availabilitySlotKey' => $slotKey,
-            'paymentRequired' => false,
+            'availabilitySlotKey' => 'invalid',
         ])->assertUnprocessable();
 
         foreach (['zoom', 'whatsapp'] as $channel) {
-            $created = $auth->postJson('/api/v1/service-requests', [
-                'requestType' => 'consultation',
-                'title' => 'استشارة اختبار '.$channel,
-                'description' => 'اختبار قناة التواصل المسموح بها في الاستشارة القانونية.',
+            $slot = $this->firstAvailableSlot($auth, $channel);
+            $sourceAttachment = $this->createPendingAttachment($userId, 'review-'.$channel.'.pdf');
+            $auth->postJson('/api/v1/service-requests', [
+                'requestType' => 'contract_review',
+                'title' => 'مراجعة عقد عبر '.$channel,
+                'description' => 'اختبار قناة التواصل المسموح بها لمناقشة تقرير مراجعة العقد.',
                 'communicationChannel' => $channel,
-                'availabilitySlotKey' => $slotKey,
-                'paymentRequired' => false,
-            ]);
-            $created->assertCreated();
-            $id = (int) $created->json('data.id');
-            $auth->getJson('/api/v1/service-requests/'.$id)
-                ->assertOk()
-                ->assertJsonPath('data.communicationChannel', $channel);
+                'availabilitySlotKey' => $slot['slotKey'],
+                'attachmentIds' => [$sourceAttachment],
+            ])->assertCreated()
+                ->assertJsonPath('data.status', 'awaiting_payment');
         }
     }
 
     public function test_payment_receipt_history_and_notification_flow(): void
     {
+        $this->setSetting('services.contract_review.fee_egp', 300);
+        $this->setSetting('services.contract_review.deposit_egp', 100);
         $auth = $this->registerAndVerifyClient();
-        $slotKey = $this->ensureConsultationSchedule();
         $profile = $auth->getJson('/api/v1/users/profile')->assertOk()->json('data');
         $userId = (int) $profile['id'];
+        $slot = $this->firstAvailableSlot($auth, 'whatsapp');
+        $sourceAttachment = $this->createPendingAttachment($userId, 'review-payment-source.pdf');
 
         $created = $auth->postJson('/api/v1/service-requests', [
-            'requestType' => 'consultation',
-            'title' => 'استشارة مدفوعة لاختبار الإيصال',
-            'description' => 'اختبار حفظ إيصال الدفع والسجل والإشعار داخل Laravel.',
+            'requestType' => 'contract_review',
+            'title' => 'مراجعة عقد لاختبار الإيصال',
+            'description' => 'اختبار حفظ إيصال عربون مراجعة العقد والسجل والإشعار داخل Laravel.',
             'communicationChannel' => 'whatsapp',
-            'availabilitySlotKey' => $slotKey,
-            'paymentRequired' => true,
+            'availabilitySlotKey' => $slot['slotKey'],
+            'attachmentIds' => [$sourceAttachment],
         ]);
         $created->assertCreated()->assertJsonPath('data.status', 'awaiting_payment');
         $requestId = (int) $created->json('data.id');
+        $amount = (float) $created->json('data.paymentAmountEgp');
 
-        $attachmentId = (int) DB::table('document_attachments')->insertGetId([
-            'attachable_type' => 'pending',
-            'attachable_id' => 0,
-            'owner_user_id' => $userId,
-            'file_path' => '/tmp/zdraft-tests/private/payment-receipt.pdf',
-            'file_name' => 'payment-receipt.pdf',
-            'original_file_name' => 'payment-receipt.pdf',
-            'file_type' => 'application/pdf',
-            'file_size_bytes' => 128,
-            'visibility' => 'private',
-            'created_at' => now(),
-        ]);
-        $setting = DB::selectOne("SELECT COALESCE((setting_value_json #>> '{}')::numeric,100)::float AS amount FROM platform_settings WHERE setting_key='services.consultation.fee_egp'");
-        $amount = (float) ($setting->amount ?? 100);
-
+        $attachmentId = $this->createPendingAttachment($userId, 'payment-receipt.pdf');
         $payment = $auth->postJson('/api/v1/payments/receipts', [
             'serviceRequestId' => $requestId,
             'amountEgp' => $amount,
@@ -135,6 +142,9 @@ final class DatabaseWorkflowSmokeTest extends TestCase
         $payment->assertCreated()->assertJsonPath('data.status', 'pending_verification');
         $serial = (string) $payment->json('data.serialNumber');
 
+        $auth->getJson('/api/v1/service-requests/'.$requestId)
+            ->assertOk()
+            ->assertJsonPath('data.bookingStatus', 'pending_verification');
         $auth->getJson('/api/v1/payments/my')
             ->assertOk()
             ->assertJsonFragment(['serialNumber' => $serial, 'status' => 'pending_verification']);
@@ -143,52 +153,237 @@ final class DatabaseWorkflowSmokeTest extends TestCase
             ->assertJsonPath('data.items.0.payload', fn ($value) => is_array($value));
     }
 
-    public function test_super_admin_dashboard_and_reports_flow(): void
+    public function test_contract_review_client_admin_payment_lifecycle(): void
     {
-        $admin = DB::selectOne(
-            "SELECT u.id,u.email FROM users u JOIN staff_role_assignments sra ON sra.user_id=u.id JOIN roles r ON r.id=sra.role_id WHERE r.role_key='super_admin' ORDER BY u.id LIMIT 1"
-        );
-        $this->assertNotNull($admin, 'Run php artisan migrate --seed before the database smoke suite.');
+        $this->setSetting('services.contract_review.fee_egp', 500);
+        $this->setSetting('services.contract_review.deposit_egp', 200);
 
-        $password = 'StrongAdminPass123';
-        DB::table('users')->where('id', $admin->id)->update([
-            'password_hash' => Hash::make($password),
-            'status' => 'active',
-            'email_verified_at' => now(),
+        $client = $this->registerAndVerifyClient();
+        $clientProfile = $client->getJson('/api/v1/users/profile')->assertOk()->json('data');
+        $clientId = (int) $clientProfile['id'];
+        $admin = $this->loginSuperAdmin();
+        $adminAuth = $admin['auth'];
+        $adminId = (int) $admin['id'];
+
+        $sourceContractAttachment = $this->createPendingAttachment($clientId, 'contract-to-review.pdf');
+        $slot = $this->firstAvailableSlot($client, 'whatsapp');
+        $created = $client->postJson('/api/v1/service-requests', [
+            'requestType' => 'contract_review',
+            'title' => 'مراجعة عقد دورة كاملة',
+            'description' => 'مراجعة عقد لاختبار العربون والمتبقي والمخرجات واعتماد العميل.',
+            'communicationChannel' => 'whatsapp',
+            'availabilitySlotKey' => $slot['slotKey'],
+            'attachmentIds' => [$sourceContractAttachment],
+        ]);
+        $created->assertCreated()
+            ->assertJsonPath('data.status', 'awaiting_payment')
+            ->assertJsonPath('data.paymentAmountEgp', 200)
+            ->assertJsonPath('data.totalPriceEgp', 500)
+            ->assertJsonPath('data.remainingEgp', 300);
+        $requestId = (int) $created->json('data.id');
+
+        $depositReceipt = $this->createPendingAttachment($clientId, 'review-deposit.pdf');
+        $deposit = $client->postJson('/api/v1/payments/receipts', [
+            'serviceRequestId' => $requestId,
+            'amountEgp' => 200,
+            'attachmentId' => $depositReceipt,
+            'senderPhone' => '01000000000',
+        ])->assertCreated();
+        $depositPaymentId = (int) $deposit->json('data.id');
+
+        $adminAuth->postJson('/api/v1/admin/payments/'.$depositPaymentId.'/approve', [
+            'notes' => 'تم اعتماد عربون المراجعة',
+        ])->assertOk()->assertJsonPath('data.status', 'approved');
+
+        $client->getJson('/api/v1/service-requests/'.$requestId)
+            ->assertOk()
+            ->assertJsonPath('data.requestType', 'contract_review')
+            ->assertJsonPath('data.status', 'new')
+            ->assertJsonPath('data.bookingStatus', 'confirmed')
+            ->assertJsonPath('data.approvedPaidEgp', 200)
+            ->assertJsonPath('data.outstandingEgp', 300)
+            ->assertJsonPath('data.paymentStage', 'working');
+
+        $adminAuth->postJson('/api/v1/admin/service-requests/'.$requestId.'/status', [
+            'status' => 'in_progress',
+            'notes' => 'بدأت المراجعة القانونية',
+            'visibleToClient' => true,
+        ])->assertOk()->assertJsonPath('data.status', 'in_progress');
+
+        $reportAttachment = $this->createPendingAttachment($adminId, 'review-report-final.pdf');
+        $adminAuth->postJson('/api/v1/admin/service-requests/'.$requestId.'/deliverables', [
+            'attachmentId' => $reportAttachment,
+            'type' => 'final_document',
+            'title' => 'تقرير مراجعة العقد النهائي',
+            'notes' => 'اكتملت المراجعة وأصبح المتبقي مستحقًا.',
+            'isFinal' => true,
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'awaiting_payment')
+            ->assertJsonPath('data.paymentDueEgp', 300);
+
+        $client->getJson('/api/v1/service-requests/'.$requestId)
+            ->assertOk()
+            ->assertJsonPath('data.status', 'awaiting_payment')
+            ->assertJsonPath('data.paymentStage', 'balance')
+            ->assertJsonPath('data.expectedPaymentEgp', 300)
+            ->assertJsonPath('data.deliverables', fn ($items) => is_array($items) && count($items) === 0);
+
+        $balanceReceipt = $this->createPendingAttachment($clientId, 'review-balance.pdf');
+        $balance = $client->postJson('/api/v1/payments/receipts', [
+            'serviceRequestId' => $requestId,
+            'amountEgp' => 300,
+            'attachmentId' => $balanceReceipt,
+            'senderPhone' => '01000000000',
+        ])->assertCreated();
+        $balancePaymentId = (int) $balance->json('data.id');
+
+        $adminAuth->postJson('/api/v1/admin/payments/'.$balancePaymentId.'/approve', [
+            'notes' => 'تم اعتماد المبلغ المتبقي',
+        ])->assertOk()->assertJsonPath('data.status', 'approved');
+
+        $client->getJson('/api/v1/service-requests/'.$requestId)
+            ->assertOk()
+            ->assertJsonPath('data.status', 'client_review')
+            ->assertJsonPath('data.approvedPaidEgp', 500)
+            ->assertJsonPath('data.outstandingEgp', 0)
+            ->assertJsonPath('data.paymentStage', 'paid')
+            ->assertJsonPath('data.permissions.canConfirmReceipt', true)
+            ->assertJsonPath('data.deliverables', fn ($items) => is_array($items) && count($items) === 1);
+
+        $client->postJson('/api/v1/service-requests/'.$requestId.'/confirm-receipt')
+            ->assertOk()
+            ->assertJsonPath('data.status', 'completed');
+
+        $adminAuth->postJson('/api/v1/admin/service-requests/'.$requestId.'/status', [
+            'status' => 'new',
+        ])->assertStatus(409)
+            ->assertJsonPath('code', 'INVALID_SERVICE_REQUEST_STATUS_TRANSITION');
+    }
+
+    public function test_expired_booking_persists_and_client_can_rebook_before_payment(): void
+    {
+        $this->setSetting('services.contract_review.fee_egp', 300);
+        $this->setSetting('services.contract_review.deposit_egp', 100);
+        $client = $this->registerAndVerifyClient();
+        $profile = $client->getJson('/api/v1/users/profile')->assertOk()->json('data');
+        $clientId = (int) $profile['id'];
+        $slot = $this->firstAvailableSlot($client, 'whatsapp');
+        $sourceAttachment = $this->createPendingAttachment($clientId, 'expired-booking-source.pdf');
+
+        $created = $client->postJson('/api/v1/service-requests', [
+            'requestType' => 'contract_review',
+            'title' => 'مراجعة عقد مع انتهاء مهلة الحجز',
+            'description' => 'اختبار تثبيت حالة انتهاء حجز مناقشة المراجعة ثم السماح للعميل باختيار موعد جديد.',
+            'communicationChannel' => 'whatsapp',
+            'availabilitySlotKey' => $slot['slotKey'],
+            'attachmentIds' => [$sourceAttachment],
+        ])->assertCreated();
+        $requestId = (int) $created->json('data.id');
+
+        DB::table('consultation_bookings')->where('service_request_id', $requestId)->update([
+            'expires_at' => now()->subMinute(),
+            'status' => 'pending_payment',
             'updated_at' => now(),
         ]);
 
-        $login = $this->withHeader('Origin', config('zdraft.dashboard_url'))->postJson('/api/v1/auth/login', [
-            'email' => $admin->email,
-            'password' => $password,
-        ]);
-        $login->assertOk()->assertJsonPath('data.user.roles.0', 'super_admin');
+        $receiptAttachment = $this->createPendingAttachment($clientId, 'expired-booking-receipt.pdf');
+        $client->postJson('/api/v1/payments/receipts', [
+            'serviceRequestId' => $requestId,
+            'amountEgp' => 100,
+            'attachmentId' => $receiptAttachment,
+            'senderPhone' => '01000000000',
+        ])->assertStatus(409)
+            ->assertJsonPath('code', 'BOOKING_EXPIRED');
 
-        $session = $login->getCookie(config('zdraft.dashboard_session_cookie'), false)?->getValue();
-        $csrf = $login->getCookie(config('zdraft.dashboard_csrf_cookie'), false)?->getValue();
-        $this->defaultCookies = [
-            (string) config('zdraft.dashboard_session_cookie') => $session,
-            (string) config('zdraft.dashboard_csrf_cookie') => $csrf,
-        ];
-        $this->defaultHeaders = [
-            'X-CSRF-Token' => $csrf,
-            'Origin' => (string) config('zdraft.dashboard_url'),
-        ];
+        $this->assertSame('expired', DB::table('consultation_bookings')->where('service_request_id', $requestId)->value('status'));
+        $this->assertNull(DB::table('consultation_bookings')->where('service_request_id', $requestId)->value('expires_at'));
 
-        $this->getJson('/api/v1/dashboard/summary')
+        $newSlot = $this->firstAvailableSlot($client, 'whatsapp');
+        $client->postJson('/api/v1/service-requests/'.$requestId.'/rebook', [
+            'communicationChannel' => 'whatsapp',
+            'availabilitySlotKey' => $newSlot['slotKey'],
+        ])->assertOk();
+
+        $client->getJson('/api/v1/service-requests/'.$requestId)
+            ->assertOk()
+            ->assertJsonPath('data.status', 'awaiting_payment')
+            ->assertJsonPath('data.bookingStatus', 'pending_payment')
+            ->assertJsonPath('data.bookingExpiresAt', fn ($value) => !empty($value));
+
+        $client->postJson('/api/v1/payments/receipts', [
+            'serviceRequestId' => $requestId,
+            'amountEgp' => 100,
+            'attachmentId' => $receiptAttachment,
+            'senderPhone' => '01000000000',
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'pending_verification');
+    }
+
+    public function test_payment_approval_cannot_revive_cancelled_service_request(): void
+    {
+        $this->setSetting('services.contract_review.fee_egp', 300);
+        $this->setSetting('services.contract_review.deposit_egp', 100);
+        $client = $this->registerAndVerifyClient();
+        $profile = $client->getJson('/api/v1/users/profile')->assertOk()->json('data');
+        $clientId = (int) $profile['id'];
+        $admin = $this->loginSuperAdmin();
+        $adminAuth = $admin['auth'];
+        $slot = $this->firstAvailableSlot($client, 'whatsapp');
+        $sourceAttachment = $this->createPendingAttachment($clientId, 'cancelled-request-source.pdf');
+
+        $created = $client->postJson('/api/v1/service-requests', [
+            'requestType' => 'contract_review',
+            'title' => 'مراجعة عقد ستلغى بعد رفع الإيصال',
+            'description' => 'اختبار منع اعتماد إيصال قديم من إعادة إحياء طلب تم إلغاؤه.',
+            'communicationChannel' => 'whatsapp',
+            'availabilitySlotKey' => $slot['slotKey'],
+            'attachmentIds' => [$sourceAttachment],
+        ])->assertCreated();
+        $requestId = (int) $created->json('data.id');
+
+        $receiptAttachment = $this->createPendingAttachment($clientId, 'cancelled-request-receipt.pdf');
+        $payment = $client->postJson('/api/v1/payments/receipts', [
+            'serviceRequestId' => $requestId,
+            'amountEgp' => 100,
+            'attachmentId' => $receiptAttachment,
+            'senderPhone' => '01000000000',
+        ])->assertCreated();
+        $paymentId = (int) $payment->json('data.id');
+
+        $adminAuth->postJson('/api/v1/admin/service-requests/'.$requestId.'/status', [
+            'status' => 'cancelled',
+            'notes' => 'ألغي الطلب قبل مراجعة الإيصال',
+            'visibleToClient' => true,
+        ])->assertOk()->assertJsonPath('data.status', 'cancelled');
+
+        $adminAuth->postJson('/api/v1/admin/payments/'.$paymentId.'/approve', [
+            'notes' => 'محاولة اعتماد بعد الإلغاء',
+        ])->assertStatus(409)
+            ->assertJsonPath('code', 'PAYMENT_TARGET_STATE_CHANGED');
+
+        $this->assertSame('pending_verification', DB::table('payments')->where('id', $paymentId)->value('status'));
+        $this->assertSame('cancelled', DB::table('service_requests')->where('id', $requestId)->value('status'));
+    }
+
+    public function test_super_admin_dashboard_and_reports_flow(): void
+    {
+        $admin = $this->loginSuperAdmin();
+        $auth = $admin['auth'];
+
+        $auth->getJson('/api/v1/dashboard/summary')
             ->assertOk()
             ->assertJsonPath('success', true);
-        $this->getJson('/api/v1/admin/reports/overview?period=month')
+        $auth->getJson('/api/v1/admin/reports/overview?period=month')
             ->assertOk()
             ->assertJsonPath('data.period', 'month')
             ->assertJsonStructure(['data' => ['metrics', 'revenueSeries', 'templateDistribution', 'serviceDistribution']]);
-        $this->getJson('/api/v1/admin/reports/customer-export?period=month')
+        $auth->getJson('/api/v1/admin/reports/customer-export?period=month')
             ->assertOk()
             ->assertJsonPath('data.period', 'month')
             ->assertJsonStructure(['data' => ['rows']]);
     }
 
-    public function test_contract_draft_history_and_share_flow(): void
+    public function test_contract_share_is_blocked_before_payment(): void
     {
         $auth = $this->registerAndVerifyClient();
 
@@ -207,47 +402,104 @@ final class DatabaseWorkflowSmokeTest extends TestCase
         $auth->getJson('/api/v1/contracts/my')
             ->assertOk()
             ->assertJsonFragment(['serialNumber' => $serial]);
-        $auth->getJson('/api/v1/contracts/'.$contractId)
+        $detail = $auth->getJson('/api/v1/contracts/'.$contractId)
             ->assertOk()
             ->assertJsonPath('data.id', $contractId)
-            ->assertJsonPath('data.template_slug', 'rental');
+            ->assertJsonPath('data.template_slug', 'rental')
+            ->assertJsonPath('data.permissions.canShare', false);
+        $versionId = (int) $detail->json('data.current_version_id');
 
-        DB::table('contracts')->where('id', $contractId)->update(['billing_mode' => 'office_waiver']);
+        $admin = $this->loginSuperAdmin();
+        $preview = $admin['auth']->getJson('/api/v1/admin/contracts/'.$contractId.'/versions/'.$versionId.'/preview')
+            ->assertOk()
+            ->assertJsonPath('data.contractId', $contractId)
+            ->assertJsonPath('data.versionId', $versionId)
+            ->assertJsonPath('data.versionNumber', 1);
+        $this->assertSame('rental', $preview->json('data.templateSlug'));
 
-        $share = $this->postJson('/api/v1/contracts/'.$contractId.'/shares', [
+        $auth->postJson('/api/v1/contracts/'.$contractId.'/shares', [
             'permission' => 'view_only',
             'expiresInDays' => 2,
+        ])->assertStatus(402)
+            ->assertJsonPath('code', 'PAYMENT_REQUIRED_FOR_OUTPUT');
+
+        $this->getJson('/api/v1/contracts/shared/invalid-workflow-test-token')
+            ->assertNotFound();
+    }
+
+    private function firstAvailableSlot(self $auth, string $channel): array
+    {
+        $response = $auth->getJson('/api/v1/review-availability?channel='.$channel)->assertOk();
+        foreach (($response->json('data.days') ?? []) as $day) {
+            foreach (($day['slots'] ?? []) as $slot) {
+                if (($slot['available'] ?? false) && ($slot['remaining'] ?? 0) > 0) {
+                    return $slot;
+                }
+            }
+        }
+        $this->fail('No contract-review slot is available. Run migrations/seeds or configure a future review schedule window for database workflow tests.');
+    }
+
+    private function createPendingAttachment(int $ownerUserId, string $fileName, string $mime = 'application/pdf'): int
+    {
+        return (int) DB::table('document_attachments')->insertGetId([
+            'attachable_type' => 'pending',
+            'attachable_id' => 0,
+            'owner_user_id' => $ownerUserId,
+            'file_path' => '/tmp/zdraft-tests/private/'.$fileName,
+            'file_name' => $fileName,
+            'original_file_name' => $fileName,
+            'file_type' => $mime,
+            'file_size_bytes' => 128,
+            'visibility' => 'private',
+            'created_at' => now(),
         ]);
-        $share->assertCreated()->assertJsonPath('data.permission', 'view_only');
-        $shareId = (int) $share->json('data.id');
-        $token = (string) $share->json('data.token');
-        $this->assertNotSame('', $token);
+    }
 
-        $savedCookies = $this->defaultCookies;
-        $savedHeaders = $this->defaultHeaders;
-        $this->defaultCookies = [];
-        $this->defaultHeaders = [];
+    private function setSetting(string $key, mixed $value): void
+    {
+        DB::statement(
+            'INSERT INTO platform_settings(setting_key,setting_value_json,is_secret) VALUES (?,?::jsonb,FALSE) ON CONFLICT (setting_key) DO UPDATE SET setting_value_json=EXCLUDED.setting_value_json,updated_at=CURRENT_TIMESTAMP',
+            [$key, json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
+        );
+    }
 
-        $this->getJson('/api/v1/contracts/shared/'.$token)
-            ->assertOk()
-            ->assertJsonPath('data.serialNumber', $serial)
-            ->assertJsonPath('data.permission', 'view_only');
-        $this->postJson('/api/v1/contracts/shared/'.$token.'/access', [])
-            ->assertOk()
-            ->assertJsonPath('data.contractId', $contractId);
+    private function loginSuperAdmin(): array
+    {
+        $admin = DB::selectOne(
+            "SELECT u.id,u.email FROM users u JOIN staff_role_assignments sra ON sra.user_id=u.id JOIN roles r ON r.id=sra.role_id WHERE r.role_key='super_admin' ORDER BY u.id LIMIT 1"
+        );
+        $this->assertNotNull($admin, 'Run php artisan migrate --seed before the database smoke suite.');
 
-        $this->defaultCookies = $savedCookies;
-        $this->defaultHeaders = $savedHeaders;
+        $password = 'StrongAdminPass123';
+        DB::table('users')->where('id', $admin->id)->update([
+            'password_hash' => Hash::make($password),
+            'status' => 'active',
+            'email_verified_at' => now(),
+            'updated_at' => now(),
+        ]);
 
-        $this->deleteJson('/api/v1/contracts/'.$contractId.'/shares/'.$shareId)
-            ->assertOk()
-            ->assertJsonPath('data.revoked', true);
+        $login = $this->postJson('/api/v1/auth/login', [
+            'email' => $admin->email,
+            'password' => $password,
+        ]);
+        $login->assertOk()->assertJsonPath('data.user.roles.0', 'super_admin');
+
+        $session = $login->getCookie(config('zdraft.session_cookie'))?->getValue();
+        $csrf = $login->getCookie(config('zdraft.csrf_cookie'))?->getValue();
+        $this->assertNotEmpty($session);
+        $this->assertNotEmpty($csrf);
+        $login->assertJsonPath('data.csrfToken', $csrf);
+
+        $auth = $this->withCookie(config('zdraft.session_cookie'), $session)
+            ->withCookie(config('zdraft.csrf_cookie'), $csrf)
+            ->withHeader('X-CSRF-Token', $csrf);
+
+        return ['auth' => $auth, 'id' => (int) $admin->id];
     }
 
     private function registerAndVerifyClient(): self
     {
-        $this->defaultCookies = [];
-        $this->defaultHeaders = [];
         $email = 'workflow+'.bin2hex(random_bytes(5)).'@example.test';
         $register = $this->postJson('/api/v1/auth/register', [
             'fullName' => 'عميل اختبار',
@@ -258,59 +510,30 @@ final class DatabaseWorkflowSmokeTest extends TestCase
         ]);
         $register->assertCreated()->assertJsonPath('data.verificationRequired', true);
 
-        $session = $register->getCookie(config('zdraft.frontend_session_cookie'), false)?->getValue();
-        $csrf = $register->getCookie(config('zdraft.frontend_csrf_cookie'), false)?->getValue();
+        $session = $register->getCookie(config('zdraft.session_cookie'))?->getValue();
+        $csrf = $register->getCookie(config('zdraft.csrf_cookie'))?->getValue();
         $code = $register->json('data.debugVerificationCode');
-        $this->defaultCookies = [
-            (string) config('zdraft.frontend_session_cookie') => $session,
-            (string) config('zdraft.frontend_csrf_cookie') => $csrf,
-        ];
-        $this->defaultHeaders = [
-            'X-CSRF-Token' => $csrf,
-        ];
+        $this->assertNotEmpty($session);
+        $this->assertNotEmpty($csrf);
+        $register->assertJsonPath('data.csrfToken', $csrf);
+        $this->assertMatchesRegularExpression('/^\d{6}$/', (string) $code);
 
-        $this->postJson('/api/v1/auth/email-verification/verify', ['code' => $code])
+        $auth = $this->withCookie(config('zdraft.session_cookie'), $session)
+            ->withCookie(config('zdraft.csrf_cookie'), $csrf)
+            ->withHeader('X-CSRF-Token', $csrf);
+        $auth->postJson('/api/v1/auth/email-verification/verify', ['code' => $code])
             ->assertOk()
             ->assertJsonPath('data.verified', true);
 
-        $this->getJson('/api/v1/auth/sessions')
+        $auth->getJson('/api/v1/auth/sessions')
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.0.current', true);
-        $this->getJson('/api/v1/users/profile')
+        $auth->getJson('/api/v1/users/profile')
             ->assertOk()
             ->assertJsonPath('data.email', $email)
             ->assertJsonPath('data.emailVerifiedAt', fn ($value) => !empty($value));
 
-        return $this;
-    }
-
-    private function ensureConsultationSchedule(): string
-    {
-        if (!DB::table('consultation_schedule_windows')->where('is_active', true)->exists()) {
-            for ($day = 0; $day <= 6; $day++) {
-                DB::table('consultation_schedule_windows')->insert([
-                    'weekday' => $day,
-                    'start_time' => '09:00:00',
-                    'end_time' => '17:00:00',
-                    'slot_minutes' => 60,
-                    'total_capacity' => 5,
-                    'zoom_capacity' => 3,
-                    'whatsapp_capacity' => 3,
-                    'is_active' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        }
-        $avail = $this->getJson('/api/v1/consultation-availability')->json('data');
-        foreach ($avail['days'] ?? [] as $day) {
-            foreach ($day['slots'] ?? [] as $slot) {
-                if (!empty($slot['slotKey']) && ($slot['available'] ?? false)) {
-                    return (string) $slot['slotKey'];
-                }
-            }
-        }
-        return now()->addDays(1)->format('Y-m-d').'_10:00';
+        return $auth;
     }
 }

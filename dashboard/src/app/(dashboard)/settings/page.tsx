@@ -41,8 +41,8 @@ export default function SettingsPage() {
 
   const loadSchedule = useCallback(async () => {
     setScheduleError("");
-    try { setSchedule(await dashboardRequest<SchedulePayload>("/api/v1/admin/consultation-schedule")); }
-    catch (caught) { setScheduleError(caught instanceof Error ? caught.message : "تعذر تحميل جدول مواعيد الاستشارات"); }
+    try { setSchedule(await dashboardRequest<SchedulePayload>("/api/v1/admin/review-schedule")); }
+    catch (caught) { setScheduleError(caught instanceof Error ? caught.message : "تعذر تحميل جدول مواعيد مراجعة العقود"); }
   }, []);
 
   useEffect(() => { void Promise.all([loadSettings(), loadSchedule()]); }, [loadSettings, loadSchedule]);
@@ -63,7 +63,7 @@ export default function SettingsPage() {
       { key:"office.display_name", value:asText(form.get("office.display_name")), isSecret:false },
       { key:"office.support_email", value:asText(form.get("office.support_email")), isSecret:false },
       { key:"office.address", value:asText(form.get("office.address")), isSecret:false },
-      { key:"office.consultation_whatsapp_number", value:asText(form.get("office.consultation_whatsapp_number")), isSecret:false },
+      { key:"office.review_whatsapp_number", value:asText(form.get("office.review_whatsapp_number")), isSecret:false },
       { key:"office.support_whatsapp_number", value:asText(form.get("office.support_whatsapp_number")), isSecret:false },
       { key:"office.support_phone", value:asText(form.get("office.support_phone")), isSecret:false },
       { key:"payments.vodafone_cash_number", value:asText(form.get("payments.vodafone_cash_number")), isSecret:false },
@@ -107,10 +107,10 @@ export default function SettingsPage() {
     if (invalidCapacity) { const message="مجموع سعة Zoom وواتساب يجب ألا يتجاوز السعة الإجمالية للفترة."; setScheduleError(message); setToast({kind:"error",text:message}); return; }
     setScheduleBusy(true); setScheduleError(""); setToast(null);
     try {
-      await dashboardRequest("/api/v1/admin/consultation-schedule", {method:"PUT",body:JSON.stringify({windows:schedule.windows.map(({id:_,...row})=>row)})});
-      setToast({kind:"success",text:"تم حفظ جدول الاستشارات والسعة لكل قناة."});
+      await dashboardRequest("/api/v1/admin/review-schedule", {method:"PUT",body:JSON.stringify({windows:schedule.windows.map(({id:_,...row})=>row)})});
+      setToast({kind:"success",text:"تم حفظ جدول مواعيد مراجعة العقود والسعة لكل قناة."});
       await loadSchedule();
-    } catch (caught) { setScheduleError(caught instanceof Error?caught.message:"تعذر حفظ جدول الاستشارات"); setToast({kind:"error",text:caught instanceof Error?caught.message:"تعذر حفظ جدول الاستشارات"}); }
+    } catch (caught) { setScheduleError(caught instanceof Error?caught.message:"تعذر حفظ جدول مواعيد مراجعة العقود"); setToast({kind:"error",text:caught instanceof Error?caught.message:"تعذر حفظ جدول مواعيد مراجعة العقود"}); }
     finally { setScheduleBusy(false); }
   }
 
@@ -119,7 +119,7 @@ export default function SettingsPage() {
     if (!blockDate) return;
     setScheduleBusy(true); setScheduleError("");
     try {
-      await dashboardRequest("/api/v1/admin/consultation-schedule/exceptions", {method:"POST",body:JSON.stringify({date:blockDate,startTime:blockStart||null,endTime:blockEnd||null,reason:blockReason||null})});
+      await dashboardRequest("/api/v1/admin/review-schedule/exceptions", {method:"POST",body:JSON.stringify({date:blockDate,startTime:blockStart||null,endTime:blockEnd||null,reason:blockReason||null})});
       setBlockDate(""); setBlockStart(""); setBlockEnd(""); setBlockReason("");
       setToast({kind:"success",text:"تمت إضافة الإغلاق الاستثنائي."}); await loadSchedule();
     } catch(caught){setScheduleError(caught instanceof Error?caught.message:"تعذر إضافة الإغلاق الاستثنائي");setToast({kind:"error",text:caught instanceof Error?caught.message:"تعذر إضافة الإغلاق الاستثنائي"});}
@@ -128,7 +128,7 @@ export default function SettingsPage() {
 
   async function deleteBlock(id:number) {
     setScheduleBusy(true);
-    try { await dashboardRequest(`/api/v1/admin/consultation-schedule/exceptions/${id}`,{method:"DELETE"}); setToast({kind:"success",text:"تم حذف الإغلاق الاستثنائي."}); await loadSchedule(); }
+    try { await dashboardRequest(`/api/v1/admin/review-schedule/exceptions/${id}`,{method:"DELETE"}); setToast({kind:"success",text:"تم حذف الإغلاق الاستثنائي."}); await loadSchedule(); }
     catch(caught){setToast({kind:"error",text:caught instanceof Error?caught.message:"تعذر حذف الإغلاق الاستثنائي"});}
     finally{setScheduleBusy(false);}
   }
@@ -143,13 +143,13 @@ export default function SettingsPage() {
       <Section icon={Building2} title="هوية المكتب والتواصل" description="تظهر هذه البيانات للعميل وفي كتالوج الخدمات.">
         <Field error={fieldError["office.display_name"]} label="اسم المكتب الظاهر" name="office.display_name" defaultValue={String(current("office.display_name","Z draft"))} required/>
         <Field error={fieldError["office.support_email"]} label="بريد الدعم" name="office.support_email" type="email" defaultValue={String(current("office.support_email",""))}/>
-        <Field error={fieldError["office.consultation_whatsapp_number"]} label="واتساب الاستشارات" name="office.consultation_whatsapp_number" defaultValue={String(current("office.consultation_whatsapp_number",current("office.whatsapp_number","")))} placeholder="مثال: 2010xxxxxxxx"/>
+        <Field error={fieldError["office.review_whatsapp_number"]} label="واتساب مراجعة العقود" name="office.review_whatsapp_number" defaultValue={String(current("office.review_whatsapp_number",current("office.whatsapp_number","")))} placeholder="مثال: 2010xxxxxxxx"/>
         <Field error={fieldError["office.support_whatsapp_number"]} label="واتساب الدعم الفني" name="office.support_whatsapp_number" defaultValue={String(current("office.support_whatsapp_number",current("office.whatsapp_number","")))} placeholder="مثال: 2010xxxxxxxx"/>
         <Field error={fieldError["office.support_phone"]} label="هاتف الدعم الفني" name="office.support_phone" defaultValue={String(current("office.support_phone",""))} placeholder="مثال: 010xxxxxxxx"/>
         <label className="sm:col-span-2"><span className="mb-2 block text-xs font-black text-slate-600">عنوان المكتب</span><textarea name="office.address" defaultValue={String(current("office.address",""))} maxLength={500} className="min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-[#986410]"/>{fieldError["office.address"]&&<FieldError text={fieldError["office.address"]}/>}</label>
       </Section>
 
-      <Section icon={CreditCard} title="الدفع" description="بيانات التحصيل فقط. أسعار الاستشارة والعقود موجودة في صفحة الأسعار.">
+      <Section icon={CreditCard} title="الدفع" description="بيانات التحصيل فقط. أسعار مراجعة العقود وإعداد العقود موجودة في صفحة الأسعار.">
         <Field error={fieldError["payments.vodafone_cash_number"]} label="رقم Vodafone Cash" name="payments.vodafone_cash_number" defaultValue={String(current("payments.vodafone_cash_number",""))}/>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-600">أي تحصيل يدوي أو خارجي يُسجل من صفحة المدفوعات حتى يظل الأثر المالي صحيحًا.</div>
       </Section>
@@ -159,7 +159,7 @@ export default function SettingsPage() {
         <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4"><ShieldCheck className="h-5 w-5 shrink-0 text-emerald-700"/><div><div className="text-xs font-black text-emerald-900">تأكيد البريد إلزامي</div><div className="mt-1 text-[10px] leading-5 text-emerald-700">مطلوب قبل الدفع وإنشاء الطلبات الحساسة، وهو سياسة أمان ثابتة وليس خيارًا يمكن تعطيله.</div></div></div>
       </Section>
 
-      <Section icon={MessageCircle} title="قنوات الاستشارة والتواصل" description="حدد القنوات التي يمكن للعميل اختيارها. مواعيد وسعة كل قناة تُدار في جدول الاستشارات أدناه.">
+      <Section icon={MessageCircle} title="قنوات مناقشة مراجعة العقود" description="حدد القنوات التي يمكن للعميل اختيارها. مواعيد وسعة كل قناة تُدار في جدول مراجعة العقود أدناه.">
         <div className="sm:col-span-2"><div className="mb-2 text-xs font-black text-slate-600">القنوات المتاحة للعميل</div><div className="grid gap-3 sm:grid-cols-2">{[["zoom","Zoom"],["whatsapp","واتساب"]].map(([value,label])=><label key={value} className="flex items-center gap-2 rounded-xl border border-slate-200 p-4 text-xs font-black text-slate-700"><input name={`channel_${value}`} type="checkbox" defaultChecked={selectedChannels.includes(value)} className="h-4 w-4 accent-[#986410]"/>{label}</label>)}</div>{fieldError["customer_portal.communication_channels"]&&<FieldError text={fieldError["customer_portal.communication_channels"]}/>}</div>
         <label><span className="mb-2 block text-xs font-black text-slate-600">استخدام واتساب</span><select name="notifications.whatsapp_mode" defaultValue={String(current("notifications.whatsapp_mode","manual_wa_me"))} className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-[#986410]"><option value="manual_wa_me">فتح محادثة واتساب عند الحاجة</option><option value="disabled">معطل</option></select></label>
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-6 text-amber-900"><b>واتساب الحالي:</b> يفتح المحادثة مباشرة فقط، ولا توجد رسائل تُرسل تلقائيًا باسم المكتب.</div>
@@ -169,7 +169,7 @@ export default function SettingsPage() {
     </form>
 
     <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex gap-3"><CalendarClock className="mt-0.5 h-6 w-6 text-[#986410]"/><div><h2 className="text-lg font-black text-[#00102e]">مواعيد الاستشارات</h2><p className="mt-1 text-xs leading-6 text-slate-500">حدد فترات العمل الأسبوعية، مدة الموعد، والحد الأقصى لحجوزات Zoom وواتساب. التوقيت: {schedule?.timezone||"Africa/Cairo"}.</p></div></div><button type="button" disabled={scheduleBusy||!schedule} onClick={()=>void saveSchedule()} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-5 py-2.5 text-xs font-black text-[#d5a84c] disabled:opacity-50"><Save className="h-4 w-4"/>حفظ الجدول</button></div>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex gap-3"><CalendarClock className="mt-0.5 h-6 w-6 text-[#986410]"/><div><h2 className="text-lg font-black text-[#00102e]">مواعيد مراجعة العقود</h2><p className="mt-1 text-xs leading-6 text-slate-500">حدد فترات العمل الأسبوعية، مدة الموعد، والحد الأقصى لحجوزات Zoom وواتساب. التوقيت: {schedule?.timezone||"Africa/Cairo"}.</p></div></div><button type="button" disabled={scheduleBusy||!schedule} onClick={()=>void saveSchedule()} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-5 py-2.5 text-xs font-black text-[#d5a84c] disabled:opacity-50"><Save className="h-4 w-4"/>حفظ الجدول</button></div>
       {scheduleError&&<div className="mt-4 rounded-xl bg-red-50 p-3 text-xs font-bold text-red-700">{scheduleError}</div>}
       {!schedule&&!scheduleError&&<div className="mt-5"><PageLoading/></div>}
       {schedule&&<div className="mt-5 space-y-4">{dayOrder.map((day)=>{const rows=schedule.windows.map((row,index)=>({row,index})).filter(x=>x.row.weekday===day);return <div key={day} className="rounded-xl border border-slate-200 p-4"><div className="flex items-center justify-between gap-3"><div><div className="text-sm font-black text-[#00102e]">{dayLabels[day]}</div><div className="text-[10px] font-bold text-slate-400">{rows.length?`${rows.length} فترة عمل`:"مغلق"}</div></div><div className="flex flex-wrap items-center gap-2"><button type="button" onClick={()=>copyDayToOthers(day)} disabled={!rows.length} className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-black text-slate-600 disabled:opacity-40">نسخ لباقي الأيام</button><button type="button" onClick={()=>addWindow(day)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-black text-[#00102e]"><Plus className="h-3.5 w-3.5"/>إضافة فترة</button></div></div><div className="mt-3 space-y-3">{rows.map(({row,index})=><div key={`${day}-${index}`} className="grid gap-2 rounded-xl bg-slate-50 p-3 md:grid-cols-[100px_100px_105px_105px_105px_105px_auto] md:items-end"><MiniField label="من" type="time" value={row.startTime} onChange={v=>updateWindow(index,{startTime:v})}/><MiniField label="إلى" type="time" value={row.endTime} onChange={v=>updateWindow(index,{endTime:v})}/><MiniNumber label="مدة الموعد" value={row.slotMinutes} onChange={v=>updateWindow(index,{slotMinutes:v})}/><MiniNumber label="الإجمالي" value={row.totalCapacity} onChange={v=>updateWindow(index,{totalCapacity:v})}/><MiniNumber label="Zoom" value={row.zoomCapacity} onChange={v=>updateWindow(index,{zoomCapacity:v})}/><MiniNumber label="واتساب" value={row.whatsappCapacity} onChange={v=>updateWindow(index,{whatsappCapacity:v})}/><button type="button" onClick={()=>removeWindow(index)} className="flex h-10 items-center justify-center rounded-lg border border-rose-200 bg-white px-3 text-rose-700" aria-label="حذف الفترة"><Trash2 className="h-4 w-4"/></button></div>)}{!rows.length&&<div className="rounded-lg bg-slate-50 p-3 text-center text-[10px] font-bold text-slate-400">لا توجد ساعات عمل في هذا اليوم.</div>}</div></div>;})}</div>}

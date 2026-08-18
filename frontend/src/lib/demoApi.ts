@@ -77,22 +77,21 @@ const catalogTemplates = Object.values(localTemplateRegistry)
 const catalog: PublicCatalog = {
   templates: catalogTemplates,
   services: {
+    contractReviewFeeEgp: 300,
     contractReviewDepositEgp: 100,
-    consultationDepositEgp: 100,
-    consultationFeeEgp: 100,
     contractDraftingDepositEgp: 100,
   },
   office: {
     displayName: "Z draft",
     address: "بيانات تجريبية",
     whatsappNumber: "201000000000",
-    consultationWhatsappNumber: "201000000000",
+    reviewWhatsappNumber: "201000000000",
     supportWhatsappNumber: "201000000000",
     supportPhone: "01000000000",
     supportEmail: "zlegaleg@gmail.com",
   },
   payment: {
-    vodafoneCashNumber: "01000000000",
+    vodafoneCashNumber: "",
   },
   policies: {
     selfServiceEditHours: 24,
@@ -305,6 +304,7 @@ export async function demoApiRequest<T>(path: string, init: RequestInit = {}): P
   if (pathname === "/api/v1/service-requests") return { id: 501, serialNumber: "REQ-2026-00001" } as T;
   if (pathname.startsWith("/api/v1/service-requests/")) return { ok: true } as T;
   if (pathname === "/api/v1/attachments") return { id: Math.floor(Math.random() * 10000), fileName: "document.pdf" } as T;
+  if (pathname === "/api/v1/payments/instructions") return { vodafoneCashNumber: "01000000000" } as T;
   if (pathname === "/api/v1/payments/receipts") return { id: 701, serialNumber: "PAY-2026-00001", status: "pending_verification" } as T;
   if (pathname === "/api/v1/payments/my") return [] as T;
   if (pathname === "/api/v1/notifications") return { items: notifications, unreadCount: notifications.filter((item) => !item.readAt).length } as T;

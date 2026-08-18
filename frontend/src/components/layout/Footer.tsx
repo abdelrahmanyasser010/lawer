@@ -7,7 +7,6 @@ const footerLinks = {
     { label: "صياغة عقد بنفسي", href: "/create-contract?mode=self_service" },
     { label: "صياغة بواسطة محام", href: "/create-contract?mode=lawyer_assisted" },
     { label: "مراجعة عقد قائم", href: "/request-review" },
-    { label: "استشارة قانونية", href: "/requests" },
     { label: "Z Draft Vault", href: "/contracts" },
   ],
   legal: [
@@ -35,7 +34,7 @@ export default function Footer() {
               </div>
             </Link>
             <p className="text-[12px] font-medium leading-[1.8] text-slate-400 max-w-xs">
-              منصة قانونية متكاملة لإعداد العقود والاستشارات القانونية بأعلى معايير الأمان والاحترافية.
+              منصة قانونية متكاملة لإعداد العقود ومراجعة العقود القائمة بأعلى معايير الأمان والاحترافية.
             </p>
             <div className="mt-6 flex flex-col gap-2.5 text-[11px] text-slate-400 font-medium">
               <span className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-[#d9a84e]" /> support@zdraft.io</span>
@@ -112,7 +111,7 @@ export default function Footer() {
           </p>
           <div className="flex items-center gap-5 text-[11px] font-bold text-slate-500">
             <Link href="/privacy" className="hover:text-[#d9a84e] transition-colors flex items-center gap-1"><FileLock2 className="h-3 w-3" /> الخصوصية</Link>
-            <Link href="/declaration" className="hover:text-[#d9a84e] transition-colors flex items-center gap-1"><FileText className="h-3 w-3" /> الشروط</Link>
+            <Link href="/terms" className="hover:text-[#d9a84e] transition-colors flex items-center gap-1"><FileText className="h-3 w-3" /> الشروط</Link>
           </div>
         </div>
       </div>

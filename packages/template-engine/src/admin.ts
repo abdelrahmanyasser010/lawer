@@ -200,16 +200,6 @@ export function inspectTemplateDefinition(definition: ContractTemplateDefinition
       else if (!optional.applicableVariantKeys.includes(variant.key)) issue(issues, "error", "OPTIONAL_VARIANT_MISMATCH", `الإضافة ${optionalKey} غير مفعلة لهذا النوع`, `${variantPath}.allowedOptionalClauseKeys[${index}]`);
     });
 
-    (variant.requiredAnnexKeys ?? []).forEach((annexKey, index) => {
-      if (!variant.allowedOptionalClauseKeys.includes(annexKey)) {
-        issue(issues, "error", "REQUIRED_ANNEX_NOT_ALLOWED", `الملحق الأساسي غير موجود ضمن ملاحق النوع: ${annexKey}`, `${variantPath}.requiredAnnexKeys[${index}]`);
-        return;
-      }
-      const annex = optionalByKey.get(annexKey);
-      if (!annex || annex.outputMode !== "separate_annex") {
-        issue(issues, "error", "REQUIRED_ANNEX_INVALID", `الملحق الأساسي يجب أن يكون ملحقًا مستقلاً صالحًا: ${annexKey}`, `${variantPath}.requiredAnnexKeys[${index}]`);
-      }
-    });
   });
 
   const optionalKeys = new Set<string>();

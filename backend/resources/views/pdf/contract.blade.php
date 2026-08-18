@@ -8,7 +8,7 @@
   margin: 16mm 15mm 16mm 15mm;
   @top-center {
     content: string(docTitle) " — " string(docSerial);
-    font-family: "Noto Naskh Arabic", "DejaVu Sans", sans-serif;
+    font-family: "Noto Sans Arabic", "DejaVu Sans", sans-serif;
     font-size: 7.7pt;
     color: #666;
     border-bottom: .35pt solid #c9c9c9;
@@ -16,7 +16,7 @@
   }
   @bottom-center {
     content: string(docSerial) "  |  صفحة " counter(page) " من " counter(pages);
-    font-family: "Noto Naskh Arabic", "DejaVu Sans", sans-serif;
+    font-family: "Noto Sans Arabic", "DejaVu Sans", sans-serif;
     font-size: 7.7pt;
     color: #666;
   }
@@ -34,10 +34,10 @@
 * { box-sizing: border-box; }
 html,body { margin:0; padding:0; }
 body {
-  font-family: "Noto Naskh Arabic", "Noto Sans Arabic", "DejaVu Sans", Tahoma, Arial, sans-serif;
+  font-family: "Noto Sans Arabic", "DejaVu Sans", Tahoma, Arial, sans-serif;
   color:#111;
   font-size:11.35pt;
-  line-height:1.52;
+  line-height:1.44;
   direction:rtl;
 }
 .masthead {
@@ -99,9 +99,10 @@ body {
 .repeater thead { display:table-header-group; }
 .repeater th,.repeater td { border:.35pt solid #aaa; padding:1.1mm 1.4mm; vertical-align:top; }
 .repeater th { background:#f7f7f7; font-weight:700; }
-.clause { margin:0 0 3.2mm; break-inside:auto; }
-.clause p { margin:0; text-align:justify; white-space:pre-line; orphans:3; widows:3; }
-.clause + .clause { margin-top:1mm; }
+.clause { margin:0 0 2.4mm; break-inside:auto; }
+.clause p { margin:0; text-align:justify; line-height:1.46; white-space:normal; orphans:3; widows:3; }
+.clause-number { direction:ltr; unicode-bidi:isolate; display:inline-block; min-width:1.8em; text-align:right; font-weight:600; }
+.clause + .clause { margin-top:.5mm; }
 .signatures { margin-top:8mm; break-inside:avoid-page; }
 .signatures-title { font-size:11.5pt; font-weight:800; border-bottom:.55pt solid #777; padding-bottom:1mm; margin-bottom:3mm; }
 .signature-table { width:100%; border-collapse:separate; border-spacing:5mm 0; table-layout:fixed; }
@@ -114,21 +115,43 @@ body {
 </style>
 </head>
 <body>
+@php
+  $formatClauseBody = static function ($body): string {
+      $text = str_replace(["\r\n", "\r"], "\n", (string) $body);
+      $text = preg_replace('/\n[ \t]*\n+/u', "\n", $text) ?? $text;
+      $escaped = e($text);
+      return preg_replace_callback(
+          '/(^|\n)\s*(?:\.(\d{1,3})(?=\s|$)|(\d{1,3})\.(?=\s|$))\s*/u',
+          static function (array $match): string {
+              $number = (($match[2] ?? '') !== '' ? $match[2] : ($match[3] ?? ''));
+              return ($match[1] ?? '') . '<span class="clause-number" dir="ltr">' . $number . '.</span> ';
+          },
+          $escaped,
+      ) ?? $escaped;
+  };
+  $manualStandaloneAnnex = $documentKind === 'annex' && ($manualAnnex ?? false);
+@endphp
 @if($hashShort)<span class="hash-string">بصمة: {{ $hashShort }}</span>@else<span class="hash-string"></span>@endif
 <div class="masthead">
   <div>
     <div class="office">{{ $officeName }}</div>
-    <div class="document-kind">{{ $documentKind === 'annex' ? 'ملحق تعاقدي' : 'محرر تعاقدي' }}</div>
+    <div class="document-kind">{{ $manualStandaloneAnnex ? 'ملحق تعاقدي — قالب فارغ للتعبئة اليدوية' : ($documentKind === 'annex' ? 'ملحق تعاقدي' : 'محرر تعاقدي') }}</div>
   </div>
   @if($logoPath)<img src="{{ $logoPath }}" class="logo" alt="Z draft">@endif
 </div>
 
 <div class="title">{{ $title }}</div>
 <div class="meta">
-  @if($documentKind === 'annex' && ($manualAnnex ?? false))
-    رقم الملحق: <span class="serial">........................</span>
-    &nbsp; | &nbsp; تابع للعقد رقم: <span class="ltr">........................</span>
-    &nbsp; | &nbsp; تاريخ العقد: <span class="ltr">.... / .... / ........</span>
+  @if($documentKind === 'annex')
+    @if($manualStandaloneAnnex)
+      رقم الملحق: <span class="serial">................................</span>
+      &nbsp; | &nbsp; تابع للعقد رقم: <span class="ltr">................................</span>
+      &nbsp; | &nbsp; تاريخ العقد: <span class="ltr">.... / .... / ........</span>
+    @else
+      رقم الملحق: <span class="serial">{{ $annexRef }}</span>
+      &nbsp; | &nbsp; تابع للعقد رقم: <span class="ltr">{{ $serialNumber }}</span>
+      &nbsp; | &nbsp; تاريخ العقد: <span class="ltr">{{ $issuedAt }}</span>
+    @endif
   @else
     رقم المستند: <span class="serial">{{ $annexRef ?: $serialNumber }}</span>
     &nbsp; | &nbsp; تاريخ العقد: <span class="ltr">{{ $issuedAt }}</span>
@@ -138,7 +161,7 @@ body {
 @if($documentKind === 'annex')
 <div class="annex-ref">
   @if($manualAnnex ?? false)
-    هذا الملحق قالب فارغ للتعبئة اليدوية، ويصبح جزءًا لا يتجزأ من العقد بعد استكمال بياناته واعتماده وفقًا لأحكام العقد.
+    هذا قالب ملحق فارغ للطباعة والتعبئة اليدوية؛ لم تُنقل إليه أي بيانات من العقد أو الـWizard، ويُستكمل بالكامل قبل اعتماده وتوقيعه.
   @else
     هذا الملحق جزء لا يتجزأ من العقد رقم <strong class="ltr">{{ $serialNumber }}</strong>، ويُقرأ ويُفسر معه كوحدة واحدة.
   @endif
@@ -193,7 +216,7 @@ body {
   @if(trim((string)($clause['bodyAr'] ?? '')) !== '')
   <div class="clause">
     <h2>{{ $clause['titleAr'] ?: ('البند '.($index+1)) }}</h2>
-    <p>{{ $clause['bodyAr'] }}</p>
+    <p>{!! nl2br($formatClauseBody($clause['bodyAr'])) !!}</p>
   </div>
   @endif
 @endforeach
@@ -205,14 +228,14 @@ body {
       @foreach($parties as $party)
       <td class="signature-box">
         <div class="signature-role">{{ $party['label'] }}</div>
-        <div class="signature-name">الاسم: {{ ($documentKind === 'annex' && ($manualAnnex ?? false)) ? '................................................' : ($party['name'] ?: '................................................') }}</div>
+        <div class="signature-name">الاسم: {{ $manualStandaloneAnnex ? '................................................' : ($party['name'] ?: '................................................') }}</div>
         @if($identitySignatureLayout ?? false)
-        <div class="signature-line">الصفة: ................................................</div>
+        <div class="signature-line">الصفة: {{ $manualStandaloneAnnex ? '................................................' : ($party['capacity'] ?: '................................................') }}</div>
         <div class="signature-line">التوقيع: ................................................</div>
         <div class="signature-line">البصمة: ................................................</div>
         @elseif(($rentalSignatureLayout ?? null) === 'administrative')
-        <div class="signature-line">الصفة: {{ $party['capacity'] ?? '................................................' }}</div>
-        <div class="signature-line">الرقم القومي / رقم الجواز: <span class="ltr">{{ $party['nationalId'] ?? '................................' }}</span></div>
+        <div class="signature-line">الصفة: {{ $manualStandaloneAnnex ? '................................................' : ($party['capacity'] ?? '................................................') }}</div>
+        <div class="signature-line">الرقم القومي / رقم الجواز: <span class="ltr">{{ $manualStandaloneAnnex ? '................................' : ($party['nationalId'] ?? '................................') }}</span></div>
         <div class="signature-line">التوقيع: ................................................</div>
         <div class="signature-line">البصمة: ................................................</div>
         @elseif(($rentalSignatureLayout ?? null) === 'standard')
@@ -220,7 +243,7 @@ body {
         <div class="signature-line">البصمة: ................................................</div>
         @elseif($saleSignatureLayout ?? false)
           @if($documentKind === 'annex')
-          <div class="signature-line">الصفة: {{ ($manualAnnex ?? false) ? '................................................' : ($party['capacity'] ?? '................................................') }}</div>
+          <div class="signature-line">الصفة: {{ $manualStandaloneAnnex ? '................................................' : ($party['capacity'] ?: '................................................') }}</div>
           @endif
         <div class="signature-line">التوقيع: ................................................</div>
         <div class="signature-line">البصمة: ................................................</div>
@@ -253,7 +276,7 @@ body {
 @endif
 
 <div class="final-note">
-  {{ ($documentKind === 'annex' && ($manualAnnex ?? false)) ? 'قالب ملحق فارغ للتعبئة اليدوية — لا يتضمن بيانات المستخدم تلقائيًا.' : 'النسخة الإلكترونية المرجعية لهذا المحرر محفوظة في سجل العقد برقم المستند المبين أعلاه.' }}
+  {{ $manualStandaloneAnnex ? 'هذا الملحق قالب فارغ؛ لم تُدرج فيه بيانات المستخدم تلقائيًا، ويجب استكماله يدويًا قبل اعتماده.' : 'النسخة الإلكترونية المرجعية لهذا المحرر محفوظة في سجل العقد برقم المستند المبين أعلاه.' }}
 </div>
 
 @foreach(($annexes ?? []) as $annex)
@@ -261,15 +284,15 @@ body {
 <div class="masthead">
   <div>
     <div class="office">{{ $officeName }}</div>
-    <div class="document-kind">{{ ($annex['manualFill'] ?? false) ? 'ملحق تعاقدي — قالب للتعبئة اليدوية' : 'ملحق تعاقدي' }}</div>
+    <div class="document-kind">{{ ($annex['manualFill'] ?? false) ? 'ملحق تعاقدي — قالب فارغ للتعبئة اليدوية' : 'ملحق تعاقدي' }}</div>
   </div>
   @if($logoPath)<img src="{{ $logoPath }}" class="logo" alt="Z draft">@endif
 </div>
 <div class="title">{{ $annex['title'] }}</div>
 <div class="meta">
   @if($annex['manualFill'] ?? false)
-    رقم الملحق: <span class="serial">........................</span>
-    &nbsp; | &nbsp; تابع للعقد رقم: <span class="ltr">........................</span>
+    رقم الملحق: <span class="serial">................................</span>
+    &nbsp; | &nbsp; تابع للعقد رقم: <span class="ltr">................................</span>
     &nbsp; | &nbsp; تاريخ العقد: <span class="ltr">.... / .... / ........</span>
   @else
     رقم الملحق: <span class="serial">{{ $annex['annexRef'] }}</span>
@@ -279,7 +302,7 @@ body {
 </div>
 <div class="annex-ref">
   @if($annex['manualFill'] ?? false)
-    هذا الملحق قالب فارغ للتعبئة اليدوية، ويُطبع مع العقد في ملف PDF واحد، ولا تُنقل إليه بيانات المستخدم تلقائيًا.
+    هذا قالب ملحق فارغ للطباعة والتعبئة اليدوية؛ لم تُنقل إليه أي بيانات من العقد أو الـWizard، ويُستكمل بالكامل قبل الاعتماد والتوقيع.
   @else
     هذا الملحق جزء لا يتجزأ من العقد رقم <strong class="ltr">{{ $serialNumber }}</strong>، ويُقرأ ويُفسر معه كوحدة واحدة.
   @endif
@@ -316,7 +339,7 @@ body {
 
 @foreach($annex['clauses'] as $index=>$clause)
   @if(trim((string)($clause['bodyAr'] ?? '')) !== '')
-  <div class="clause"><h2>{{ $clause['titleAr'] ?: ('البند '.($index+1)) }}</h2><p>{{ $clause['bodyAr'] }}</p></div>
+  <div class="clause"><h2>{{ $clause['titleAr'] ?: ('البند '.($index+1)) }}</h2><p>{!! nl2br($formatClauseBody($clause['bodyAr'])) !!}</p></div>
   @endif
 @endforeach
 
@@ -328,14 +351,14 @@ body {
       <div class="signature-role">{{ $party['label'] }}</div>
       <div class="signature-name">الاسم: {{ ($annex['manualFill'] ?? false) ? '................................................' : ($party['name'] ?: '................................................') }}</div>
       @if($identitySignatureLayout ?? false)
-        <div class="signature-line">الصفة: ................................................</div>
+        <div class="signature-line">الصفة: {{ ($annex['manualFill'] ?? false) ? '................................................' : ($party['capacity'] ?: '................................................') }}</div>
         <div class="signature-line">التوقيع: ................................................</div>
         <div class="signature-line">البصمة: ................................................</div>
       @elseif($rentalSignatureLayout ?? null)
         <div class="signature-line">التوقيع: ................................................</div>
         <div class="signature-line">البصمة: ................................................</div>
       @elseif($saleSignatureLayout ?? false)
-        @if(!($annex['manualFill'] ?? false))<div class="signature-line">الصفة: {{ $party['capacity'] ?? '................................................' }}</div>@else<div class="signature-line">الصفة: ................................................</div>@endif
+        <div class="signature-line">الصفة: {{ ($annex['manualFill'] ?? false) ? '................................................' : ($party['capacity'] ?: '................................................') }}</div>
         <div class="signature-line">التوقيع: ................................................</div>
         <div class="signature-line">البصمة: ................................................</div>
       @else
@@ -346,7 +369,7 @@ body {
     @endforeach
   </tr></table>
 </div>
-<div class="final-note">{{ ($annex['manualFill'] ?? false) ? 'قالب ملحق للتعبئة اليدوية — لا يتضمن بيانات المستخدم تلقائيًا.' : 'تم توليد هذا الملحق من بيانات العقد المعتمدة، ويُقرأ معه كوحدة واحدة.' }}</div>
+<div class="final-note">{{ ($annex['manualFill'] ?? false) ? 'هذا الملحق قالب فارغ؛ لم تُدرج فيه بيانات المستخدم تلقائيًا، ويجب استكماله يدويًا قبل اعتماده.' : 'تم توليد هذا الملحق من بيانات العقد المعتمدة، ويُقرأ معه كوحدة واحدة.' }}</div>
 @endforeach
 </body>
 </html>
