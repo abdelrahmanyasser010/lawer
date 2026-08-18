@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import {
   ArrowRight,
+  Calendar,
   CheckCircle2,
   Clock3,
   Download,
@@ -272,6 +273,16 @@ function RequestDetailsContent() {
   const communicationIsFollowUpOnly = item.status === "awaiting_payment" && item.paymentStatus !== "approved";
 
   function getDetailedNextStep() {
+    if (!item) {
+      return {
+        title: "",
+        description: "",
+        actionText: null,
+        actionType: null,
+        bg: "",
+        badge: "",
+      };
+    }
     if (item.status === "awaiting_payment") {
       if (bookingExpired) {
         return {
