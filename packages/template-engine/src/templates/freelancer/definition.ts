@@ -1364,6 +1364,7 @@ const variants: ContractVariantDefinition[] = [
       "social_media_messaging_contacts",
       "social_media_messaging_contacts_custom",
       "social_media_legal_fees_clause",
+      "social_competent_court_clause",
     ],
     // The main source lists social-media annexes as optional. The PDF set supplied for this review
     // does not contain their authoritative originals; similarly named attachments belong to the
