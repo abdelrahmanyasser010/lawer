@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { MousePointer2 } from "lucide-react";
+function CursorIcon({ className = "h-3 w-3" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="m4 4 7.07 17 2.51-7.39L21 11.07z" />
+    </svg>
+  );
+}
 import {
   localTemplateRegistry,
   renderLegalClauses,
@@ -321,7 +327,7 @@ function LegalTextBody({ text, className = "" }: { text: string; className?: str
 function LiveFieldMarker({ label }: { label?: string | null }) {
   return (
     <span className="pointer-events-none absolute -top-3 right-2 z-30 inline-flex items-center gap-1 rounded-full border border-[#d9a84e] bg-[#00102e] px-2 py-1 text-[8.5px] font-black text-[#f2c45f] shadow-md">
-      <MousePointer2 className="h-3 w-3" />
+      <CursorIcon className="h-3 w-3" />
       {label ? `${label} يظهر هنا` : "التعديل يظهر هنا"}
     </span>
   );
@@ -1155,7 +1161,7 @@ export default function LegalDocumentSheet({
                   {/* Court Jurisdiction Row in Specs Table */}
                   <tr data-preview-group="jurisdiction" data-active-preview={activeJurisdiction ? "exact" : undefined} className={`border-b border-slate-200 bg-slate-50/40 ${activeJurisdiction ? "outline outline-2 outline-[#d9a84e]" : ""}`}>
                     <td colSpan={2} className="py-1.5 px-3 align-top">
-                      {activeJurisdiction && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#00102e] px-2 py-0.5 text-[8.5px] font-black text-[#f2c45f]"><MousePointer2 className="h-3 w-3" />{activeFieldLabel || "المحكمة المختصة"} يظهر هنا</span>}
+                      {activeJurisdiction && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#00102e] px-2 py-0.5 text-[8.5px] font-black text-[#f2c45f]"><CursorIcon className="h-3 w-3" />{activeFieldLabel || "المحكمة المختصة"} يظهر هنا</span>}
                       <span className="text-slate-500 text-[10px] block">المحكمة المختصة بنظر أي نزاع:</span>
                       <span className="font-bold text-[#00102e]">
                         {jurisdictionCourtDisplay || "⚠ مطلوب تحديد المحكمة المختصة"}
@@ -1262,7 +1268,7 @@ export default function LegalDocumentSheet({
                   </tr>
                   <tr data-preview-group="jurisdiction" data-active-preview={activeJurisdiction ? "exact" : undefined} className={`bg-slate-50/40 ${activeJurisdiction ? "outline outline-2 outline-[#d9a84e]" : ""}`}>
                     <td colSpan={2} className="py-1.5 px-3 align-top">
-                      {activeJurisdiction && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#00102e] px-2 py-0.5 text-[8.5px] font-black text-[#f2c45f]"><MousePointer2 className="h-3 w-3" />{activeFieldLabel || "المحكمة المختصة"} يظهر هنا</span>}
+                      {activeJurisdiction && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#00102e] px-2 py-0.5 text-[8.5px] font-black text-[#f2c45f]"><CursorIcon className="h-3 w-3" />{activeFieldLabel || "المحكمة المختصة"} يظهر هنا</span>}
                       <span className="text-slate-500 text-[10px] block">المحكمة المختصة بنظر أي نزاع:</span>
                       <span className="font-bold text-[#00102e]">
                         {jurisdictionCourtDisplay || "⚠ مطلوب تحديد المحكمة المختصة"}

@@ -77,7 +77,7 @@ export default function StaffContractPreviewPage() {
   const resolved = useMemo(() => {
     if (!payload) return null;
     try {
-      return resolveWizardDefinition(payload.templateDefinition, payload.variantKey, payload.selectedOptionalClauseKeys, payload.fieldValues);
+      return resolveWizardDefinition(payload.templateDefinition, payload.variantKey, payload.selectedOptionalClauseKeys, payload.fieldValues as any);
     } catch {
       return null;
     }
@@ -87,7 +87,7 @@ export default function StaffContractPreviewPage() {
     if (!payload) return [];
     if (payload.legalClauseSnapshot?.length) return payload.legalClauseSnapshot;
     try {
-      return renderLegalClauses(payload.templateDefinition, payload.variantKey, payload.selectedOptionalClauseKeys, payload.fieldValues) as LegalClause[];
+      return renderLegalClauses(payload.templateDefinition, payload.variantKey, payload.selectedOptionalClauseKeys, payload.fieldValues as any) as LegalClause[];
     } catch {
       return [];
     }
@@ -126,7 +126,7 @@ export default function StaffContractPreviewPage() {
         <section className="relative mt-7">
           <h2 className="border-r-4 border-[#986410] pr-3 text-[15px] font-black text-[#00102e]">بيانات العقد</h2>
           <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 text-[11.5px] leading-6">
-            {resolved.steps.flatMap((step) => step.fields.map((field) => ({ step, field }))).filter(({ field }) => field.type !== "file").map(({ step, field }) => (
+            {resolved.steps.flatMap((step) => step.fields.map((field) => ({ step, field }))).filter(({ field }) => (field.type as string) !== "file").map(({ step, field }) => (
               <div key={`${step.key}:${field.key}`} className="break-inside-avoid border-b border-slate-200 pb-2">
                 <div className="text-[9.5px] font-black text-slate-500">{field.labelAr}</div>
                 <div className="mt-0.5 font-bold text-slate-900">{displayValue(field, payload.fieldValues[field.key])}</div>

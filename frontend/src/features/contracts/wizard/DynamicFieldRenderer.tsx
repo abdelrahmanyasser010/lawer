@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
-import { Calendar, CircleHelp, Trash2 } from "lucide-react";
+import { Calendar, HelpCircle, Trash2 } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { evaluateCondition } from "@zdraft/template-engine";
 import type {
@@ -317,7 +317,7 @@ export default function DynamicFieldRenderer({
       {helpText && (
         <details className="group max-w-full text-[10.5px] text-slate-500">
           <summary className="inline-flex cursor-pointer list-none items-center gap-1 font-bold text-slate-400 transition hover:text-[#986410] [&::-webkit-details-marker]:hidden">
-            <CircleHelp className="h-3 w-3" />
+            <HelpCircle className="h-3 w-3" />
             توضيح
           </summary>
           <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] leading-5 text-slate-600">

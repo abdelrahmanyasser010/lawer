@@ -222,6 +222,8 @@ export interface PublicCatalog {
     contractReviewFeeEgp: number;
     contractReviewDepositEgp: number;
     contractDraftingDepositEgp: number;
+    consultationFeeEgp?: number;
+    consultationDepositEgp?: number;
   };
   office: {
     displayName: string;
@@ -231,6 +233,7 @@ export interface PublicCatalog {
     supportWhatsappNumber: string;
     supportPhone: string;
     supportEmail: string;
+    consultationWhatsappNumber?: string;
   };
   payment: {
     vodafoneCashNumber: string;

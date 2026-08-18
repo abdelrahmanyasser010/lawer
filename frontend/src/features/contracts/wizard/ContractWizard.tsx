@@ -7,7 +7,7 @@ import Footer from "@/components/layout/Footer";
 import VodafoneCashModal from "@/components/checkout/VodafoneCashModal";
 import {
   Lock, ArrowRight, ArrowLeft,
-  ShieldCheck, CheckCircle2, Zap, ExternalLink, FileText, MousePointer2,
+  ShieldCheck, CheckCircle2, Zap, ExternalLink, FileText,
 } from "lucide-react";
 import { apiRequest, ApiClientError } from "@/lib/apiClient";
 import type { ContractSlug, CreationMode } from "@/types/zdraft";
@@ -890,7 +890,7 @@ export default function WizardPage() {
                   </button>
                 </div>
                 <span aria-live="polite" className="flex max-w-[50%] items-center gap-1 rounded-full border border-[#986410]/30 bg-[#986410]/20 px-2.5 py-0.5 text-[10px] font-bold leading-4 text-[#d9a84e]">
-                  {activePreviewField ? <MousePointer2 className="h-3 w-3 shrink-0" /> : <Zap className="h-3 w-3 shrink-0" />}
+                  <Zap className="h-3 w-3 shrink-0" />
                   <span className="truncate">{activePreviewField ? `يتحدّث الآن: ${activePreviewField.labelAr}` : "نفس مقاسات الطباعة — اضغط حقلًا لتحديد مكانه"}</span>
                 </span>
               </div>

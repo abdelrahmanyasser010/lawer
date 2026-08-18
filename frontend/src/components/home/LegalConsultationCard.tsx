@@ -34,13 +34,13 @@ export default function LegalConsultationCard() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const consultationFee = catalog.services.consultationFeeEgp;
-  const consultationDeposit = catalog.services.consultationDepositEgp;
+  const consultationFee = catalog.services.consultationFeeEgp ?? catalog.services.contractReviewFeeEgp;
+  const consultationDeposit = catalog.services.consultationDepositEgp ?? catalog.services.contractReviewDepositEgp;
   const hasDepositSplit = consultationDeposit > 0 && consultationDeposit < consultationFee;
   const requiredAmount = hasDepositSplit ? consultationDeposit : consultationFee;
   const remainingAmount = Math.max(0, consultationFee - requiredAmount);
   const cashNumber = catalog.payment.vodafoneCashNumber;
-  const consultationNumber = catalog.office.consultationWhatsappNumber;
+  const consultationNumber = catalog.office.consultationWhatsappNumber || catalog.office.reviewWhatsappNumber || catalog.office.whatsappNumber;
   const enabledChannels = useMemo(() => channels.filter((option) => catalog.policies.communicationChannels.includes(option.key)), [catalog.policies.communicationChannels]);
   useEffect(() => {
     if (enabledChannels.length && !enabledChannels.some((option) => option.key === channel)) setChannel(enabledChannels[0].key);

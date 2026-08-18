@@ -386,7 +386,7 @@ function demoRequestDetails(id: number) {
     description: "طلب تجريبي يعرض دورة العمل الكاملة بين العميل ومكتب المحاماة.",
     templateSlug: "apartment_sale",
     communicationChannel: "whatsapp",
-    preferredContactAt: iso(12), meetingAt: row.dueAt ?? null, meetingProvider: row.meetingUrl ? "zoom" : null,
+    preferredContactAt: iso(12), meetingAt: row.dueAt ?? null, meetingProvider: (row as any).meetingUrl ? "zoom" : null, meetingUrl: (row as any).meetingUrl ?? null,
     meetingLocation: null, assignedLawyerId: row.assignedLawyerName ? 2 : null, clientUserId: 1,
     clientWhatsappNumber: row.clientPhone, dueAt: row.dueAt, linkedContractId: null, linkedContractSerial: null,
     linkedContractTitle: null, paymentStatus: row.status === "awaiting_payment" ? "pending_verification" : "approved",
