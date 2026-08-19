@@ -462,9 +462,6 @@ function attachmentStep(variant: "preliminary" | "registrable" | "inherited"): W
 
 function metaStep(variant: "preliminary" | "registrable" | "inherited"): WizardStepDefinition {
   const fields: WizardFieldDefinition[] = [contractDateField, { key: "sale_contract_city", type: "text", labelAr: "مدينة تحرير العقد", required: true }];
-  if (variant === "registrable" || variant === "inherited") {
-    fields.push({ key: "sale_contract_copies_count", type: "number", labelAr: "عدد النسخ الأصلية", required: true, validation: { min: 2, max: 20 } });
-  }
   return { key: "sale_contract_meta", titleAr: "بيانات العقد", articleRange: "التاريخ ومكان التحرير", fields };
 }
 

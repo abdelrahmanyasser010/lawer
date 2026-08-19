@@ -465,7 +465,6 @@ const websiteSteps: WizardStepDefinition[] = [
     { key: "website_force_majeure_termination_days", type: "number", labelAr: "مدة استمرار القوة القاهرة التي تجيز الإنهاء — يوم", required: true, validation: { min: 1 } },
     { key: "website_hardship_duration_days", type: "number", labelAr: "مدة استمرار الظروف الطارئة قبل إعادة التفاوض — يوم", required: true, validation: { min: 1 } },
     { key: "website_hardship_negotiation_days", type: "number", labelAr: "مدة التفاوض بعد الظروف الطارئة — يوم", required: true, validation: { min: 1 } },
-    { key: "website_contract_copies", type: "number", labelAr: "عدد نسخ العقد الأصلية أو الإلكترونية", required: true, validation: { min: 1 } },
     { key: "website_non_solicitation_months", type: "number", labelAr: "مدة عدم استقطاب العاملين بعد انتهاء العقد — شهر", required: true, validation: { min: 1 } },
     { key: "website_legal_fees_enabled", type: "checkbox", labelAr: "يوجد اتفاق خاص على تحمل رسوم الدمغة أو الرسوم القانونية", printInDocument: false },
     { key: "website_legal_fees_payer", type: "radio", labelAr: "يتحمل الرسوم", visibleWhen: { fieldKey: "website_legal_fees_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_legal_fees_enabled", operator: "truthy" }, options: [
@@ -637,7 +636,6 @@ const socialSteps: WizardStepDefinition[] = [
     { key: "social_client_stoppage_days", type: "number", labelAr: "توقف المشروع بسبب العميل قبل التعليق — أيام عمل", required: true, validation: { min: 1 } },
     { key: "social_client_post_notice_termination_days", type: "number", labelAr: "المهلة بعد إخطار العميل قبل حق الإنهاء — أيام عمل", required: true, validation: { min: 1 } },
     { key: "social_force_majeure_notice_days", type: "number", labelAr: "مهلة إخطار القوة القاهرة / الظروف الطارئة — أيام عمل", required: true, validation: { min: 1 } },
-    { key: "social_contract_copies", type: "number", labelAr: "عدد نسخ العقد الأصلية أو الإلكترونية", required: true, validation: { min: 1 } },
   ] },
   { key: "social_communications", titleAr: "الإخطارات ووسائل الاتصال المعتمدة", articleRange: "المادة 20 — الإخطارات والمراسلات", fields: [
     { key: "social_email_notices_enabled", type: "checkbox", labelAr: "اعتماد البريد الإلكتروني للمراسلات والاعتمادات", printInDocument: false },

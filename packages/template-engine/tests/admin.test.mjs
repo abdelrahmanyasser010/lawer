@@ -332,10 +332,10 @@ test("social media delay penalty uses exactly one source-backed calculation path
 });
 
 test("full nine-contract publication files stay version-aligned", () => {
-  const rentalBackend = JSON.parse(readFileSync("../../backend/database/template-definitions/rental.json", "utf8"));
-  const saleBackend = JSON.parse(readFileSync("../../backend/database/template-definitions/apartment_sale.json", "utf8"));
-  const freelancerBackend = JSON.parse(readFileSync("../../backend/database/template-definitions/freelancer.json", "utf8"));
-  const migration = readFileSync("../../backend/database/migrations/2026_08_19_000700_publish_full_nine_contracts_experience.php", "utf8");
+  const rentalBackend = JSON.parse(readFileSync(new URL("../../../backend/database/template-definitions/rental.json", import.meta.url), "utf8"));
+  const saleBackend = JSON.parse(readFileSync(new URL("../../../backend/database/template-definitions/apartment_sale.json", import.meta.url), "utf8"));
+  const freelancerBackend = JSON.parse(readFileSync(new URL("../../../backend/database/template-definitions/freelancer.json", import.meta.url), "utf8"));
+  const migration = readFileSync(new URL("../../../backend/database/migrations/2026_08_19_000700_publish_full_nine_contracts_experience.php", import.meta.url), "utf8");
   assert.equal(rentalTemplateDefinition.version, 15);
   assert.equal(apartmentSaleTemplateDefinition.version, 14);
   assert.equal(freelancerTemplateDefinition.version, 15);
@@ -370,7 +370,7 @@ test("rental v15 exposes three source-specific lease variants with derived legal
 
 test("rental v15 core finance, duration and source-specific payment semantics are fail-closed", () => {
   const commonRequired = [
-    "contract_date", "contract_copies_count", "lease_duration_value", "lease_duration_unit", "start_date", "end_date", "property_delivery_date",
+    "contract_date", "lease_duration_value", "lease_duration_unit", "start_date", "end_date", "property_delivery_date",
     "deposit_amount", "deposit_payment_status", "rent_period", "rent_amount", "rent_due_day", "holdover_daily_compensation",
     "property_governorate", "property_city", "property_district", "property_street", "floor_number", "unit_number", "property_area",
     "electricity_meter_exists", "water_meter_exists", "gas_meter_exists",
@@ -378,7 +378,7 @@ test("rental v15 core finance, duration and source-specific payment semantics ar
   for (const variant of rentalTemplateDefinition.variants) {
     const fields = Object.fromEntries(variant.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
     for (const key of commonRequired) assert.equal(fields[key]?.required, true, `${variant.key}:${key}`);
-    assert.equal(fields.contract_copies_count.validation.min, 2);
+    assert.equal(Boolean(fields.contract_copies_count), false);
     assert.equal(variant.defaultFieldValues.contract_copies_count, 2);
     assert.equal(Object.hasOwn(variant.defaultFieldValues ?? {}, "deposit_amount"), false);
     assert.equal(Object.hasOwn(variant.defaultFieldValues ?? {}, "rent_amount"), false);
@@ -662,12 +662,13 @@ test("sale v14 editable timing and payment terms are explicit and variant-specif
   assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "registrable_sale").defaultFieldValues.sale_delivery_delay_threshold_days, 30);
   assert.equal(byVariant.registrable_sale.sale_delivery_delay_threshold_days.required, true);
   assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "inherited_sale").defaultFieldValues.sale_contract_copies_count, 2);
-  assert.equal(byVariant.inherited_sale.sale_contract_copies_count.required, true);
+  assert.equal(Boolean(byVariant.inherited_sale.sale_contract_copies_count), false);
   assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "preliminary_sale").defaultFieldValues.seller_party_type, "individual");
   assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "preliminary_sale").defaultFieldValues.buyer_party_type, "individual");
   assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "registrable_sale").defaultFieldValues.seller_party_type, "individual");
   assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "registrable_sale").defaultFieldValues.buyer_party_type, "individual");
   assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "registrable_sale").defaultFieldValues.sale_contract_copies_count, 2);
+  assert.equal(Boolean(byVariant.registrable_sale.sale_contract_copies_count), false);
   assert.equal(Boolean(byVariant.preliminary_sale.sale_contract_copies_count), false);
   for (const variantKey of ["preliminary_sale", "registrable_sale", "inherited_sale"]) {
     assert.equal(byVariant[variantKey].sale_general_breach_cure_days.required, true);
@@ -1145,7 +1146,7 @@ test("website v12 variable coverage audit fails closed for every wizard input", 
     externalBindings: websiteFieldCoverageExternalBindings,
   });
 
-  assert.equal(audit.entries.length, 106, "عدد حقول عقد الموقع تغير؛ راجع خريطة الـcoverage قبل النشر");
+  assert.equal(audit.entries.length, 105, "عدد حقول عقد الموقع تغير؛ راجع خريطة الـcoverage قبل النشر");
   assert.deepEqual(audit.uncoveredFieldKeys, [], `حقول بدون أثر في العقد: ${audit.uncoveredFieldKeys.join(", ")}`);
 
   const byKey = Object.fromEntries(audit.entries.map((entry) => [entry.fieldKey, entry]));
@@ -1434,8 +1435,8 @@ test("social media v14 variable coverage audit fails closed for every wizard inp
     derivedVariableDependencies: derivedClauseVariableDependencies,
     externalBindings: socialMediaFieldCoverageExternalBindings,
   });
-  assert.equal(coverage.entries.length, 140, "عدد حقول عقد السوشيال تغير؛ راجع خريطة الـcoverage قبل النشر");
-  assert.equal(coverage.entries.filter((entry) => entry.status === "clause_bound").length, 134);
+  assert.equal(coverage.entries.length, 139, "عدد حقول عقد السوشيال تغير؛ راجع خريطة الـcoverage قبل النشر");
+  assert.equal(coverage.entries.filter((entry) => entry.status === "clause_bound").length, 133);
   assert.equal(coverage.entries.filter((entry) => entry.status === "external_bound").length, 6);
   assert.deepEqual(coverage.uncoveredFieldKeys, [], coverage.uncoveredFieldKeys.join(", "));
   const byKey = Object.fromEntries(coverage.entries.map((entry) => [entry.fieldKey, entry]));
@@ -1518,8 +1519,8 @@ test("customer-facing legal text contains no wizard placeholders or product-edit
 
 test("preview A4 typography stays aligned with the WeasyPrint PDF hierarchy", () => {
   const compact = (value) => value.replace(/\s+/g, "");
-  const css = compact(readFileSync("../../frontend/src/app/globals.css", "utf8"));
-  const blade = compact(readFileSync("../../backend/resources/views/pdf/contract.blade.php", "utf8"));
+  const css = compact(readFileSync(new URL("../../../frontend/src/app/globals.css", import.meta.url), "utf8"));
+  const blade = compact(readFileSync(new URL("../../../backend/resources/views/pdf/contract.blade.php", import.meta.url), "utf8"));
   for (const token of ["font-size:11.35pt", "line-height:1.44", "min-height:18mm", "font-size:17.5pt", "font-size:11.25pt", "font-size:9.4pt"]) {
     assert.ok(css.includes(token), `preview ${token}`);
     assert.ok(blade.includes(token), `pdf ${token}`);
