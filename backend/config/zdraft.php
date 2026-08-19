@@ -16,6 +16,8 @@ return [
     'otp_resend_cooldown_seconds' => (int) env('EMAIL_OTP_RESEND_COOLDOWN_SECONDS', 60),
     'password_reset_ttl_minutes' => (int) env('PASSWORD_RESET_TTL_MINUTES', 30),
     'expose_debug_tokens' => filter_var(env('EXPOSE_DEBUG_TOKENS', false), FILTER_VALIDATE_BOOL),
+    'super_admin_email' => env('SUPER_ADMIN_EMAIL'),
+    'super_admin_password' => env('SUPER_ADMIN_PASSWORD'),
     'image' => [
         'max_dimension' => (int) env('IMAGE_MAX_DIMENSION', 1920),
         'max_input_pixels' => (int) env('IMAGE_MAX_INPUT_PIXELS', 40000000),

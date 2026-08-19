@@ -478,6 +478,8 @@ function partySteps(allowCompany: boolean): WizardStepDefinition[] {
 const saleReviewStep: WizardStepDefinition = { key: "sale_review", titleAr: "المراجعة والاعتماد", articleRange: "مراجعة نهائية", fields: [] };
 
 const sharedDefaults: Record<string, string | number | boolean | null> = {
+  seller_party_type: "individual",
+  buyer_party_type: "individual",
   sale_email_notices_enabled: false,
   sale_notice_use_party_emails: true,
   sale_messaging_enabled: false,
@@ -558,9 +560,9 @@ const reviewedSourceClauses = saleSourceLegalClauses.map((item): LegalClauseDefi
   if (key.endsWith("_source_article_01")) {
     body = `إنه بتاريخ {{contract_date}} تم إبرام هذا العقد بين كل من:
 
-أولًا: الطرف الأول (البائع): {{sale_seller_party_definition}}
+أولًا: {{sale_seller_party_definition}}
 
-ثانيًا: الطرف الثاني (المشتري): {{sale_buyer_party_definition}}
+ثانيًا: {{sale_buyer_party_definition}}
 
 ويُشار إلى كل منهما منفردًا بـ«الطرف» وإليهما معًا بـ«الطرفين»، وتُعد بيانات التعريف السابقة جزءًا لا يتجزأ من هذا العقد.`;
     variables.push("contract_date", "sale_seller_party_definition", "sale_buyer_party_definition");
@@ -601,7 +603,7 @@ const reviewedSourceClauses = saleSourceLegalClauses.map((item): LegalClauseDefi
 وأما انتقال الملكية العينية أو استكمال آثارها في السجلات فيتم وفقًا للإجراءات التي يقررها القانون وبالمستندات الدالة على الميراث وسند ملكية المورث وسند حق البائع في التصرف.`;
   }
   if (key.endsWith("_source_article_06")) {
-    body = "اتفق الطرفان على أن إجمالي ثمن البيع هو {{sale_total_price}} جنيه مصري، فقط ({{sale_total_price_words}} جنيه مصري لا غير). ووسيلة/وسائل السداد المتفق عليها هي: {{sale_payment_method}}. ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.";
+    body = "اتفق الطرفان على أن إجمالي ثمن البيع هو {{sale_total_price}} جنيه مصري ({{sale_total_price_words}}). ووسيلة/وسائل السداد المتفق عليها هي: {{sale_payment_method}}. ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.";
     variables.push("sale_total_price", "sale_total_price_words", "sale_payment_method");
   }
   if (key.endsWith("_source_article_07")) {
@@ -824,7 +826,7 @@ const conditionalClauses: LegalClauseDefinition[] = [
     variables: ["sale_property_jurisdiction_text"],
     bodyAr: "{{sale_property_jurisdiction_text}} ولا ينشئ هذا البيان اختصاصًا مخالفًا لقواعد الاختصاص الولائي أو النوعي أو القيمي الآمرة.",
   }),
-  customClause({ key: "sale_full_payment_clause", titleAr: "السداد الكامل في مجلس العقد", variables: ["sale_total_price", "sale_total_price_words"], bodyAr: "يقر البائع بأنه تسلم من المشتري قبل التوقيع وفي مجلس العقد كامل ثمن البيع وقدره {{sale_total_price}} جنيه مصري، فقط ({{sale_total_price_words}} جنيه مصري لا غير)، ويُعد توقيعه مخالصة نهائية باستلام كامل الثمن وإبراءً لذمة المشتري من الالتزام المالي الناشئ عن الثمن، دون إخلال بأي التزامات أخرى ناشئة عن العقد أو القانون.", visibleWhen: fullPaymentCondition }),
+  customClause({ key: "sale_full_payment_clause", titleAr: "السداد الكامل في مجلس العقد", variables: ["sale_total_price", "sale_total_price_words"], bodyAr: "يقر البائع بأنه تسلم من المشتري قبل التوقيع وفي مجلس العقد كامل ثمن البيع وقدره {{sale_total_price}} جنيه مصري ({{sale_total_price_words}})، ويُعد توقيعه مخالصة نهائية باستلام كامل الثمن وإبراءً لذمة المشتري من الالتزام المالي الناشئ عن الثمن، دون إخلال بأي التزامات أخرى ناشئة عن العقد أو القانون.", visibleWhen: fullPaymentCondition }),
   customClause({ key: "sale_installment_payment_clause", titleAr: "السداد بالتقسيط أو على دفعات", variables: ["sale_down_payment", "sale_remaining_amount", "sale_installment_grace_days", "sale_installment_schedule_text", "sale_payment_method"], bodyAr: `يقر البائع باستلام مقدم قدره {{sale_down_payment}} جنيه مصري، ويكون باقي الثمن المستحق {{sale_remaining_amount}} جنيه مصري. واتفق الطرفان على جدول السداد الآتي: {{sale_installment_schedule_text}} وتكون وسيلة/وسائل السداد: {{sale_payment_method}}.
 
 إذا تأخر المشتري عن سداد أي قسط في موعد استحقاقه لمدة تتجاوز {{sale_installment_grace_days}} يومًا (فترة سماح)، حلت واستحقت باقي الأقساط المؤجلة فورًا بقوة الاتفاق ودون حاجة لتوجيه إنذار، ويلتزم بسداد كامل المتبقي من الثمن فورًا كدفعة واحدة. وإذا تأخر عن سداد قسطين متتاليين أو أي ثلاثة أقساط متفرقة، يُعتبر العقد مفسوخًا من تلقاء نفسه وبمرتبة الشرط الفاسخ الصريح، دون حاجة إلى إعذار أو الحصول على حكم قضائي بالفسخ، وفق الصياغة الواردة بالمصدر.
@@ -974,7 +976,7 @@ const installmentAnnexClause: LegalClauseDefinition = {
 
 export const apartmentSaleTemplateDefinition: ContractTemplateDefinition = {
   slug: "apartment_sale",
-  version: 13,
+  version: 14,
   nameAr: "عقود بيع الوحدات السكنية",
   description: "ثلاثة عقود بيع مستقلة مطابقة للنماذج: بيع ابتدائي، بيع قابل للتسجيل بالشهر العقاري، وبيع لوحدة آلت بالميراث، مع ملحق أقساط اختياري وفارغ قابل للطباعة والتعبئة اليدوية.",
   priceEgp: 0,

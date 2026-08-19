@@ -1,6 +1,6 @@
 {
   "slug": "apartment_sale",
-  "version": 13,
+  "version": 14,
   "nameAr": "عقود بيع الوحدات السكنية",
   "description": "ثلاثة عقود بيع مستقلة مطابقة للنماذج: بيع ابتدائي، بيع قابل للتسجيل بالشهر العقاري، وبيع لوحدة آلت بالميراث، مع ملحق أقساط اختياري وفارغ قابل للطباعة والتعبئة اليدوية.",
   "priceEgp": 0,
@@ -1785,7 +1785,9 @@
         "sale_general_breach_cure_days": 15,
         "sale_force_majeure_notice_days": 15,
         "sale_notice_change_days": 15,
-        "preliminary_contractual_penalty_enabled": false
+        "preliminary_contractual_penalty_enabled": false,
+        "seller_party_type": "individual",
+        "buyer_party_type": "individual"
       }
     },
     {
@@ -3487,7 +3489,9 @@
         "sale_force_majeure_notice_days": 15,
         "sale_notice_change_days": 15,
         "sale_contract_copies_count": 2,
-        "registrable_contractual_penalty_enabled": false
+        "registrable_contractual_penalty_enabled": false,
+        "seller_party_type": "individual",
+        "buyer_party_type": "individual"
       }
     },
     {
@@ -5040,7 +5044,7 @@
     {
       "key": "preliminary_sale_source_article_01",
       "titleAr": "المادة الأولى: أطراف العقد",
-      "bodyAr": "إنه بتاريخ {{contract_date}} تم إبرام هذا العقد بين كل من:\n\nأولًا: الطرف الأول (البائع): {{sale_seller_party_definition}}\n\nثانيًا: الطرف الثاني (المشتري): {{sale_buyer_party_definition}}\n\nويُشار إلى كل منهما منفردًا بـ«الطرف» وإليهما معًا بـ«الطرفين»، وتُعد بيانات التعريف السابقة جزءًا لا يتجزأ من هذا العقد.",
+      "bodyAr": "إنه بتاريخ {{contract_date}} تم إبرام هذا العقد بين كل من:\n\nأولًا: {{sale_seller_party_definition}}\n\nثانيًا: {{sale_buyer_party_definition}}\n\nويُشار إلى كل منهما منفردًا بـ«الطرف» وإليهما معًا بـ«الطرفين»، وتُعد بيانات التعريف السابقة جزءًا لا يتجزأ من هذا العقد.",
       "sourceDocumentName": "عقد بيع ابتدائي Z DRAFT.pdf",
       "sourcePageStart": 1,
       "sourcePageEnd": 2,
@@ -5118,7 +5122,7 @@
     {
       "key": "preliminary_sale_source_article_06",
       "titleAr": "المادة السادسة: ثمن البيع وطريقة السداد",
-      "bodyAr": "اتفق الطرفان على أن إجمالي ثمن البيع هو {{sale_total_price}} جنيه مصري، فقط ({{sale_total_price_words}} جنيه مصري لا غير). ووسيلة/وسائل السداد المتفق عليها هي: {{sale_payment_method}}. ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.",
+      "bodyAr": "اتفق الطرفان على أن إجمالي ثمن البيع هو {{sale_total_price}} جنيه مصري ({{sale_total_price_words}}). ووسيلة/وسائل السداد المتفق عليها هي: {{sale_payment_method}}. ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.",
       "sourceDocumentName": "عقد بيع ابتدائي Z DRAFT.pdf",
       "sourcePageStart": 4,
       "sourcePageEnd": 5,
@@ -5354,7 +5358,7 @@
     {
       "key": "registrable_sale_source_article_01",
       "titleAr": "المادة الأولى: أطراف العقد",
-      "bodyAr": "إنه بتاريخ {{contract_date}} تم إبرام هذا العقد بين كل من:\n\nأولًا: الطرف الأول (البائع): {{sale_seller_party_definition}}\n\nثانيًا: الطرف الثاني (المشتري): {{sale_buyer_party_definition}}\n\nويُشار إلى كل منهما منفردًا بـ«الطرف» وإليهما معًا بـ«الطرفين»، وتُعد بيانات التعريف السابقة جزءًا لا يتجزأ من هذا العقد.",
+      "bodyAr": "إنه بتاريخ {{contract_date}} تم إبرام هذا العقد بين كل من:\n\nأولًا: {{sale_seller_party_definition}}\n\nثانيًا: {{sale_buyer_party_definition}}\n\nويُشار إلى كل منهما منفردًا بـ«الطرف» وإليهما معًا بـ«الطرفين»، وتُعد بيانات التعريف السابقة جزءًا لا يتجزأ من هذا العقد.",
       "sourceDocumentName": "عقد بيع قابل للتسجيل في الشهر العقاري Z DRAFT.pdf",
       "sourcePageStart": 1,
       "sourcePageEnd": 2,
@@ -5430,7 +5434,7 @@
     {
       "key": "registrable_sale_source_article_06",
       "titleAr": "المادة السادسة: ثمن البيع وإقرار بالمخالصة النهائية",
-      "bodyAr": "اتفق الطرفان على أن إجمالي ثمن البيع هو {{sale_total_price}} جنيه مصري، فقط ({{sale_total_price_words}} جنيه مصري لا غير). ووسيلة/وسائل السداد المتفق عليها هي: {{sale_payment_method}}. ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.",
+      "bodyAr": "اتفق الطرفان على أن إجمالي ثمن البيع هو {{sale_total_price}} جنيه مصري ({{sale_total_price_words}}). ووسيلة/وسائل السداد المتفق عليها هي: {{sale_payment_method}}. ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.",
       "sourceDocumentName": "عقد بيع قابل للتسجيل في الشهر العقاري Z DRAFT.pdf",
       "sourcePageStart": 4,
       "sourcePageEnd": 5,
@@ -5655,7 +5659,7 @@
     {
       "key": "inherited_sale_source_article_01",
       "titleAr": "المادة الأولى: أطراف العقد",
-      "bodyAr": "إنه بتاريخ {{contract_date}} تم إبرام هذا العقد بين كل من:\n\nأولًا: الطرف الأول (البائع): {{sale_seller_party_definition}}\n\nثانيًا: الطرف الثاني (المشتري): {{sale_buyer_party_definition}}\n\nويُشار إلى كل منهما منفردًا بـ«الطرف» وإليهما معًا بـ«الطرفين»، وتُعد بيانات التعريف السابقة جزءًا لا يتجزأ من هذا العقد.",
+      "bodyAr": "إنه بتاريخ {{contract_date}} تم إبرام هذا العقد بين كل من:\n\nأولًا: {{sale_seller_party_definition}}\n\nثانيًا: {{sale_buyer_party_definition}}\n\nويُشار إلى كل منهما منفردًا بـ«الطرف» وإليهما معًا بـ«الطرفين»، وتُعد بيانات التعريف السابقة جزءًا لا يتجزأ من هذا العقد.",
       "sourceDocumentName": "عقد بيع وحدة عن طريق الورث (Z DRAFT (.pdf",
       "sourcePageStart": 1,
       "sourcePageEnd": 1,
@@ -5736,7 +5740,7 @@
     {
       "key": "inherited_sale_source_article_06",
       "titleAr": "المادة السادسة: ثمن البيع وإقرار بالمخالصة النهائية",
-      "bodyAr": "اتفق الطرفان على أن إجمالي ثمن البيع هو {{sale_total_price}} جنيه مصري، فقط ({{sale_total_price_words}} جنيه مصري لا غير). ووسيلة/وسائل السداد المتفق عليها هي: {{sale_payment_method}}. ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.",
+      "bodyAr": "اتفق الطرفان على أن إجمالي ثمن البيع هو {{sale_total_price}} جنيه مصري ({{sale_total_price_words}}). ووسيلة/وسائل السداد المتفق عليها هي: {{sale_payment_method}}. ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.",
       "sourceDocumentName": "عقد بيع وحدة عن طريق الورث (Z DRAFT (.pdf",
       "sourcePageStart": 3,
       "sourcePageEnd": 4,
@@ -5991,7 +5995,7 @@
         "sale_total_price",
         "sale_total_price_words"
       ],
-      "bodyAr": "يقر البائع بأنه تسلم من المشتري قبل التوقيع وفي مجلس العقد كامل ثمن البيع وقدره {{sale_total_price}} جنيه مصري، فقط ({{sale_total_price_words}} جنيه مصري لا غير)، ويُعد توقيعه مخالصة نهائية باستلام كامل الثمن وإبراءً لذمة المشتري من الالتزام المالي الناشئ عن الثمن، دون إخلال بأي التزامات أخرى ناشئة عن العقد أو القانون.",
+      "bodyAr": "يقر البائع بأنه تسلم من المشتري قبل التوقيع وفي مجلس العقد كامل ثمن البيع وقدره {{sale_total_price}} جنيه مصري ({{sale_total_price_words}})، ويُعد توقيعه مخالصة نهائية باستلام كامل الثمن وإبراءً لذمة المشتري من الالتزام المالي الناشئ عن الثمن، دون إخلال بأي التزامات أخرى ناشئة عن العقد أو القانون.",
       "visibleWhen": {
         "fieldKey": "sale_payment_plan",
         "operator": "equals",

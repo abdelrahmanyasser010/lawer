@@ -173,6 +173,33 @@ export function validateDynamicDefinition(
     }
   }
 
+  if (definition.template.slug === "rental") {
+    const fv = draft.fieldValues;
+
+    const start = String(fv.start_date ?? "");
+    const end = String(fv.end_date ?? "");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}$/.test(end) && end <= start) {
+      issues.push({ stepKey: "lease_term", fieldKey: "end_date", labelAr: "تاريخ نهاية الإيجار يجب أن يكون بعد تاريخ بداية الإيجار" });
+    }
+
+    const checkCountIssue = (prefix: "commercial" | "administrative", stepKey: string) => {
+      if (!Boolean(fv[`${prefix}_guarantee_checks_enabled`])) return;
+      const expected = Number(fv[`${prefix}_guarantee_checks_count`] ?? 0);
+      const raw = String(fv[`${prefix}_guarantee_check_numbers`] ?? "").trim();
+      if (!Number.isFinite(expected) || expected <= 0 || !raw) return;
+      const numbers = raw.split(/[،,;؛\n]+/).map((item) => item.trim()).filter(Boolean);
+      if (numbers.length !== expected) {
+        issues.push({
+          stepKey,
+          fieldKey: `${prefix}_guarantee_check_numbers`,
+          labelAr: `عدد أرقام شيكات الضمان المدخلة (${numbers.length}) يجب أن يساوي عدد الشيكات المحدد (${expected})`,
+        });
+      }
+    };
+    checkCountIssue("commercial", "rental_commercial_details");
+    checkCountIssue("administrative", "rental_administrative_details");
+  }
+
   if (definition.template.slug === "apartment_sale" && draft.fieldValues.sale_payment_plan !== "installments" && draft.selectedOptionalClauseKeys.includes("sale_installment_schedule")) {
     issues.push({ stepKey: "sale_payment", fieldKey: "sale_payment_plan", labelAr: "ملحق جدول الأقساط يُستخدم فقط عند اختيار السداد بالتقسيط" });
   }

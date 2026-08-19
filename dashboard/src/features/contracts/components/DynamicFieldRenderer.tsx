@@ -2,7 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import type { ChangeEvent } from "react";
-import { evaluateCondition } from "@zdraft/template-engine";
+import { evaluateCondition, numberToEgyptianPoundsWords } from "@zdraft/template-engine";
 import type {
   ContractFieldValue,
   PrimitiveFieldValue,
@@ -24,6 +24,49 @@ const inputClass =
 function scalarValue(value: ContractFieldValue | undefined): PrimitiveFieldValue {
   if (Array.isArray(value)) return "";
   return value ?? "";
+}
+
+function MoneyFieldInput({
+  value,
+  onChange,
+  min,
+  max,
+  placeholder,
+}: {
+  value: PrimitiveFieldValue;
+  onChange: (value: PrimitiveFieldValue) => void;
+  min?: string | number;
+  max?: string | number;
+  placeholder?: string;
+}) {
+  const raw = String(value ?? "");
+  const numeric = Number(raw);
+  const hasValidValue = raw.trim() !== "" && Number.isFinite(numeric) && numeric >= 0;
+  const words = hasValidValue ? numberToEgyptianPoundsWords(numeric) : "";
+
+  return (
+    <div className="space-y-1.5">
+      <div className="relative">
+        <input
+          type="number"
+          value={raw}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
+          placeholder={placeholder}
+          min={min}
+          max={max}
+          step="0.01"
+          className={`${inputClass} pl-14`}
+          dir="ltr"
+        />
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">ج.م</span>
+      </div>
+      {words && (
+        <div className="rounded-lg border border-[#986410]/20 bg-[#986410]/5 px-3 py-2 text-[10px] font-bold leading-5 text-[#00102e]" dir="rtl">
+          <span className="text-[#986410]">كتابةً تلقائيًا: </span>{words}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function renderScalarControl(
@@ -95,7 +138,19 @@ function renderScalarControl(
     );
   }
 
-  const type = field.type === "date" ? "date" : field.type === "number" || field.type === "money" ? "number" : "text";
+  if (field.type === "money") {
+    return (
+      <MoneyFieldInput
+        value={value}
+        onChange={onChange}
+        min={field.validation?.min}
+        max={field.validation?.max}
+        placeholder={field.placeholder}
+      />
+    );
+  }
+
+  const type = field.type === "date" ? "date" : field.type === "number" ? "number" : "text";
   return (
     <input
       type={type}
@@ -164,13 +219,21 @@ function RepeaterRenderer({
                       </option>
                     ))}
                   </select>
+                ) : column.type === "money" ? (
+                  <MoneyFieldInput
+                    value={(row[column.key] ?? "") as PrimitiveFieldValue}
+                    onChange={(nextValue) => updateRow(index, column.key, nextValue)}
+                    min={column.validation?.min}
+                    max={column.validation?.max}
+                    placeholder={column.placeholder}
+                  />
                 ) : (
                   <input
-                    type={column.type === "date" ? "date" : column.type === "number" || column.type === "money" ? "number" : "text"}
+                    type={column.type === "date" ? "date" : column.type === "number" ? "number" : "text"}
                     value={String(row[column.key] ?? "")}
                     onChange={(event: ChangeEvent<HTMLInputElement>) => updateRow(index, column.key, event.target.value)}
                     placeholder={column.placeholder}
-                    dir={column.type === "date" || column.type === "number" || column.type === "money" ? "ltr" : undefined}
+                    dir={column.type === "date" || column.type === "number" ? "ltr" : undefined}
                     className={inputClass}
                   />
                 )}

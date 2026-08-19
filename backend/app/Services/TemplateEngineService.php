@@ -171,7 +171,7 @@ final class TemplateEngineService
         foreach($resolved['activeClauseKeys'] as$key){
             $key=(string)$key;$clause=$clauseByKey[$key]??null;if(!$clause||!$this->evaluate($clause['visibleWhen']??null,$fieldValues))continue;
             $manual=isset($manualClauseKeys[$key]);$body=(string)($clause['bodyAr']??'');$vars=$manual?[]:($clause['variables']??[]);
-            foreach($vars as$var){$token='{{'.$var.'}}';$value=$fieldValues[$var]??null;$isDerived=false;if($this->emptyValue($value)){$value=$this->derivedClauseValue((string)$var,$fieldValues);$isDerived=!$this->emptyValue($value);}if($this->emptyValue($value)){$missing[]=(string)$var;continue;}$display=$isDerived?trim((string)$value):$this->displayClauseValue((string)$var,$value,$fieldByKey[(string)$var]??null,$fieldValues);$body=str_replace($token,$display,$body);}
+            foreach($vars as$var){$token='{{'.$var.'}}';$derived=$this->derivedClauseValue((string)$var,$fieldValues);$isDerived=!$this->emptyValue($derived);$value=$isDerived?$derived:($fieldValues[$var]??null);if($this->emptyValue($value)){$missing[]=(string)$var;continue;}$display=$isDerived?trim((string)$value):$this->displayClauseValue((string)$var,$value,$fieldByKey[(string)$var]??null,$fieldValues);$body=str_replace($token,$display,$body);}
             $clauses[]=['key'=>$key,'titleAr'=>$clause['titleAr']??$key,'bodyAr'=>$body,'sourceDocumentName'=>$clause['sourceDocumentName']??null,'sourcePageStart'=>$clause['sourcePageStart']??null,'sourcePageEnd'=>$clause['sourcePageEnd']??null];
         }
         return ['clauses'=>$clauses,'missingVariables'=>array_values(array_unique($missing)),'missingClauseKeys'=>$missingKeys];
@@ -180,6 +180,37 @@ final class TemplateEngineService
     private function derivedClauseValue(string $key,array $fieldValues):?string
     {
         $valueText=function(string $fieldKey)use($fieldValues):?string{$value=$fieldValues[$fieldKey]??null;if($this->emptyValue($value))return null;$text=trim((string)$value);if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$text)===1){$parts=explode('-',$text);return implode('/',array_reverse($parts));}return$text;};
+        $moneyWordSources=[
+            'social_fee_words'=>'social_fee',
+            'visual_contract_value_words'=>'visual_contract_value',
+            'website_total_price_words'=>'website_total_price',
+            'sale_total_price_words'=>'sale_total_price',
+            'deposit_amount_words'=>'deposit_amount',
+            'rent_amount_words'=>'rent_amount',
+        ];
+        if(isset($moneyWordSources[$key]))return $this->numberToEgyptianPoundsWords($fieldValues[$moneyWordSources[$key]]??null);
+
+        $partyDefinitions=[
+            'social_client_party_definition'=>['social_client','الطرف الأول (العميل)','tax_number','company_phone','required'],
+            'social_provider_party_definition'=>['social_provider','الطرف الثاني (مقدم الخدمة)','tax_number','company_phone','required'],
+            'visual_client_party_definition'=>['visual_client','الطرف الأول (العميل)','tax_number','company_phone','required'],
+            'visual_provider_party_definition'=>['visual_provider','الطرف الثاني (المصمم)','tax_number','company_phone','required'],
+            'website_client_party_definition'=>['website_client','الطرف الأول (العميل)','tax_number','company_phone','none'],
+            'website_provider_party_definition'=>['website_provider','الطرف الثاني (مقدم الخدمة)','tax_number','company_phone','optional'],
+            'sale_seller_party_definition'=>['seller','الطرف الأول (البائع)','tax_card','phone','none'],
+            'sale_buyer_party_definition'=>['buyer','الطرف الثاني (المشتري)','tax_card','phone','none'],
+            'rental_landlord_party_definition'=>['landlord','الطرف الأول (المؤجر)','tax_card','company_phone','none'],
+            'rental_tenant_party_definition'=>['tenant','الطرف الثاني (المستأجر)','tax_card','company_phone','none'],
+        ];
+        if(isset($partyDefinitions[$key])){
+            [$prefix,$role,$taxSuffix,$companyPhoneSuffix,$authorityMode]=$partyDefinitions[$key];
+            return $this->partyDefinition($fieldValues,$prefix,$role,$taxSuffix,$companyPhoneSuffix,$authorityMode);
+        }
+        if($key==='sale_remaining_amount'){
+            $total=(float)($fieldValues['sale_total_price']??0);$down=(float)($fieldValues['sale_down_payment']??0);
+            if($total<=0||$down<0||$down>$total)return null;
+            return $this->formatLegalNumber($total-$down);
+        }
         if($key==='rental_property_additional_details'){
             $parts=[];
             $add=function(string $label,string $fieldKey)use(&$parts,$valueText):void{$value=$valueText($fieldKey);if($value!==null)$parts[]=$label.': '.$value;};
@@ -246,6 +277,62 @@ final class TemplateEngineService
             $mode=(string)($fieldValues['administrative_guarantee_value_mode']??'');$amount=$valueText($mode==='each'?'administrative_guarantee_each_amount':($mode==='total'?'administrative_guarantee_total_amount':''));if(!$amount)return null;return$mode==='each'?"وقيمة كل شيك {$amount} جنيه مصري":"وإجمالي قيمة الشيكات {$amount} جنيه مصري";
         }
         return null;
+    }
+
+    private function partyDefinition(array $fieldValues,string $prefix,string $role,string $taxSuffix,string $companyPhoneSuffix,string $authorityMode):?string
+    {
+        $text=function(string $suffix)use($fieldValues,$prefix):?string{$value=$fieldValues[$prefix.'_'.$suffix]??null;if($this->emptyValue($value))return null;$text=trim((string)$value);if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$text)===1){$parts=explode('-',$text);return implode('/',array_reverse($parts));}return$text;};
+        $type=$text('party_type')??'individual';
+        if($type==='company'){
+            $company=$text('company_name');$legalForm=$text('company_legal_form');$register=$text('commercial_register');$tax=$text($taxSuffix);$rep=$text('legal_representative');$capacity=$text('representative_capacity');$address=$text('company_address');
+            if(!$company||!$legalForm||!$register||!$tax||!$rep||!$capacity||!$address)return null;
+            $authority='';$basis=$text('authority_basis');
+            if($authorityMode==='required'&&!$basis)return null;
+            if($basis==='commercial_register')$authority='، بموجب الصفة الثابتة بالسجل التجاري';
+            elseif($basis==='power_of_attorney'){
+                $no=$text('power_of_attorney_number');$year=$text('power_of_attorney_year');$office=$text('power_of_attorney_office');
+                if($authorityMode==='required'&&(!$no||!$year||!$office))return null;
+                if($no&&$year&&$office)$authority="، بموجب توكيل رقم {$no} لسنة {$year} موثق لدى {$office}";
+            }
+            $phone=$text($companyPhoneSuffix);$email=$text('company_email');
+            $taxLabel=$taxSuffix==='tax_card'?'والبطاقة الضريبية رقم':'والرقم الضريبي الموحد';
+            return "شركة/منشأة «{$company}»، شكلها القانوني {$legalForm}، سجل تجاري رقم {$register}، {$taxLabel} {$tax}، ومقرها {$address}، ويمثلها قانونًا السيد/ {$rep} بصفته {$capacity}{$authority}".($phone?"، ورقم الهاتف {$phone}":'').($email?"، والبريد الإلكتروني {$email}":'')."، ويشار إليها في هذا العقد بـ «{$role}».";
+        }
+        $name=$text('name');$nationality=$text('nationality');$identityType=$text('identity_document_type');$identity=$text('national_id');$address=$text('address');$phone=$text('phone');
+        if(!$name||!$nationality||!$identityType||!$identity||!$address||!$phone)return null;
+        $identityLabel=$identityType==='passport'?'رقم جواز السفر':'الرقم القومي';$issuer=$text('id_issuer');$issueDate=$text('id_issue_date');$email=$text('email');
+        $issueText='';if($issuer||$issueDate)$issueText='، '.($issuer?"صادر من {$issuer}":'').($issuer&&$issueDate?' ':'').($issueDate?"بتاريخ {$issueDate}":'');
+        return "السيد/ {$name}، {$nationality} الجنسية، يحمل {$identityLabel} رقم {$identity}{$issueText}، وعنوانه {$address}، ورقم هاتفه {$phone}".($email?"، وبريده الإلكتروني {$email}":'')."، ويشار إليه في هذا العقد بـ «{$role}».";
+    }
+
+    private function numberToArabicWordsBare(mixed $input):?string
+    {
+        if(!is_numeric($input))return null;$numeric=(float)$input;if(!is_finite($numeric)||$numeric<0)return null;$n=(int)floor($numeric);
+        if($n===0)return 'صفر';
+        $ones=['','واحد','اثنان','ثلاثة','أربعة','خمسة','ستة','سبعة','ثمانية','تسعة','عشرة','أحد عشر','اثنا عشر','ثلاثة عشر','أربعة عشر','خمسة عشر','ستة عشر','سبعة عشر','ثمانية عشر','تسعة عشر'];
+        $tens=['','','عشرون','ثلاثون','أربعون','خمسون','ستون','سبعون','ثمانون','تسعون'];
+        $hundreds=['','مائة','مئتان','ثلاثمائة','أربعمائة','خمسمائة','ستمائة','سبعمائة','ثمانمائة','تسعمائة'];
+        $belowThousand=function(int $value)use($ones,$tens,$hundreds):string{if($value===0)return'';if($value<20)return$ones[$value];$h=intdiv($value,100);$rem=$value%100;$parts=[];if($h)$parts[]=$hundreds[$h];if($rem){if($rem<20)$parts[]=$ones[$rem];else{$t=intdiv($rem,10);$o=$rem%10;$parts[]=$o?$ones[$o].' و'.$tens[$t]:$tens[$t];}}return implode(' و',$parts);};
+        $scales=[[1000000000,'مليار','ملياران','مليارات'],[1000000,'مليون','مليونان','ملايين'],[1000,'ألف','ألفان','آلاف']];$remaining=$n;$parts=[];
+        foreach($scales as[$value,$singular,$dual,$plural]){if($remaining<$value)continue;$count=intdiv($remaining,$value);$remaining%=$value;if($count===1)$parts[]=$singular;elseif($count===2)$parts[]=$dual;elseif($count>=3&&$count<=10)$parts[]=$belowThousand($count).' '.$plural;else$parts[]=$belowThousand($count).' '.$singular;}
+        if($remaining)$parts[]=$belowThousand($remaining);return implode(' و',$parts);
+    }
+
+    private function numberToEgyptianPoundsWords(mixed $input):?string
+    {
+        if(!is_numeric($input))return null;$numeric=(float)$input;if(!is_finite($numeric)||$numeric<0)return null;
+        $pounds=(int)floor($numeric+0.000000001);$piasters=(int)round(($numeric-$pounds)*100);
+        if($piasters===100){$pounds++;$piasters=0;}
+        $poundsWords=$this->numberToArabicWordsBare($pounds);if($poundsWords===null)return null;
+        if($piasters===0)return $poundsWords.' جنيه مصري فقط لا غير';
+        $piastersWords=$this->numberToArabicWordsBare($piasters);if($piastersWords===null)return null;
+        return $poundsWords.' جنيه مصري و'.$piastersWords.' قرشًا فقط لا غير';
+    }
+
+    private function formatLegalNumber(float $value):string
+    {
+        if(abs($value-round($value))<0.000001)return number_format($value,0,'.','');
+        return rtrim(rtrim(number_format($value,2,'.',''),'0'),'.');
     }
 
     private function displayClauseValue(string $key,mixed $value,?array $field,array $fieldValues):string

@@ -1,0 +1,98 @@
+{
+  "release": "full-9-contracts-v15",
+  "date": "2026-08-19",
+  "templateVersions": {
+    "freelancer": 15,
+    "apartment_sale": 14,
+    "rental": 15
+  },
+  "contracts": [
+    "website_development",
+    "visual_identity_design",
+    "social_media_management",
+    "preliminary_sale",
+    "registrable_sale",
+    "inherited_sale",
+    "residential_lease",
+    "commercial_lease",
+    "administrative_lease"
+  ],
+  "legalClauses": 378,
+  "templateEngineTests": {
+    "total": 58,
+    "passed": 58,
+    "failed": 0
+  },
+  "coverage": {
+    "website_development": {
+      "total": 106,
+      "clauseBound": 100,
+      "externalBound": 6,
+      "uncovered": []
+    },
+    "visual_identity_design": {
+      "total": 91,
+      "clauseBound": 85,
+      "externalBound": 6,
+      "uncovered": []
+    },
+    "social_media_management": {
+      "total": 140,
+      "clauseBound": 134,
+      "externalBound": 6,
+      "uncovered": []
+    },
+    "preliminary_sale": {
+      "total": 127,
+      "clauseBound": 111,
+      "externalBound": 16,
+      "uncovered": []
+    },
+    "registrable_sale": {
+      "total": 123,
+      "clauseBound": 109,
+      "externalBound": 14,
+      "uncovered": []
+    },
+    "inherited_sale": {
+      "total": 115,
+      "clauseBound": 98,
+      "externalBound": 17,
+      "uncovered": []
+    },
+    "residential_lease": {
+      "total": 118,
+      "clauseBound": 111,
+      "externalBound": 7,
+      "uncovered": []
+    },
+    "commercial_lease": {
+      "total": 132,
+      "clauseBound": 125,
+      "externalBound": 7,
+      "uncovered": []
+    },
+    "administrative_lease": {
+      "total": 128,
+      "clauseBound": 121,
+      "externalBound": 7,
+      "uncovered": []
+    }
+  },
+  "regressions": {
+    "partyNamesOpeningArticle": "PASS_9_OF_9",
+    "moneyWordsSingleSource": "PASS_9_OF_9",
+    "customerFacingForbiddenWording": "PASS",
+    "previewPdfTypographyContract": "PASS"
+  },
+  "backendJsonSync": "PASS",
+  "phpSyntax": "PASS",
+  "legalSourcePdfs": {
+    "count": 31,
+    "byteForByteUnchanged": true
+  },
+  "nextLocalBuild": {
+    "status": "NOT_RUN",
+    "reason": "packaging environment has no installed Next.js workspace dependencies; production deploy-zdraft remains final build gate"
+  }
+}

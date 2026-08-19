@@ -31,95 +31,7 @@ export interface TemplateDefinitionInspection {
   };
 }
 
-const derivedClauseVariableKeys = new Set([
-  "social_client_party_definition",
-  "social_provider_party_definition",
-  "social_activity_definition",
-  "social_accounts_text",
-  "social_responsible_people_text",
-  "social_scope_services_text",
-  "social_excluded_services_text",
-  "social_content_plan_text",
-  "social_ads_terms_text",
-  "social_reports_kpi_text",
-  "social_contract_duration_text",
-  "social_service_start_text",
-  "social_fee_nature_text",
-  "social_fee_words",
-  "social_payment_schedule_text",
-  "social_payment_method_text",
-  "social_review_rounds_text",
-  "social_source_files_text",
-  "social_portfolio_permission_text",
-  "social_ai_permission_text",
-  "social_email_notices_text",
-  "social_messaging_notices_text",
-  "social_competent_court_text",
-  "social_contract_copies_text",
-  "social_legal_fees_text",
-  "visual_client_party_definition",
-  "visual_provider_party_definition",
-  "visual_project_definition",
-  "visual_scope_services_text",
-  "visual_source_files_text",
-  "visual_execution_duration_text",
-  "visual_execution_start_text",
-  "visual_payment_schedule_text",
-  "visual_ip_rights_text",
-  "visual_portfolio_permission_text",
-  "visual_email_notices_text",
-  "visual_messaging_notices_text",
-  "visual_competent_court_text",
-  "website_client_party_definition",
-  "website_provider_party_definition",
-  "website_project_definition",
-  "website_project_type_text",
-  "website_execution_duration_text",
-  "website_execution_start_text",
-  "website_duration_basis_text",
-  "website_warranty_duration_text",
-  "website_contract_copies_text",
-  "website_confidentiality_duration_text",
-  "website_non_solicitation_duration_text",
-  "website_approval_authority_text",
-  "website_payment_schedule_text",
-  "website_restart_fee_text",
-  "website_portfolio_permission_text",
-  "website_external_services_text",
-  "website_email_notices_text",
-  "website_messaging_notices_text",
-  "website_project_platform_text",
-  "website_competent_court_text",
-  "website_legal_fees_text",
-  "rental_property_additional_details",
-  "sale_property_additional_details",
-  "preliminary_ownership_detail",
-  "registrable_ownership_detail",
-  "sale_seller_party_definition",
-  "sale_buyer_party_definition",
-  "sale_total_price_words",
-  "sale_remaining_amount",
-  "sale_installment_schedule_text",
-  "sale_delivery_rule_text",
-  "sale_inspection_ack_text",
-  "sale_occupancy_status_text",
-  "sale_property_jurisdiction_text",
-  "sale_email_notices_text",
-  "sale_messaging_notices_text",
-  "preliminary_disposition_tax_payer_text",
-  "registrable_disposition_tax_payer_text",
-  "inherited_disposition_tax_payer_text",
-  "preliminary_garage_scope_text",
-  "preliminary_reconciliation_legal_text",
-  "inheritance_heirs_capacity_text",
-  "registrable_negative_certificate_text",
-  "inherited_contractual_penalty_text",
-  "preliminary_ownership_detail",
-  "registrable_ownership_detail",
-  "inheritance_disposition_detail",
-  "commercial_guarantee_value_text",
-  "administrative_guarantee_value_text",
-]);
+const derivedClauseVariableKeys = new Set(Object.keys(derivedClauseVariableDependencies));
 
 const knownFieldTypes = new Set([
   "text",
@@ -214,6 +126,16 @@ export const apartmentSaleFieldCoverageExternalBindings: Record<string, VariantF
   sale_witness_2_enabled: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يتحكم في ظهور بلوك الشاهد الثاني خارج جسم المواد القانونية." },
   sale_witness_2_name: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
   sale_witness_2_national_id: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+};
+
+export const rentalFieldCoverageExternalBindings: Record<string, VariantFieldCoverageExternalBinding> = {
+  rental_witness_1_enabled: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يتحكم في ظهور بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  rental_witness_1_name: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  rental_witness_1_national_id: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  rental_witness_2_enabled: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يتحكم في ظهور بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+  rental_witness_2_name: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+  rental_witness_2_national_id: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+  rental_supporting_documents: { sectionAr: "قسم المرفقات", reasonAr: "مستندات داعمة تُرفق بالعقد ولا تُطبع كقيمة داخل جسم المواد القانونية." },
 };
 
 function conditionFieldKeys(condition: ConditionDefinition | undefined): string[] {
@@ -525,6 +447,22 @@ export function inspectTemplateDefinition(definition: ContractTemplateDefinition
           "error",
           "UNBOUND_LEGAL_FIELD",
           `حقل عقد الموقع لا يصل إلى أي مادة قانونية أو قسم مستند مسجل: ${fieldKey}`,
+          `${variantPath}.steps`,
+        );
+      });
+    }
+
+    if (definition.slug === "rental") {
+      const coverage = auditVariantFieldCoverage(definition, variant.key, {
+        derivedVariableDependencies: derivedClauseVariableDependencies,
+        externalBindings: rentalFieldCoverageExternalBindings,
+      });
+      coverage.uncoveredFieldKeys.forEach((fieldKey) => {
+        issue(
+          issues,
+          "error",
+          "UNBOUND_LEGAL_FIELD",
+          `حقل عقد الإيجار «${variant.nameAr}» لا يصل إلى أي مادة قانونية أو قسم مستند مسجل: ${fieldKey}`,
           `${variantPath}.steps`,
         );
       });

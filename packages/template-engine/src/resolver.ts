@@ -8,6 +8,7 @@ import type {
   WizardFieldDefinition,
   WizardStepDefinition,
 } from "./types";
+import { numberToArabicWordsBare, numberToEgyptianPoundsWords } from "./formatters";
 
 function primitiveValue(value: ContractFieldValue | undefined): string | number | boolean | null | undefined {
   if (Array.isArray(value)) return undefined;
@@ -265,6 +266,7 @@ export const derivedClauseVariableDependencies: Record<string, readonly string[]
     "visual_provider_power_of_attorney_office", "visual_provider_company_address", "visual_provider_company_phone",
     "visual_provider_company_email",
   ],
+  visual_contract_value_words: ["visual_contract_value"],
   visual_project_definition: ["visual_project_name", "visual_project_brief", "visual_project_purpose"],
   visual_scope_services_text: ["visual_main_scope_services"],
   visual_source_files_text: ["visual_output_formats", "visual_source_files_included", "visual_source_file_types", "visual_source_files_price_mode", "visual_source_files_additional_fee"],
@@ -302,6 +304,7 @@ export const derivedClauseVariableDependencies: Record<string, readonly string[]
     "website_provider_power_of_attorney_office", "website_provider_company_address", "website_provider_company_phone",
     "website_provider_company_email",
   ],
+  website_total_price_words: ["website_total_price"],
   website_project_definition: [
     "website_project_name", "website_project_type", "website_project_type_other", "website_contact_email",
     "website_project_manager", "website_approval_person", "website_billing_contact",
@@ -336,6 +339,57 @@ export const derivedClauseVariableDependencies: Record<string, readonly string[]
   website_project_platform_text: ["website_project_platform_enabled", "website_project_platform_name", "website_project_platform_link"],
   website_competent_court_text: ["website_competent_court", "website_competent_court_other"],
   website_legal_fees_text: ["website_legal_fees_enabled", "website_legal_fees_payer", "website_legal_fees_other"],
+  rental_landlord_party_definition: [
+    "landlord_party_type", "landlord_name", "landlord_nationality", "landlord_identity_document_type", "landlord_national_id",
+    "landlord_id_issuer", "landlord_id_issue_date", "landlord_address", "landlord_phone", "landlord_email",
+    "landlord_company_name", "landlord_company_legal_form", "landlord_commercial_register", "landlord_tax_card",
+    "landlord_legal_representative", "landlord_representative_capacity", "landlord_company_address", "landlord_company_phone", "landlord_company_email",
+  ],
+  rental_tenant_party_definition: [
+    "tenant_party_type", "tenant_name", "tenant_nationality", "tenant_identity_document_type", "tenant_national_id",
+    "tenant_id_issuer", "tenant_id_issue_date", "tenant_address", "tenant_phone", "tenant_email",
+    "tenant_company_name", "tenant_company_legal_form", "tenant_commercial_register", "tenant_tax_card",
+    "tenant_legal_representative", "tenant_representative_capacity", "tenant_company_address", "tenant_company_phone", "tenant_company_email",
+  ],
+  lease_duration_text: ["lease_duration_value", "lease_duration_unit"],
+  deposit_amount_words: ["deposit_amount"],
+  rent_amount_words: ["rent_amount"],
+  rental_deposit_receipt_text: ["deposit_payment_status", "deposit_due_date"],
+  rental_payment_method_text: ["rental_payment_method", "rental_payment_method_other"],
+  rental_property_jurisdiction_text: ["property_governorate", "property_city"],
+  rental_meter_details_text: [
+    "electricity_meter_exists", "electricity_meter", "electricity_meter_type", "electricity_meter_reading",
+    "water_meter_exists", "water_meter", "water_meter_type", "water_meter_reading",
+    "gas_meter_exists", "gas_meter", "gas_meter_type", "gas_meter_reading",
+  ],
+  rental_email_notices_text: [
+    "rental_email_notices_enabled", "rental_notice_use_party_emails", "rental_notice_landlord_email", "rental_notice_tenant_email",
+    "landlord_party_type", "landlord_email", "landlord_company_email", "tenant_party_type", "tenant_email", "tenant_company_email",
+  ],
+  rental_messaging_notices_text: [
+    "rental_messaging_enabled", "rental_messaging_channel", "rental_messaging_channel_other", "rental_messaging_use_party_phones",
+    "rental_messaging_landlord_phone", "rental_messaging_tenant_phone", "landlord_party_type", "landlord_phone", "landlord_company_phone",
+    "tenant_party_type", "tenant_phone", "tenant_company_phone",
+  ],
+  residential_pets_text: ["residential_pets_allowed"],
+  rental_property_additional_details: [
+    "building_number",
+    "electricity_meter_exists", "electricity_meter", "electricity_meter_type", "electricity_meter_reading",
+    "water_meter_exists", "water_meter", "water_meter_type", "water_meter_reading",
+    "gas_meter_exists", "gas_meter", "gas_meter_type", "gas_meter_reading",
+    "residential_compound_name", "residential_plot_number", "residential_adjacency_number", "residential_building_name",
+    "residential_includes_garage", "residential_includes_storage", "residential_includes_garden", "residential_includes_roof",
+    "residential_includes_service_room", "residential_includes_parking", "residential_other_annex_enabled", "residential_other_annex", "residential_management_rules_applicable",
+    "commercial_project_name", "commercial_license_number", "commercial_plot_number", "commercial_site_type", "commercial_site_type_other",
+    "commercial_has_mezzanine", "commercial_frontage_width", "commercial_frontage_count", "commercial_has_storage", "commercial_has_loading_area",
+    "commercial_includes_garage", "commercial_front_yard", "commercial_back_yard", "commercial_service_room", "commercial_toilet",
+    "commercial_other_annex_enabled", "commercial_other_annex", "commercial_finishing_level", "commercial_finishing_other",
+    "administrative_project_name", "administrative_license_number", "administrative_plot_number", "administrative_site_type", "administrative_site_type_other",
+    "administrative_meeting_room", "administrative_reception", "administrative_storage", "administrative_lift", "administrative_parking_count",
+    "administrative_server_room", "administrative_ac_system", "administrative_data_network", "administrative_delivery_condition",
+  ],
+  commercial_guarantee_value_text: ["commercial_guarantee_value_mode", "commercial_guarantee_each_amount", "commercial_guarantee_total_amount"],
+  administrative_guarantee_value_text: ["administrative_guarantee_value_mode", "administrative_guarantee_each_amount", "administrative_guarantee_total_amount"],
   sale_seller_party_definition: [
     "seller_party_type", "seller_name", "seller_nationality", "seller_identity_document_type", "seller_national_id",
     "seller_id_issuer", "seller_id_issue_date", "seller_address", "seller_phone", "seller_email",
@@ -396,49 +450,6 @@ export const derivedClauseVariableDependencies: Record<string, readonly string[]
     "deceased_owner_name", "inheritance_declaration_number", "inheritance_declaration_court", "inheritance_declaration_date",
   ],
 };
-
-function numberToArabicWordsBare(input: unknown): string | undefined {
-  const n = Math.floor(Number(input));
-  if (!Number.isFinite(n) || n < 0) return undefined;
-  if (n === 0) return "صفر";
-  const ones = ["", "واحد", "اثنان", "ثلاثة", "أربعة", "خمسة", "ستة", "سبعة", "ثمانية", "تسعة", "عشرة", "أحد عشر", "اثنا عشر", "ثلاثة عشر", "أربعة عشر", "خمسة عشر", "ستة عشر", "سبعة عشر", "ثمانية عشر", "تسعة عشر"];
-  const tens = ["", "", "عشرون", "ثلاثون", "أربعون", "خمسون", "ستون", "سبعون", "ثمانون", "تسعون"];
-  const hundreds = ["", "مائة", "مئتان", "ثلاثمائة", "أربعمائة", "خمسمائة", "ستمائة", "سبعمائة", "ثمانمائة", "تسعمائة"];
-  const belowThousand = (value: number): string => {
-    if (value === 0) return "";
-    if (value < 20) return ones[value];
-    const h = Math.floor(value / 100);
-    const rem = value % 100;
-    const parts: string[] = [];
-    if (h) parts.push(hundreds[h]);
-    if (rem) {
-      if (rem < 20) parts.push(ones[rem]);
-      else {
-        const t = Math.floor(rem / 10); const o = rem % 10;
-        parts.push(o ? `${ones[o]} و${tens[t]}` : tens[t]);
-      }
-    }
-    return parts.join(" و");
-  };
-  const scales: Array<[number, string, string, string]> = [
-    [1_000_000_000, "مليار", "ملياران", "مليارات"],
-    [1_000_000, "مليون", "مليونان", "ملايين"],
-    [1_000, "ألف", "ألفان", "آلاف"],
-  ];
-  let remaining = n;
-  const parts: string[] = [];
-  for (const [value, singular, dual, plural] of scales) {
-    if (remaining < value) continue;
-    const count = Math.floor(remaining / value);
-    remaining %= value;
-    if (count === 1) parts.push(singular);
-    else if (count === 2) parts.push(dual);
-    else if (count >= 3 && count <= 10) parts.push(`${belowThousand(count)} ${plural}`);
-    else parts.push(`${belowThousand(count)} ${singular}`);
-  }
-  if (remaining) parts.push(belowThousand(remaining));
-  return parts.join(" و");
-}
 
 function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any>): string | undefined {
   const valueText = (key: string): string | undefined => {
@@ -581,7 +592,7 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
   if (fieldKey === "social_fee_nature_text") {
     const nature=valueText("social_fee_nature"); if(nature==="total")return "إجمالي"; if(nature==="periodic"){const raw=valueText("social_fee_periodicity");const map:Record<string,string>={weekly:"أسبوعي",monthly:"شهري",quarterly:"كل ثلاثة أشهر"};const period=raw==="other"?valueText("social_fee_periodicity_other"):(raw?map[raw]:undefined);return period?`دوري (${period})`:undefined;} return undefined;
   }
-  if (fieldKey === "social_fee_words") return numberToArabicWordsBare(fieldValues.social_fee);
+  if (fieldKey === "social_fee_words") return numberToEgyptianPoundsWords(fieldValues.social_fee) || undefined;
   if (fieldKey === "social_payment_schedule_text") {
     const nature=valueText("social_fee_nature");
     if(nature==="periodic"){const due=valueText("social_periodic_due");return due?`يستحق المقابل الدوري ${due}.`:undefined;}
@@ -599,6 +610,90 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
   if (fieldKey === "social_contract_copies_text") { const n=Number(fieldValues.social_contract_copies??0);if(!Number.isFinite(n)||n<=0)return undefined;const d=n.toLocaleString("ar-EG");if(n===1)return "نسخة واحدة";if(n===2)return "نسختين";if(Number.isInteger(n)&&n>=3&&n<=10)return `${d} نسخ`;return `${d} نسخة`; }
   if (fieldKey === "social_legal_fees_text") { return Boolean(fieldValues.social_legal_fees_enabled)?"ما لم يتفق الطرفان كتابةً على خلاف ذلك، يتحمل كل طرف الرسوم والضرائب والمصروفات القانونية التي تفرض عليه بحكم صفته أو التزاماته أو التصرفات الصادرة عنه وفقًا للقوانين واللوائح السارية. ولا يشمل المقابل المالي المتفق عليه أي ضرائب أو رسوم تستحق قانونًا على الطرف الثاني بصفته مقدم الخدمة، بما في ذلك ضريبة القيمة المضافة متى كانت واجبة التطبيق، وتضاف إلى المقابل المالي وفقًا لأحكام القانون.":""; }
 
+  if (fieldKey === "rental_landlord_party_definition" || fieldKey === "rental_tenant_party_definition") {
+    const prefix = fieldKey.startsWith("rental_landlord") ? "landlord" : "tenant";
+    const role = prefix === "landlord" ? "الطرف الأول (المؤجر)" : "الطرف الثاني (المستأجر)";
+    const type = valueText(`${prefix}_party_type`);
+    if (type === "company") {
+      const company = valueText(`${prefix}_company_name`); const legalForm = valueText(`${prefix}_company_legal_form`);
+      const register = valueText(`${prefix}_commercial_register`); const tax = valueText(`${prefix}_tax_card`);
+      const rep = valueText(`${prefix}_legal_representative`); const capacity = valueText(`${prefix}_representative_capacity`);
+      const address = valueText(`${prefix}_company_address`); const phone = valueText(`${prefix}_company_phone`); const email = valueText(`${prefix}_company_email`);
+      if (!company || !legalForm || !register || !tax || !rep || !capacity || !address) return undefined;
+      return `شركة/منشأة «${company}»، شكلها القانوني ${legalForm}، سجل تجاري رقم ${register}، والبطاقة الضريبية رقم ${tax}، ومقرها ${address}، ويمثلها قانونًا السيد/ ${rep} بصفته ${capacity}${phone ? `، ورقم الهاتف ${phone}` : ""}${email ? `، والبريد الإلكتروني ${email}` : ""}، ويشار إليها في هذا العقد بـ «${role}».`;
+    }
+    const name = valueText(`${prefix}_name`); const nationality = valueText(`${prefix}_nationality`); const identityType = valueText(`${prefix}_identity_document_type`);
+    const identity = valueText(`${prefix}_national_id`); const address = valueText(`${prefix}_address`); const phone = valueText(`${prefix}_phone`);
+    if (!name || !nationality || !identityType || !identity || !address || !phone) return undefined;
+    const identityLabel = identityType === "passport" ? "رقم جواز السفر" : "الرقم القومي";
+    const issuer = valueText(`${prefix}_id_issuer`); const issueDate = valueText(`${prefix}_id_issue_date`); const email = valueText(`${prefix}_email`);
+    const issueText = issuer || issueDate ? `، ${issuer ? `صادر من ${issuer}` : ""}${issuer && issueDate ? " " : ""}${issueDate ? `بتاريخ ${issueDate}` : ""}` : "";
+    return `السيد/ ${name}، ${nationality} الجنسية، يحمل ${identityLabel} رقم ${identity}${issueText}، وعنوانه ${address}، ورقم هاتفه ${phone}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
+  }
+
+  if (fieldKey === "lease_duration_text") {
+    const n = Number(fieldValues.lease_duration_value ?? 0); const unit = valueText("lease_duration_unit");
+    if (!Number.isFinite(n) || n <= 0 || !unit) return undefined;
+    const d = n.toLocaleString("ar-EG");
+    if (unit === "months") { if (n === 1) return "شهر واحد"; if (n === 2) return "شهرين"; if (Number.isInteger(n) && n >= 3 && n <= 10) return `${d} أشهر`; return `${d} شهرًا`; }
+    if (unit === "years") { if (n === 1) return "سنة واحدة"; if (n === 2) return "سنتين"; if (Number.isInteger(n) && n >= 3 && n <= 10) return `${d} سنوات`; return `${d} سنة`; }
+    return undefined;
+  }
+  if (fieldKey === "deposit_amount_words") return numberToEgyptianPoundsWords(fieldValues.deposit_amount) || undefined;
+  if (fieldKey === "rent_amount_words") return numberToEgyptianPoundsWords(fieldValues.rent_amount) || undefined;
+  if (fieldKey === "rental_deposit_receipt_text") {
+    const status = valueText("deposit_payment_status");
+    if (status === "received") return "ويقر المؤجر باستلام مبلغ التأمين كاملًا عند توقيع العقد.";
+    if (status === "due_later") { const due = valueText("deposit_due_date"); return due ? `ويلتزم المستأجر بسداد مبلغ التأمين للمؤجر في موعد أقصاه ${due}، ولا يعد المؤجر مستلمًا له قبل ثبوت السداد.` : undefined; }
+    return undefined;
+  }
+  if (fieldKey === "rental_payment_method_text") {
+    const raw = valueText("rental_payment_method");
+    const labels: Record<string, string> = { cash_receipt: "نقدًا بموجب إيصال", bank_transfer: "تحويل بنكي", bank_deposit: "إيداع بالحساب البنكي", electronic_wallet: "محفظة إلكترونية", instapay: "إنستاباي" };
+    if (raw === "other") return valueText("rental_payment_method_other");
+    return raw ? labels[raw] ?? raw : undefined;
+  }
+  if (fieldKey === "rental_property_jurisdiction_text") {
+    const governorate = valueText("property_governorate"); const city = valueText("property_city");
+    return governorate && city ? `تختص محليًا المحاكم المصرية التي تقع العين المؤجرة في دائرتها، والكائنة بمدينة/مركز ${city} بمحافظة ${governorate}، مع مراعاة قواعد الاختصاص الولائي والنوعي والقيمي الآمرة.` : undefined;
+  }
+  if (fieldKey === "rental_email_notices_text") {
+    if (!Boolean(fieldValues.rental_email_notices_enabled)) return "";
+    const reuse = Boolean(fieldValues.rental_notice_use_party_emails);
+    const partyEmail = (prefix: "landlord" | "tenant") => String(fieldValues[`${prefix}_party_type`] ?? "") === "company" ? valueText(`${prefix}_company_email`) : valueText(`${prefix}_email`);
+    const landlord = reuse ? partyEmail("landlord") : valueText("rental_notice_landlord_email"); const tenant = reuse ? partyEmail("tenant") : valueText("rental_notice_tenant_email");
+    return landlord && tenant ? `اعتمد الطرفان البريد الإلكتروني للإخطارات والمراسلات؛ بريد المؤجر: ${landlord}، وبريد المستأجر: ${tenant}.` : undefined;
+  }
+  if (fieldKey === "rental_messaging_notices_text") {
+    if (!Boolean(fieldValues.rental_messaging_enabled)) return "";
+    const raw = valueText("rental_messaging_channel"); const channel = raw === "أخرى" ? valueText("rental_messaging_channel_other") : raw;
+    const reuse = Boolean(fieldValues.rental_messaging_use_party_phones);
+    const partyPhone = (prefix: "landlord" | "tenant") => String(fieldValues[`${prefix}_party_type`] ?? "") === "company" ? valueText(`${prefix}_company_phone`) : valueText(`${prefix}_phone`);
+    const landlord = reuse ? partyPhone("landlord") : valueText("rental_messaging_landlord_phone"); const tenant = reuse ? partyPhone("tenant") : valueText("rental_messaging_tenant_phone");
+    return channel && landlord && tenant ? `اعتمد الطرفان ${channel} للمراسلات المتعلقة بتنفيذ العقد؛ رقم المؤجر: ${landlord}، ورقم المستأجر: ${tenant}. وتكون المراسلات قابلة للاحتجاج بها متى أمكن التحقق من صدورها وسلامة محتواها، دون أن تعد بذاتها تعديلًا للعقد إلا باعتماد صريح.` : undefined;
+  }
+  if (fieldKey === "rental_meter_details_text") {
+    const lines: string[] = [];
+    const meterType = (value?: string) => value === "independent" ? "مستقل" : value === "shared" ? "مشترك" : value;
+    for (const [prefix, label] of [["electricity", "الكهرباء"], ["water", "المياه"], ["gas", "الغاز الطبيعي"]] as const) {
+      const exists = valueText(`${prefix}_meter_exists`);
+      if (exists === "no") { lines.push(`عداد ${label}: لا يوجد`); continue; }
+      if (exists !== "yes") continue;
+      const number = valueText(`${prefix}_meter`);
+      const type = meterType(valueText(`${prefix}_meter_type`));
+      const reading = valueText(`${prefix}_meter_reading`);
+      const parts = [number ? `رقم ${number}` : undefined, type ? `نوعه ${type}` : undefined, reading ? `قراءته عند التسليم ${reading}` : undefined].filter(Boolean);
+      lines.push(`عداد ${label}: ${parts.length ? parts.join(" — ") : "موجود"}`);
+    }
+    return lines.length ? lines.join("؛ ") : "لا توجد عدادات مثبتة ضمن بيانات العقد وقت إبرامه";
+  }
+  if (fieldKey === "residential_pets_text") {
+    const value = valueText("residential_pets_allowed");
+    if (value === "yes") return "اتفق الطرفان على السماح بتربية الحيوانات الأليفة داخل العين، بشرط الالتزام بالقوانين ولوائح العقار أو الكمبوند وعدم إحداث ضرر أو إزعاج، ويتحمل المستأجر مسؤولية ما ينشأ عنها من أضرار أو مطالبات.";
+    if (value === "no") return "اتفق الطرفان على عدم السماح بتربية أو إيواء الحيوانات أو الطيور داخل العين المؤجرة إلا بموافقة كتابية لاحقة من المؤجر.";
+    return undefined;
+  }
+
   if (fieldKey === "rental_property_additional_details") {
     const parts: string[] = [];
     const add = (label: string, key: string) => { const value = valueText(key); if (value) parts.push(`${label}: ${value}`); };
@@ -607,26 +702,29 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
 
     add("رقم العقار/المبنى", "building_number");
     for (const [prefix, label] of [["electricity", "الكهرباء"], ["water", "المياه"], ["gas", "الغاز الطبيعي"]] as const) {
-      const number = valueText(`${prefix}_meter`);
-      const type = meterType(valueText(`${prefix}_meter_type`));
-      if (number || type) parts.push(`عداد ${label}: ${number ? `رقم ${number}` : ""}${number && type ? " — " : ""}${type ? `نوعه ${type}` : ""}`);
+      const exists = valueText(`${prefix}_meter_exists`);
+      if (exists === "no") { parts.push(`عداد ${label}: لا يوجد`); continue; }
+      if (exists !== "yes") continue;
+      const number = valueText(`${prefix}_meter`); const type = meterType(valueText(`${prefix}_meter_type`)); const reading = valueText(`${prefix}_meter_reading`);
+      if (number || type) parts.push(`عداد ${label}: ${number ? `رقم ${number}` : ""}${number && type ? " — " : ""}${type ? `نوعه ${type}` : ""}${reading ? ` — القراءة عند التسليم ${reading}` : ""}`);
     }
     if (fieldValues.residential_property_type !== undefined) {
       add("اسم الكمبوند", "residential_compound_name"); add("رقم القطعة", "residential_plot_number"); add("رقم المجاورة", "residential_adjacency_number"); add("اسم البرج/العمارة", "residential_building_name");
       const annexes: string[] = [];
       if (fieldValues.residential_includes_garage) annexes.push("جراج"); if (fieldValues.residential_includes_storage) annexes.push("مخزن"); if (fieldValues.residential_includes_garden) annexes.push("حديقة"); if (fieldValues.residential_includes_roof) annexes.push("سطح/رووف"); if (fieldValues.residential_includes_service_room) annexes.push("غرفة خدمات"); if (fieldValues.residential_includes_parking) annexes.push("مكان انتظار سيارة");
       const other = valueText("residential_other_annex"); if (other) annexes.push(other); if (annexes.length) parts.push(`ملحقات العين: ${annexes.join("، ")}`);
+      if (Boolean(fieldValues.residential_management_rules_applicable)) parts.push("تخضع العين للوائح إدارة العقار/الكمبوند أو اتحاد الشاغلين في حدود ما لا يخالف العقد أو القانون");
     } else if (fieldValues.commercial_activity_name !== undefined) {
       add("اسم المول/المشروع التجاري", "commercial_project_name"); add("رقم الترخيص", "commercial_license_number"); add("رقم القطعة", "commercial_plot_number");
       const siteRaw = valueText("commercial_site_type"); const site = siteRaw === "أخرى" ? valueText("commercial_site_type_other") : siteRaw; if (site) parts.push(`موقع الوحدة: ${site}`);
       addYesNo("وجود ميزانين", "commercial_has_mezzanine"); add("عرض الواجهة بالمتر", "commercial_frontage_width"); add("عدد الواجهات", "commercial_frontage_count"); addYesNo("مخزن تابع", "commercial_has_storage"); addYesNo("مكان تحميل وتنزيل", "commercial_has_loading_area");
+      const annexes: string[] = []; if (valueText("commercial_has_storage") === "yes") annexes.push("مخزن"); if (valueText("commercial_has_loading_area") === "yes") annexes.push("مكان تحميل وتنزيل"); if (valueText("commercial_includes_garage") === "yes") annexes.push("جراج"); if (valueText("commercial_front_yard") === "yes") annexes.push("ساحة أمامية"); if (valueText("commercial_back_yard") === "yes") annexes.push("ساحة خلفية"); if (valueText("commercial_service_room") === "yes") annexes.push("غرفة خدمات"); if (valueText("commercial_toilet") === "yes") annexes.push("دورة مياه"); const commercialOther = valueText("commercial_other_annex"); if (commercialOther) annexes.push(commercialOther); if (annexes.length) parts.push(`ملحقات الوحدة التجارية: ${annexes.join("، ")}`);
       if (String(fieldValues.commercial_finishing_level ?? "") === "أخرى") add("وصف التشطيب", "commercial_finishing_other");
     } else if (fieldValues.administrative_activity_name !== undefined) {
       add("اسم المشروع/البرج الإداري", "administrative_project_name"); add("رقم الترخيص", "administrative_license_number"); add("رقم القطعة", "administrative_plot_number");
       const siteRaw = valueText("administrative_site_type"); const site = siteRaw === "أخرى" ? valueText("administrative_site_type_other") : siteRaw; if (site) parts.push(`موقع العين: ${site}`);
       addYesNo("قاعة اجتماعات", "administrative_meeting_room"); addYesNo("استقبال", "administrative_reception"); addYesNo("مخزن تابع", "administrative_storage"); addYesNo("مصعد", "administrative_lift"); add("عدد أماكن الانتظار", "administrative_parking_count"); addYesNo("غرفة خوادم", "administrative_server_room"); add("نظام التكييف", "administrative_ac_system"); add("شبكة البيانات", "administrative_data_network");
       const deliveryMap: Record<string, string> = { vacant: "خالية", furnished: "مؤثثة", fully_equipped: "مجهزة بالكامل", inventory_report: "وفقًا لمحضر الجرد" }; const delivery = valueText("administrative_delivery_condition"); if (delivery) parts.push(`حالة العين عند التسليم: ${deliveryMap[delivery] ?? delivery}`);
-      add("قراءة الكهرباء عند التسليم", "administrative_electricity_reading"); add("قراءة المياه عند التسليم", "administrative_water_reading"); add("قراءة الغاز عند التسليم", "administrative_gas_reading");
     }
     return parts.length ? `وتُستكمل بيانات وصف العين بما يلي: ${parts.join("؛ ")}.` : "ولا توجد بيانات تعريفية إضافية للعين بخلاف ما تقدم.";
   }
@@ -667,7 +765,7 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
     return `السيد/ ${name}، ${nationality} الجنسية، يحمل ${identityLabel} رقم ${identity}${issueText}، وعنوانه ${address}، ورقم هاتفه ${phone}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
   }
 
-  if (fieldKey === "sale_total_price_words") return numberToArabicWordsBare(fieldValues.sale_total_price);
+  if (fieldKey === "sale_total_price_words") return numberToEgyptianPoundsWords(fieldValues.sale_total_price) || undefined;
 
   if (fieldKey === "sale_remaining_amount") {
     const total = Number(fieldValues.sale_total_price ?? 0); const down = Number(fieldValues.sale_down_payment ?? 0);
@@ -888,6 +986,8 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
     return `السيد/ ${name}، ${nationality} الجنسية، يحمل ${identityLabel} رقم ${identity}${issueText}، وعنوانه ${address}، ورقم هاتفه ${phone}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
   }
 
+  if (fieldKey === "visual_contract_value_words") return numberToEgyptianPoundsWords(fieldValues.visual_contract_value) || undefined;
+
   if (fieldKey === "visual_project_definition") {
     const name = valueText("visual_project_name");
     const purpose = valueText("visual_project_purpose");
@@ -1039,6 +1139,8 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
     const issueText = issuer || issueDate ? `، ${issuer ? `صادر من ${issuer}` : ""}${issuer && issueDate ? " " : ""}${issueDate ? `بتاريخ ${issueDate}` : ""}` : "";
     return `السيد/ ${name}، ${nationality} الجنسية، يحمل ${identityLabel} رقم ${identity}${issueText}، وعنوانه ${address}، ورقم هاتفه ${phone}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
   }
+
+  if (fieldKey === "website_total_price_words") return numberToEgyptianPoundsWords(fieldValues.website_total_price) || undefined;
 
   if (fieldKey === "website_project_definition") {
     const name = valueText("website_project_name");
@@ -1306,11 +1408,13 @@ export function renderLegalClauses(
 
     for (const v of variables) {
       const token = `{{${v}}}`;
-      let val = fieldValues[v];
-      if (val === undefined || val === null || val === "") val = derivedClauseVariable(v, fieldValues);
+      const derived = derivedClauseVariable(v, fieldValues);
+      let val = derived;
+      const usingDerived = derived !== undefined && derived !== null && derived !== "";
+      if (!usingDerived) val = fieldValues[v];
       if (val === undefined || val === null || val === "") {
         val = "بيان مطلوب";
-      } else if (fieldValues[v] !== undefined && fieldValues[v] !== null && fieldValues[v] !== "") {
+      } else if (!usingDerived) {
         val = formatClauseVariable(v, val, fieldMap.get(v), fieldValues);
       }
       body = body.split(token).join(String(val));

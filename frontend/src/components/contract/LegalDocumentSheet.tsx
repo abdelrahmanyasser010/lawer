@@ -629,7 +629,7 @@ function AnnexPreviewSheet({
   return (
     <article
       data-annex-number={annexNumber}
-      className={`zdraft-document-page relative mx-auto min-h-[297mm] w-[210mm] min-w-[210mm] overflow-hidden border border-slate-200 bg-white px-[13mm] py-[14mm] text-[#1a1a1a] shadow-sm print:break-before-page print:border-none print:shadow-none ${isDraft ? "select-none print:hidden" : "select-text"}`}
+      className={`zdraft-document-page relative mx-auto min-h-[297mm] w-[210mm] min-w-[210mm] overflow-hidden border border-slate-200 bg-white px-[13mm] pb-[14mm] pt-[12mm] text-[#1a1a1a] shadow-sm print:break-before-page print:border-none print:shadow-none ${isDraft ? "select-none print:hidden" : "select-text"}`}
       onCopy={isDraft ? (event) => event.preventDefault() : undefined}
       onCut={isDraft ? (event) => event.preventDefault() : undefined}
       onContextMenu={isDraft ? (event) => event.preventDefault() : undefined}
@@ -1032,12 +1032,14 @@ export default function LegalDocumentSheet({
       <div className="zd-doc-body relative z-10 text-justify text-slate-800">
 
         {resolvedDefinition ? (
-          <DocumentDataSections
-            steps={resolvedDefinition.steps}
-            fieldValues={fieldValues}
-            activeFieldKey={activeFieldKey}
-            activeFieldLabel={activeFieldLabel}
-          />
+          isSale ? null : (
+            <DocumentDataSections
+              steps={resolvedDefinition.steps}
+              fieldValues={fieldValues}
+              activeFieldKey={activeFieldKey}
+              activeFieldLabel={activeFieldLabel}
+            />
+          )
         ) : (
         <>
 

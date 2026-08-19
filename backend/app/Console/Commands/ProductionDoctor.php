@@ -132,8 +132,8 @@ final class ProductionDoctor extends Command
 
     private function checkSuperAdminSeed(): void
     {
-        $email = strtolower(trim((string) env('SUPER_ADMIN_EMAIL')));
-        $password = (string) env('SUPER_ADMIN_PASSWORD');
+        $email = strtolower(trim((string) config('zdraft.super_admin_email')));
+        $password = (string) config('zdraft.super_admin_password');
         $badEmail = $email === '' || str_contains($email, 'example.com') || $email === 'admin@example.com';
         $badPassword = strlen($password) < 12 || str_contains($password, 'CHANGE_') || str_contains($password, 'PASSWORD');
         $this->add(

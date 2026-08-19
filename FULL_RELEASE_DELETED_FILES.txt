@@ -1,0 +1,7 @@
+# Files that must NOT exist after applying this full release
+frontend/src/components/home/LegalConsultationCard.tsx
+
+# If you extract the ZIP over an older Git working tree, run:
+# git rm --ignore-unmatch frontend/src/components/home/LegalConsultationCard.tsx
+# git add -A
+# git status

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { numberToArabicWords } from "@/lib/numberToWords";
+import { numberToEgyptianPoundsWords } from "@zdraft/template-engine";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 
 interface Props {
@@ -28,7 +28,7 @@ export default function ArabicCurrencyInput({
   const numVal = Number(value);
   const hasValue = value !== "" && !isNaN(numVal) && numVal > 0;
   const isInvalid = value !== "" && (!hasValue || numVal < min || numVal > max);
-  const arabicText = hasValue ? numberToArabicWords(numVal) : "";
+  const arabicText = hasValue ? numberToEgyptianPoundsWords(numVal) : "";
 
   return (
     <div className="space-y-1.5">
@@ -69,7 +69,7 @@ export default function ArabicCurrencyInput({
       {/* Arabic Words Display */}
       {hasValue && !isInvalid && (
         <div className="rounded-lg border border-[#986410]/25 bg-[#986410]/5 px-3.5 py-2.5 flex items-start gap-2">
-          <span className="text-[10px] text-[#986410] font-bold shrink-0 mt-0.5">كتابة:</span>
+          <span className="text-[10px] text-[#986410] font-bold shrink-0 mt-0.5">كتابةً تلقائيًا:</span>
           <span className="text-[11px] text-[#00102e] font-bold leading-relaxed" dir="rtl">
             {arabicText}
           </span>

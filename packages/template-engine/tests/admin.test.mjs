@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import {
+import engine from "../dist/index.js";
+const {
   apartmentSaleTemplateDefinition,
   auditVariantFieldCoverage,
   websiteFieldCoverageExternalBindings,
@@ -14,12 +15,13 @@ import {
   freelancerTemplateDefinition,
   inspectTemplateDefinition,
   moveArrayItem,
+  numberToEgyptianPoundsWords,
   renderLegalClauses,
   resolveWizardDefinition,
   validateDynamicDefinition,
   derivedClauseVariableDependencies,
   rentalTemplateDefinition,
-} from "../dist/index.js";
+} = engine;
 
 test("published sale and rental definitions have no structural publish errors", () => {
   const sale = inspectTemplateDefinition(apartmentSaleTemplateDefinition);
@@ -109,8 +111,8 @@ test("website manual annexes are active only after explicit user selection and s
 });
 
 
-test("visual identity semantics remain intact in freelancer v14", () => {
-  assert.equal(freelancerTemplateDefinition.version, 14);
+test("visual identity semantics remain intact in freelancer v15", () => {
+  assert.equal(freelancerTemplateDefinition.version, 15);
   const visual = freelancerTemplateDefinition.variants.find((item) => item.key === "visual_identity_design");
   assert.ok(visual);
   const allFields = visual.steps.flatMap((step) => step.fields);
@@ -123,7 +125,7 @@ test("visual identity semantics remain intact in freelancer v14", () => {
   assert.equal(byKey.visual_revision_rounds.required, true);
   assert.equal(byKey.visual_ip_rights_mode.required, true);
   assert.equal(byKey.visual_contract_value.required, true);
-  assert.equal(byKey.visual_contract_value_words.required, true);
+  assert.equal(Boolean(byKey.visual_contract_value_words), false);
   assert.equal(byKey.visual_competent_court.required, true);
   assert.ok(byKey.visual_competent_court.options.some((option) => option.value === "المنيا"));
   assert.ok(byKey.visual_competent_court.options.some((option) => option.value === "أخرى"));
@@ -329,19 +331,24 @@ test("social media delay penalty uses exactly one source-backed calculation path
   assert.equal(Boolean(percentageFields.social_delay_penalty_amount), false);
 });
 
-test("rental v14 publication files stay version-aligned", () => {
-  const backendDefinition = JSON.parse(readFileSync("../../backend/database/template-definitions/rental.json", "utf8"));
-  const migration = readFileSync("../../backend/database/migrations/2026_08_19_000600_publish_rental_contracts_v14.php", "utf8");
-  assert.equal(rentalTemplateDefinition.version, 14);
-  assert.equal(backendDefinition.slug, "rental");
-  assert.equal(backendDefinition.version, 14);
-  assert.match(migration, /\$targetVersion = 14;/);
-  assert.match(migration, /Canonical rental v14 definition is required by this migration\./);
-  assert.doesNotMatch(migration, /apartment_sale/);
+test("full nine-contract publication files stay version-aligned", () => {
+  const rentalBackend = JSON.parse(readFileSync("../../backend/database/template-definitions/rental.json", "utf8"));
+  const saleBackend = JSON.parse(readFileSync("../../backend/database/template-definitions/apartment_sale.json", "utf8"));
+  const freelancerBackend = JSON.parse(readFileSync("../../backend/database/template-definitions/freelancer.json", "utf8"));
+  const migration = readFileSync("../../backend/database/migrations/2026_08_19_000700_publish_full_nine_contracts_experience.php", "utf8");
+  assert.equal(rentalTemplateDefinition.version, 15);
+  assert.equal(apartmentSaleTemplateDefinition.version, 14);
+  assert.equal(freelancerTemplateDefinition.version, 15);
+  assert.equal(rentalBackend.version, 15);
+  assert.equal(saleBackend.version, 14);
+  assert.equal(freelancerBackend.version, 15);
+  assert.match(migration, /'slug' => 'freelancer'[\s\S]*'version' => 15/);
+  assert.match(migration, /'slug' => 'apartment_sale'[\s\S]*'version' => 14/);
+  assert.match(migration, /'slug' => 'rental'[\s\S]*'version' => 15/);
 });
 
-test("rental v14 exposes three source-specific lease variants with derived legal values and no court dropdown", () => {
-  assert.equal(rentalTemplateDefinition.version, 14);
+test("rental v15 exposes three source-specific lease variants with derived legal values and no court dropdown", () => {
+  assert.equal(rentalTemplateDefinition.version, 15);
   assert.deepEqual(
     rentalTemplateDefinition.variants.map((variant) => variant.key),
     ["residential_lease", "commercial_lease", "administrative_lease"],
@@ -361,7 +368,7 @@ test("rental v14 exposes three source-specific lease variants with derived legal
   }
 });
 
-test("rental v14 core finance, duration and source-specific payment semantics are fail-closed", () => {
+test("rental v15 core finance, duration and source-specific payment semantics are fail-closed", () => {
   const commonRequired = [
     "contract_date", "contract_copies_count", "lease_duration_value", "lease_duration_unit", "start_date", "end_date", "property_delivery_date",
     "deposit_amount", "deposit_payment_status", "rent_period", "rent_amount", "rent_due_day", "holdover_daily_compensation",
@@ -439,22 +446,21 @@ test("rental company identity and notice contacts are required only on their act
   assert.equal(Boolean(rf.rental_messaging_landlord_phone), false);
 });
 
-test("rental handover annex stays manually selected but becomes mandatory when the chosen facts require it", () => {
-  const residentialVariant = rentalTemplateDefinition.variants.find((v) => v.key === "residential_lease");
+test("rental handover annex remains optional and manual-fill even when handover facts are present", () => {
   const residentialValues = { ...createSampleFieldValues(rentalTemplateDefinition, "residential_lease", []), residential_is_furnished: true };
   const residentialResolved = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], residentialValues);
   assert.equal(residentialResolved.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), false);
   let issues = validateDynamicDefinition(residentialResolved, { templateSlug: "rental", variantKey: "residential_lease", selectedOptionalClauseKeys: [], fieldValues: residentialValues, touchedFieldKeys: [], attachmentRefs: {} });
-  assert.ok(issues.some((issue) => issue.fieldKey === "rental_handover_inventory_report"));
-  const residentialSelected = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", ["rental_handover_inventory_report"], residentialValues);
-  issues = validateDynamicDefinition(residentialSelected, { templateSlug: "rental", variantKey: "residential_lease", selectedOptionalClauseKeys: ["rental_handover_inventory_report"], fieldValues: residentialValues, touchedFieldKeys: [], attachmentRefs: {} });
   assert.equal(issues.some((issue) => issue.fieldKey === "rental_handover_inventory_report"), false);
 
   const adminValues = { ...createSampleFieldValues(rentalTemplateDefinition, "administrative_lease", []), administrative_delivery_condition: "inventory_report" };
   const adminResolved = resolveWizardDefinition(rentalTemplateDefinition, "administrative_lease", [], adminValues);
   assert.equal(adminResolved.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), false);
   issues = validateDynamicDefinition(adminResolved, { templateSlug: "rental", variantKey: "administrative_lease", selectedOptionalClauseKeys: [], fieldValues: adminValues, touchedFieldKeys: [], attachmentRefs: {} });
-  assert.ok(issues.some((issue) => issue.fieldKey === "rental_handover_inventory_report"));
+  assert.equal(issues.some((issue) => issue.fieldKey === "rental_handover_inventory_report"), false);
+
+  const selected = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", ["rental_handover_inventory_report"], residentialValues);
+  assert.ok(selected.activeClauseKeys.includes("rental_handover_inventory_report_source_document"));
 });
 
 test("commercial and administrative optional legal branches enforce dependent values", () => {
@@ -517,7 +523,7 @@ test("rental jurisdiction is derived from the property location inside the sourc
   }
 });
 
-test("rental v14 reuses delivery date and meter facts in every governing handover and utilities article", () => {
+test("rental v15 reuses delivery date and meter facts in every governing handover and utilities article", () => {
   const articleMap = {
     residential_lease: ["residential_lease_source_article_10", "residential_lease_source_article_11", "residential_lease_source_article_12", "residential_lease_source_article_14"],
     commercial_lease: ["commercial_lease_source_article_10", "commercial_lease_source_article_12", "commercial_lease_source_article_13", "commercial_lease_source_article_14"],
@@ -550,7 +556,7 @@ test("administrative guarantee replenishment preserves the source ten-day rule w
   assert.doesNotMatch(commercial.bodyAr, /عشرة \(10\) أيام/);
 });
 
-test("rental v14 rejects inconsistent dates and mismatched guarantee-check counts", () => {
+test("rental v15 rejects inconsistent dates and mismatched guarantee-check counts", () => {
   const values = { ...createSampleFieldValues(rentalTemplateDefinition, "commercial_lease", []), start_date: "2026-08-10", end_date: "2026-08-09", commercial_guarantee_checks_enabled: true, commercial_guarantee_checks_count: 2, commercial_guarantee_bank: "بنك الاختبار", commercial_guarantee_check_numbers: "1001", commercial_guarantee_value_mode: "total", commercial_guarantee_total_amount: 2000 };
   const resolved = resolveWizardDefinition(rentalTemplateDefinition, "commercial_lease", [], values);
   const issues = validateDynamicDefinition(resolved, { templateSlug: "rental", variantKey: "commercial_lease", selectedOptionalClauseKeys: [], fieldValues: values, touchedFieldKeys: [], attachmentRefs: {} });
@@ -558,7 +564,7 @@ test("rental v14 rejects inconsistent dates and mismatched guarantee-check count
   assert.ok(issues.some((issue) => issue.fieldKey === "commercial_guarantee_check_numbers"));
 });
 
-test("rental v14 variable coverage audit fails closed for all three lease contracts", () => {
+test("rental v15 variable coverage audit fails closed for all three lease contracts", () => {
   const minimums = { residential_lease: 110, commercial_lease: 125, administrative_lease: 120 };
   for (const variant of rentalTemplateDefinition.variants) {
     const audit = auditVariantFieldCoverage(rentalTemplateDefinition, variant.key, { derivedVariableDependencies: derivedClauseVariableDependencies, externalBindings: rentalFieldCoverageExternalBindings });
@@ -627,8 +633,8 @@ test("rental residential repeater makes other payment details required in the sa
   assert.equal(cashIssues.some((issue) => issue.fieldKey === "rental_payment_methods.0.details"), false);
 });
 
-test("sale v13 exposes three source-specific variants with fail-closed property logic", () => {
-  assert.equal(apartmentSaleTemplateDefinition.version, 13);
+test("sale v14 exposes three source-specific variants with fail-closed property logic", () => {
+  assert.equal(apartmentSaleTemplateDefinition.version, 14);
   assert.deepEqual(apartmentSaleTemplateDefinition.variants.map((item) => item.key), ["preliminary_sale", "registrable_sale", "inherited_sale"]);
   const forbidden = new Set(["sale_jurisdiction_court", "sale_total_price_words", "sale_remaining_amount", "preliminary_include_benefits_clause"]);
   for (const variant of apartmentSaleTemplateDefinition.variants) {
@@ -647,7 +653,7 @@ test("sale v13 exposes three source-specific variants with fail-closed property 
   assert.equal(inheritedFields.inheritance_no_minors_ack.required, true);
 });
 
-test("sale v13 editable timing and payment terms are explicit and variant-specific", () => {
+test("sale v14 editable timing and payment terms are explicit and variant-specific", () => {
   const byVariant = Object.fromEntries(apartmentSaleTemplateDefinition.variants.map((variant) => [variant.key, Object.fromEntries(variant.steps.flatMap((step) => step.fields).map((field) => [field.key, field]))]));
   assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "preliminary_sale").defaultFieldValues.sale_installment_grace_days, 15);
   assert.equal(Boolean(byVariant.preliminary_sale.sale_installment_grace_days.requiredWhen), true);
@@ -657,6 +663,10 @@ test("sale v13 editable timing and payment terms are explicit and variant-specif
   assert.equal(byVariant.registrable_sale.sale_delivery_delay_threshold_days.required, true);
   assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "inherited_sale").defaultFieldValues.sale_contract_copies_count, 2);
   assert.equal(byVariant.inherited_sale.sale_contract_copies_count.required, true);
+  assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "preliminary_sale").defaultFieldValues.seller_party_type, "individual");
+  assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "preliminary_sale").defaultFieldValues.buyer_party_type, "individual");
+  assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "registrable_sale").defaultFieldValues.seller_party_type, "individual");
+  assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "registrable_sale").defaultFieldValues.buyer_party_type, "individual");
   assert.equal(apartmentSaleTemplateDefinition.variants.find((v) => v.key === "registrable_sale").defaultFieldValues.sale_contract_copies_count, 2);
   assert.equal(Boolean(byVariant.preliminary_sale.sale_contract_copies_count), false);
   for (const variantKey of ["preliminary_sale", "registrable_sale", "inherited_sale"]) {
@@ -789,7 +799,8 @@ test("core wizard values are printed inside their governing legal articles", () 
     website_competent_court: "القاهرة",
   };
   const websiteText = renderLegalClauses(freelancerTemplateDefinition, "website_development", [], websiteValues).map((c) => c.bodyAr).join("\n");
-  for (const sentinel of ["مشروع-ربط-الموقع", "مدير-المشروع-اختبار", "مسؤول-الاعتماد-اختبار", "مسؤول-المدفوعات-اختبار", "binding@example.test", "قيمة الاختبار كتابة", "القاهرة"]) assert.match(websiteText, new RegExp(sentinel));
+  for (const sentinel of ["مشروع-ربط-الموقع", "مدير-المشروع-اختبار", "مسؤول-الاعتماد-اختبار", "مسؤول-المدفوعات-اختبار", "binding@example.test", numberToEgyptianPoundsWords(websiteValues.website_total_price), "القاهرة"]) assert.match(websiteText, new RegExp(sentinel));
+  assert.doesNotMatch(websiteText, /قيمة الاختبار كتابة/);
 
   const socialValues = {
     ...createSampleFieldValues(freelancerTemplateDefinition, "social_media_management", []),
@@ -840,7 +851,8 @@ test("execution, warranty, financial, delivery and court values are rendered ins
     visual_competent_court: "القاهرة",
   };
   const visualText = renderLegalClauses(freelancerTemplateDefinition, "visual_identity_design", [], visualValues).map((c) => c.bodyAr).join("\n");
-  for (const sentinel of ["47 يوم عمل", "سبعة وأربعون ألفًا وثلاثمائة وواحد وعشرون", "القاهرة"]) assert.match(visualText, new RegExp(sentinel));
+  for (const sentinel of ["47 يوم عمل", numberToEgyptianPoundsWords(visualValues.visual_contract_value), "القاهرة"]) assert.match(visualText, new RegExp(sentinel));
+  assert.doesNotMatch(visualText, /سبعة وأربعون ألفًا وثلاثمائة وواحد وعشرون/);
 
   const websiteValues = {
     ...createSampleFieldValues(freelancerTemplateDefinition, "website_development", []),
@@ -855,7 +867,8 @@ test("execution, warranty, financial, delivery and court values are rendered ins
     website_competent_court: "الجيزة",
   };
   const websiteText = renderLegalClauses(freelancerTemplateDefinition, "website_development", [], websiteValues).map((c) => c.bodyAr).join("\n");
-  for (const sentinel of ["٣٧ يوم", "سبعة وثلاثون ألفًا وأربعمائة وواحد وعشرون", "١٩ شهر", "١١ سنة", "الجيزة"]) assert.match(websiteText, new RegExp(sentinel));
+  for (const sentinel of ["٣٧ يوم", numberToEgyptianPoundsWords(websiteValues.website_total_price), "١٩ شهر", "١١ سنة", "الجيزة"]) assert.match(websiteText, new RegExp(sentinel));
+  assert.doesNotMatch(websiteText, /سبعة وثلاثون ألفًا وأربعمائة وواحد وعشرون/);
 
   const socialValues = {
     ...createSampleFieldValues(freelancerTemplateDefinition, "social_media_management", []),
@@ -912,7 +925,7 @@ test("execution, warranty, financial, delivery and court values are rendered ins
   }
 });
 
-test("sale v13 variable coverage audit fails closed for all three sale contracts", () => {
+test("sale v14 variable coverage audit fails closed for all three sale contracts", () => {
   const expectedMinimums = { preliminary_sale: 120, registrable_sale: 115, inherited_sale: 108 };
   for (const variant of apartmentSaleTemplateDefinition.variants) {
     const audit = auditVariantFieldCoverage(apartmentSaleTemplateDefinition, variant.key, {
@@ -934,7 +947,7 @@ test("sale v13 variable coverage audit fails closed for all three sale contracts
   assert.ok(inspected.errors.some((issue) => issue.code === "UNBOUND_LEGAL_FIELD" && issue.messageAr.includes("sale_future_unbound_field")));
 });
 
-test("sale v13 installment delivery controls possession, risk, utilities and final text consistently", () => {
+test("sale v14 installment delivery controls possession, risk, utilities and final text consistently", () => {
   for (const variantKey of ["preliminary_sale", "registrable_sale", "inherited_sale"]) {
     const values = {
       ...createSampleFieldValues(apartmentSaleTemplateDefinition, variantKey, []),
@@ -956,7 +969,7 @@ test("sale v13 installment delivery controls possession, risk, utilities and fin
   }
 });
 
-test("sale v13 enforces installment totals and the inheritance full-capacity gate", () => {
+test("sale v14 enforces installment totals and the inheritance full-capacity gate", () => {
   const bad = {
     ...createSampleFieldValues(apartmentSaleTemplateDefinition, "registrable_sale", []),
     sale_total_price: 100000,
@@ -1067,7 +1080,7 @@ test("website v12 binds party identity and every editable legal term into the go
   assert.match(article8, /٣ أشهر/);
 
   const article10 = byTitle("المادة العاشرة:");
-  for (const sentinel of ["خمسون ألفًا", "٢٠٬٠٠٠", "٣٠٬٠٠٠", "تحويل بنكي", "٨ أيام عمل", "٣٥ يومًا", "١٬٥٠٠"]) {
+  for (const sentinel of [numberToEgyptianPoundsWords(values.website_total_price), "٢٠٬٠٠٠", "٣٠٬٠٠٠", "تحويل بنكي", "٨ أيام عمل", "٣٥ يومًا", "١٬٥٠٠"]) {
     assert.match(article10, new RegExp(sentinel));
   }
 
@@ -1132,7 +1145,7 @@ test("website v12 variable coverage audit fails closed for every wizard input", 
     externalBindings: websiteFieldCoverageExternalBindings,
   });
 
-  assert.equal(audit.entries.length, 107, "عدد حقول عقد الموقع تغير؛ راجع خريطة الـcoverage قبل النشر");
+  assert.equal(audit.entries.length, 106, "عدد حقول عقد الموقع تغير؛ راجع خريطة الـcoverage قبل النشر");
   assert.deepEqual(audit.uncoveredFieldKeys, [], `حقول بدون أثر في العقد: ${audit.uncoveredFieldKeys.join(", ")}`);
 
   const byKey = Object.fromEntries(audit.entries.map((entry) => [entry.fieldKey, entry]));
@@ -1228,7 +1241,7 @@ test("visual identity v13 binds every negotiated term into its governing clauses
   const all = clauses.map((clause) => clause.bodyAr).join("\n");
   for (const sentinel of [
     "عميل-الهوية-اختبار", "PASS-VIS-999", "علامة-بصرية-اختبار", "غرض-بصري-اختبار",
-    "تغليف-مخصص-اختبار", "AI, FIG", "21 يوم عمل", "01/09/2026", "خمسون ألفًا",
+    "تغليف-مخصص-اختبار", "AI, FIG", "21 يوم عمل", "01/09/2026", numberToEgyptianPoundsWords(values.visual_contract_value),
     "٢٠٬٠٠٠", "تحويل بنكي", "٣ جولة", "حق الاستعمال والتعديل والنشر",
     "client-vis@example.com", "WhatsApp", "القاهرة الاقتصادية",
   ]) assert.match(all, new RegExp(sentinel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), sentinel);
@@ -1441,3 +1454,74 @@ test("social media v14 variable coverage audit fails closed for every wizard inp
   assert.ok(inspection.errors.some((issue) => issue.code === "UNBOUND_LEGAL_FIELD" && issue.messageAr.includes("social_future_unbound_field")));
 });
 
+
+
+test("all nine contracts derive legal money wording from the numeric source of truth", () => {
+  const variants = [
+    [freelancerTemplateDefinition, "website_development", "website_total_price", "website_total_price_words"],
+    [freelancerTemplateDefinition, "visual_identity_design", "visual_contract_value", "visual_contract_value_words"],
+    [freelancerTemplateDefinition, "social_media_management", "social_fee", "social_fee_words"],
+    [apartmentSaleTemplateDefinition, "preliminary_sale", "sale_total_price", "sale_total_price_words"],
+    [apartmentSaleTemplateDefinition, "registrable_sale", "sale_total_price", "sale_total_price_words"],
+    [apartmentSaleTemplateDefinition, "inherited_sale", "sale_total_price", "sale_total_price_words"],
+    [rentalTemplateDefinition, "residential_lease", "rent_amount", "rent_amount_words"],
+    [rentalTemplateDefinition, "commercial_lease", "rent_amount", "rent_amount_words"],
+    [rentalTemplateDefinition, "administrative_lease", "rent_amount", "rent_amount_words"],
+  ];
+  for (const [definition, variantKey, numericKey, wordsKey] of variants) {
+    const values = createSampleFieldValues(definition, variantKey, []);
+    values[numericKey] = 1000;
+    values[wordsKey] = "قيمة خاطئة يجب تجاهلها";
+    const fields = definition.variants.find((v) => v.key === variantKey).steps.flatMap((step) => step.fields);
+    assert.equal(fields.some((field) => field.key === wordsKey), false, `${variantKey}: no manual words input`);
+    const text = renderLegalClauses(definition, variantKey, [], values).map((clause) => clause.bodyAr).join("\n");
+    assert.match(text, /ألف جنيه مصري فقط لا غير/, variantKey);
+    assert.doesNotMatch(text, /قيمة خاطئة يجب تجاهلها/, variantKey);
+    assert.doesNotMatch(text, /\(فقط\s/u, `${variantKey}: do not duplicate فقط around derived money words`);
+  }
+});
+
+test("party names entered once appear in the opening legal article of all nine contracts", () => {
+  const cases = [
+    [freelancerTemplateDefinition, "website_development", "website_client_name", "عميل الموقع التجريبي", "website_provider_name", "مطور الموقع التجريبي"],
+    [freelancerTemplateDefinition, "visual_identity_design", "visual_client_name", "عميل الهوية التجريبي", "visual_provider_name", "مصمم الهوية التجريبي"],
+    [freelancerTemplateDefinition, "social_media_management", "social_client_name", "عميل التواصل التجريبي", "social_provider_name", "مقدم التواصل التجريبي"],
+    [apartmentSaleTemplateDefinition, "preliminary_sale", "seller_name", "بائع ابتدائي تجريبي", "buyer_name", "مشتري ابتدائي تجريبي"],
+    [apartmentSaleTemplateDefinition, "registrable_sale", "seller_name", "بائع تسجيل تجريبي", "buyer_name", "مشتري تسجيل تجريبي"],
+    [apartmentSaleTemplateDefinition, "inherited_sale", "seller_name", "بائع ميراث تجريبي", "buyer_name", "مشتري ميراث تجريبي"],
+    [rentalTemplateDefinition, "residential_lease", "landlord_name", "مؤجر سكني تجريبي", "tenant_name", "مستأجر سكني تجريبي"],
+    [rentalTemplateDefinition, "commercial_lease", "landlord_name", "مؤجر تجاري تجريبي", "tenant_name", "مستأجر تجاري تجريبي"],
+    [rentalTemplateDefinition, "administrative_lease", "landlord_name", "مؤجر إداري تجريبي", "tenant_name", "مستأجر إداري تجريبي"],
+  ];
+  for (const [definition, variantKey, firstKey, firstName, secondKey, secondName] of cases) {
+    const values = createSampleFieldValues(definition, variantKey, []);
+    values[firstKey] = firstName;
+    values[secondKey] = secondName;
+    const openingText = renderLegalClauses(definition, variantKey, [], values)
+      .slice(0, 3)
+      .map((clause) => clause.bodyAr)
+      .join("\n");
+    assert.match(openingText, new RegExp(firstName), `${variantKey}: first party`);
+    assert.match(openingText, new RegExp(secondName), `${variantKey}: second party`);
+  }
+});
+
+test("customer-facing legal text contains no wizard placeholders or product-editor wording", () => {
+  const all = [freelancerTemplateDefinition, apartmentSaleTemplateDefinition, rentalTemplateDefinition]
+    .flatMap((definition) => definition.legalClauses ?? [])
+    .map((clause) => `${clause.titleAr}\n${clause.bodyAr}`)
+    .join("\n");
+  for (const forbidden of ["محرر تعاقدي", "بيان مطلوب", "قسم بيانات العقد أعلاه", "عبر المنصة"]) {
+    assert.doesNotMatch(all, new RegExp(forbidden), forbidden);
+  }
+});
+
+test("preview A4 typography stays aligned with the WeasyPrint PDF hierarchy", () => {
+  const compact = (value) => value.replace(/\s+/g, "");
+  const css = compact(readFileSync("../../frontend/src/app/globals.css", "utf8"));
+  const blade = compact(readFileSync("../../backend/resources/views/pdf/contract.blade.php", "utf8"));
+  for (const token of ["font-size:11.35pt", "line-height:1.44", "min-height:18mm", "font-size:17.5pt", "font-size:11.25pt", "font-size:9.4pt"]) {
+    assert.ok(css.includes(token), `preview ${token}`);
+    assert.ok(blade.includes(token), `pdf ${token}`);
+  }
+});

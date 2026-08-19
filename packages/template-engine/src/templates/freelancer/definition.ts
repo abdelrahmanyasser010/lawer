@@ -321,7 +321,6 @@ const visualSteps: WizardStepDefinition[] = [
     ] },
     { key: "visual_execution_start_date", type: "date", labelAr: "تاريخ بدء التنفيذ", visibleWhen: { fieldKey: "visual_execution_start_rule", operator: "equals", value: "specific_date" }, requiredWhen: { fieldKey: "visual_execution_start_rule", operator: "equals", value: "specific_date" } },
     { key: "visual_contract_value", type: "money", labelAr: "إجمالي المقابل المالي (جنيه مصري)", required: true, validation: { min: 1 } },
-    { key: "visual_contract_value_words", type: "text", labelAr: "إجمالي المقابل المالي كتابةً (بدون اسم العملة)", required: true, helpText: "مثال: خمسون ألفًا. سيضيف العقد عبارة جنيه مصري تلقائيًا." },
     { key: "visual_payment_mode", type: "radio", labelAr: "نظام السداد", required: true, options: [
       { value: "single", labelAr: "دفعة واحدة" }, { value: "installments", labelAr: "عدة دفعات / مراحل" },
     ] },
@@ -409,7 +408,6 @@ const websiteSteps: WizardStepDefinition[] = [
   ] },
   { key: "website_finance_acceptance", titleAr: "المقابل المالي والسداد والتسليم", articleRange: "المواد 10 و12 — المقابل والدفعات والمراجعة", fields: [
     { key: "website_total_price", type: "money", labelAr: "إجمالي المقابل المالي (جنيه مصري)", required: true, validation: { min: 1 } },
-    { key: "website_total_price_words", type: "text", labelAr: "إجمالي المقابل المالي كتابةً (بدون اسم العملة)", required: true, helpText: "مثال: خمسون ألفًا. سيضيف العقد عبارة جنيه مصري تلقائيًا." },
     { key: "website_payment_mode", type: "radio", labelAr: "طريقة السداد", required: true, options: [
       { value: "single", labelAr: "دفعة واحدة" }, { value: "installments", labelAr: "دفعات" },
     ] },
@@ -1798,8 +1796,8 @@ function reviewedWebsiteMainClause(clause: LegalClauseDefinition): LegalClauseDe
         ...base,
         titleAr: "المادة الأولى: أطراف العقد وبيانات المشروع",
         variables: ["website_client_party_definition", "website_provider_party_definition", "website_project_definition"],
-        bodyAr: `أولًا: الطرف الأول (العميل): {{website_client_party_definition}}
-ثانيًا: الطرف الثاني (مقدم الخدمة): {{website_provider_party_definition}}
+        bodyAr: `أولًا: {{website_client_party_definition}}
+ثانيًا: {{website_provider_party_definition}}
 ثالثًا: بيانات المشروع والاعتماد: {{website_project_definition}}
 وتُعد البيانات السابقة جزءًا جوهريًا من هذا العقد، ويلتزم كل طرف بإخطار الطرف الآخر بأي تغيير جوهري يطرأ على بياناته أو صفته أو وسائل الاتصال المعتمدة وفقًا للمادة العشرين من هذا العقد.`,
       };
@@ -1809,7 +1807,7 @@ function reviewedWebsiteMainClause(clause: LegalClauseDefinition): LegalClauseDe
         titleAr: "المادة الثانية: التمهيد والإقرارات العامة",
         variables: ["website_project_name", "website_project_type_text"],
         bodyAr: `حيث إن الطرف الأول يرغب في التعاقد مع الطرف الثاني لتطوير المشروع الإلكتروني «{{website_project_name}}» من نوع {{website_project_type_text}} وفقًا للمتطلبات والمواصفات ونطاق العمل المتفق عليها، وحيث إن الطرف الثاني يقر بامتلاكه الخبرة الفنية والقدرة المهنية اللازمة للتنفيذ، فقد اتفق الطرفان على أحكام هذا العقد.
-يُعد هذا العقد نافذًا ومستقلًا بذاته، ولا يتوقف انعقاده أو نفاذه على اختيار أي ملحق. وتكون الملاحق المتاحة عبر المنصة اختيارية، ولا يصبح أي ملحق جزءًا من العقد إلا بعد اختياره واستكماله واعتماده من الطرفين.
+يُعد هذا العقد نافذًا ومستقلًا بذاته، ولا يتوقف انعقاده أو نفاذه على اختيار أي ملحق. وتكون الملاحق اختيارية، ولا يصبح أي ملحق جزءًا من العقد إلا بعد اختياره واستكماله واعتماده من الطرفين.
 ويقر كل طرف بصحة البيانات والمستندات التي قدمها، وبأهليته وصفته وسلطته اللازمة لإبرام العقد وتنفيذه، كما يقر الطرف الأول بمشروعية البيانات والمحتوى والمواد والحقوق التي يقدمها لتنفيذ المشروع، ويلتزم الطرفان بالتعاون المتبادل وتقديم البيانات والاعتمادات والقرارات في المواعيد المقررة.
 ويقر الطرفان بأن إبرام العقد تم بإرادة حرة وسليمة، وأنه أتيحت لكل منهما فرصة كافية لمراجعة أحكامه وآثاره والاستعانة بمن يراه من المختصين قبل التوقيع عليه.`,
       };
@@ -1908,7 +1906,7 @@ function reviewedWebsiteMainClause(clause: LegalClauseDefinition): LegalClauseDe
         ...base,
         titleAr: "المادة العاشرة: المقابل المالي وآلية السداد",
         variables: ["website_total_price", "website_total_price_words", "website_payment_schedule_text", "website_payment_method", "website_payment_grace_days", "website_restart_threshold_days", "website_restart_fee_text"],
-        bodyAr: `10-1 قيمة العقد: يلتزم الطرف الأول بسداد مبلغ إجمالي قدره {{website_total_price}} جنيه مصري (فقط {{website_total_price_words}} جنيه مصري لا غير) مقابل تنفيذ الأعمال والخدمات والمخرجات محل هذا العقد.
+        bodyAr: `10-1 قيمة العقد: يلتزم الطرف الأول بسداد مبلغ إجمالي قدره {{website_total_price}} جنيه مصري ({{website_total_price_words}}) مقابل تنفيذ الأعمال والخدمات والمخرجات محل هذا العقد.
 10-2 جدول الدفعات واستحقاقها: {{website_payment_schedule_text}}
 10-3 وسائل السداد وإثبات الوفاء: اتفق الطرفان على أن تكون وسيلة السداد {{website_payment_method}}. ويُعد السداد منتجًا لآثاره من تاريخ قيد المبلغ فعليًا في الوسيلة المالية المتفق عليها أو ثبوت استلامه بموجب إيصال أو مخالصة أو فاتورة أو مستند يفيد الاستلام. وتكون رسوم التحويل والعمولات والمصروفات المصرفية على عاتق الطرف الذي تفرضها عليه الجهة المالية ما لم يتفق الطرفان كتابةً على خلاف ذلك.
 10-4 التأخر في السداد وحق تعليق التنفيذ: إذا تأخر الطرف الأول في سداد مبلغ مستحق، جاز للطرف الثاني بعد إخطاره ومنحه مهلة {{website_payment_grace_days}} أيام عمل للوفاء تعليق التنفيذ إلى حين السداد. ولا تدخل مدة التعليق ضمن مدة التنفيذ، وتمتد المدد والجدول الزمني بقدر التعليق وآثاره. وإذا استمر التعليق بسبب عدم السداد مدة تجاوز {{website_restart_threshold_days}} يومًا ثم طلب استئناف المشروع بعد السداد، جاز إعادة جدولة المشروع وفقًا لتوافر الموارد. {{website_restart_fee_text}}
@@ -2182,7 +2180,7 @@ function reviewedSocialMainClause(clause: LegalClauseDefinition): LegalClauseDef
         ...base,
         titleAr: "المادة العاشرة: المقابل المالي وآلية السداد",
         variables: ["social_fee_nature_text", "social_fee", "social_fee_words", "social_payment_schedule_text", "social_payment_method_text", "social_payment_grace_days", "social_ads_terms_text", "social_source_files_text"],
-        bodyAr: `10-1 قيمة المقابل المالي: يلتزم الطرف الأول بسداد مقابل مالي {{social_fee_nature_text}} قدره {{social_fee}} جنيه مصري (فقط {{social_fee_words}} جنيه مصري لا غير) نظير الخدمات والمخرجات المشمولة في نطاق هذا العقد.
+        bodyAr: `10-1 قيمة المقابل المالي: يلتزم الطرف الأول بسداد مقابل مالي {{social_fee_nature_text}} قدره {{social_fee}} جنيه مصري ({{social_fee_words}}) نظير الخدمات والمخرجات المشمولة في نطاق هذا العقد.
 10-2 الاستحقاق وجدول السداد: {{social_payment_schedule_text}}
 10-3 وسيلة السداد وإثبات الوفاء: {{social_payment_method_text}}. ويُعد السداد منتجًا لآثاره من تاريخ قيد المبلغ فعليًا في وسيلة السداد المعتمدة أو استلامه بموجب إيصال أو مخالصة صحيحة.
 10-4 التأخر في السداد: إذا تأخر الطرف الأول عن سداد مبلغ مستحق، جاز للطرف الثاني بعد إخطار الطرف الأول ومنحه مهلة {{social_payment_grace_days}} أيام عمل للسداد تعليق تنفيذ الخدمات أو وقف تسليم المخرجات أو الامتناع عن بدء أعمال جديدة، وتمتد المدد الزمنية بالقدر الذي يعادل التأخير وآثاره الفعلية.
@@ -2310,7 +2308,7 @@ const reviewedIdentityMainClauseOverrides: Record<string, Partial<LegalClauseDef
   visual_identity_design_source_section_09: {
     titleAr: "المادة التاسعة: المقابل المالي وآلية السداد",
     variables: ["visual_contract_value", "visual_contract_value_words", "visual_payment_schedule_text", "visual_payment_method", "visual_source_files_text"],
-    bodyAr: `يلتزم الطرف الأول بسداد إجمالي مقابل مالي قدره {{visual_contract_value}} جنيه مصري (فقط {{visual_contract_value_words}} جنيه مصري لا غير) نظير الخدمات والمخرجات المشمولة بهذا العقد.
+    bodyAr: `يلتزم الطرف الأول بسداد إجمالي مقابل مالي قدره {{visual_contract_value}} جنيه مصري ({{visual_contract_value_words}}) نظير الخدمات والمخرجات المشمولة بهذا العقد.
 {{visual_payment_schedule_text}}
 وتكون وسيلة السداد المتفق عليها: {{visual_payment_method}}. ويُعد إيصال السداد أو إشعار التحويل أو أي وسيلة إثبات مقبولة قانونًا دليلًا على الوفاء بالمبلغ المسدد.
 ولا يلتزم الطرف الثاني بالبدء أو الاستمرار أو تسليم المرحلة التي اشترط العقد سداد دفعتها قبل تمام السداد، ويجوز له تعليق التنفيذ عند التأخر دون أن يُعد ذلك تأخيرًا منسوبًا إليه. ولا يشمل المقابل أعمالًا إضافية خارج نطاق الخدمات إلا باتفاق مكتوب.
@@ -2851,7 +2849,7 @@ const freelancerLegalClauses: LegalClauseDefinition[] = [
       return {
         ...baseClause,
         variables: ["visual_contract_value", "visual_contract_value_words"],
-        bodyAr: `يلتزم الطرف الأول بسداد المقابل المالي المستحق للطرف الثاني نظير تنفيذ الخدمات محل هذا العقد، وذلك بإجمالي مبلغ وقدره: {{visual_contract_value}} جنيه مصري (فقط {{visual_contract_value_words}} جنيه مصري لا غير)، أو وفقًا للدفعات أو المراحل أو الآلية المالية المحددة والمتفق عليها بين الطرفين.
+        bodyAr: `يلتزم الطرف الأول بسداد المقابل المالي المستحق للطرف الثاني نظير تنفيذ الخدمات محل هذا العقد، وذلك بإجمالي مبلغ وقدره: {{visual_contract_value}} جنيه مصري ({{visual_contract_value_words}})، أو وفقًا للدفعات أو المراحل أو الآلية المالية المحددة والمتفق عليها بين الطرفين.
 يتم سداد المقابل المالي بالطريقة والمواعيد المتفق عليها بين الطرفين، سواء كان ذلك نقدًا أو عن طريق التحويل البنكي أو المحافظ الإلكترونية أو أي وسيلة دفع أخرى يتفق عليها الطرفان، ويُعد إيصال السداد أو إشعار التحويل أو أي وسيلة إثبات أخرى مقبولة قانونًا دليلًا على الوفاء بالمبلغ المسدد.
 إذا اتفق الطرفان على سداد المقابل المالي دفعة واحدة، يلتزم الطرف الأول بسدادها في الموعد المحدد، وإذا تم الاتفاق على السداد على عدة دفعات أو مراحل، يلتزم الطرف الأول بسداد كل دفعة في تاريخ استحقاقها وفقًا لما تم الاتفاق عليه.
 لا يلتزم الطرف الثاني بالبدء في تنفيذ الخدمات أو الاستمرار فيها أو تسليم المخرجات أو مراحل التنفيذ المستحقة إلا في حدود سداد الدفعات المستحقة في مواعيدها، ما لم يتفق الطرفان كتابةً على خلاف ذلك.
@@ -2990,7 +2988,7 @@ const freelancerLegalClauses: LegalClauseDefinition[] = [
 
 export const freelancerTemplateDefinition: ContractTemplateDefinition = {
   slug: "freelancer",
-  version: 14,
+  version: 15,
   nameAr: "عقود الخدمات والعمل الحر",
   description: "عقود الهوية البصرية وتطوير المواقع وإدارة منصات التواصل مع ملاحق اختيارية مستقلة وفارغة قابلة للطباعة والتعبئة اليدوية.",
   priceEgp: 0,
