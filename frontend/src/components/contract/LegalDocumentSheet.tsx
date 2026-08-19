@@ -415,16 +415,16 @@ function DocumentDataSections({
   return (
     <div className="zd-doc-contract-data">
       {steps.map((step) => {
+        const partyPresentation = isPartyStepKey(step.key);
         const printableFields = step.fields.filter((field) => field.printInDocument !== false && field.type !== "attachment");
         const itemFields = printableFields.filter((field) => {
           const value = fieldValues[field.key];
           const active = field.key === activeFieldKey;
+          if (partyPresentation) return field.type !== "repeater";
           return field.type !== "repeater" && (hasDocumentValue(value) || active) && !(field.type === "checkbox" && value !== true && !active);
         });
         const repeaterFields = printableFields.filter((field) => field.type === "repeater" && (hasDocumentValue(fieldValues[field.key]) || field.key === activeFieldKey));
         if (!itemFields.length && !repeaterFields.length) return null;
-
-        const partyPresentation = isPartyStepKey(step.key);
         return (
           <section id={`doc-step-${step.key}`} data-step-preview-key={step.key} key={step.key} className="zd-doc-data-section-block scroll-mt-28">
             <h2 className="zd-doc-section-title">{step.titleAr}</h2>

@@ -54,7 +54,7 @@ function partyFields(prefix: "seller" | "buyer", label: string, allowCompany: bo
   if (allowCompany) {
     fields.push({
       key: `${prefix}_party_type`, type: "radio", labelAr: `صفة ${label}`, required: true,
-      printInDocument: false, options: partyTypeOptions,
+      options: partyTypeOptions,
     });
   }
 
@@ -65,7 +65,7 @@ function partyFields(prefix: "seller" | "buyer", label: string, allowCompany: bo
   fields.push(
     individualField({ key: `${prefix}_name`, type: "text", labelAr: `الاسم الكامل لـ${label}`, required: true }),
     individualField({ key: `${prefix}_nationality`, type: "text", labelAr: "الجنسية", required: true }),
-    individualField({ key: `${prefix}_identity_document_type`, type: "radio", labelAr: "نوع مستند إثبات الهوية", required: true, printInDocument: false, options: identityDocumentOptions }),
+    individualField({ key: `${prefix}_identity_document_type`, type: "radio", labelAr: "نوع مستند إثبات الهوية", required: true, options: identityDocumentOptions }),
     individualField({ key: `${prefix}_national_id`, type: "text", labelAr: "رقم مستند إثبات الهوية", required: true }),
     individualField({ key: `${prefix}_id_issuer`, type: "text", labelAr: "جهة الإصدار" }),
     individualField({ key: `${prefix}_id_issue_date`, type: "date", labelAr: "تاريخ الإصدار" }),
@@ -480,6 +480,10 @@ const saleReviewStep: WizardStepDefinition = { key: "sale_review", titleAr: "ا�
 const sharedDefaults: Record<string, string | number | boolean | null> = {
   seller_party_type: "individual",
   buyer_party_type: "individual",
+  seller_nationality: "مصري",
+  buyer_nationality: "مصري",
+  seller_identity_document_type: "national_id",
+  buyer_identity_document_type: "national_id",
   sale_email_notices_enabled: false,
   sale_notice_use_party_emails: true,
   sale_messaging_enabled: false,
