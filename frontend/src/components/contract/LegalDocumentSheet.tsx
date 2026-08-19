@@ -1032,14 +1032,12 @@ export default function LegalDocumentSheet({
       <div className="zd-doc-body relative z-10 text-justify text-slate-800">
 
         {resolvedDefinition ? (
-          isSale ? null : (
-            <DocumentDataSections
-              steps={resolvedDefinition.steps}
-              fieldValues={fieldValues}
-              activeFieldKey={activeFieldKey}
-              activeFieldLabel={activeFieldLabel}
-            />
-          )
+          <DocumentDataSections
+            steps={resolvedDefinition.steps}
+            fieldValues={fieldValues}
+            activeFieldKey={activeFieldKey}
+            activeFieldLabel={activeFieldLabel}
+          />
         ) : (
         <>
 

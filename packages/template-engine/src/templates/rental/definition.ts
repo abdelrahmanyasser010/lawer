@@ -88,10 +88,9 @@ const rentalCommonSteps: WizardStepDefinition[] = [
   {
     key: "rental_contract_meta",
     titleAr: "بيانات العقد",
-    articleRange: "تاريخ تحرير العقد وعدد النسخ",
+    articleRange: "تاريخ تحرير العقد",
     fields: [
       contractDateField,
-      { key: "contract_copies_count", type: "number", labelAr: "عدد النسخ الأصلية للعقد", required: true, validation: { min: 2 }, placeholder: "2" },
     ],
   },
   { key: "rental_landlord", titleAr: "بيانات الطرف الأول (المؤجر)", articleRange: "المادة الأولى", fields: partyFields("landlord", "المؤجر") },

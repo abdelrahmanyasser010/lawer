@@ -58,7 +58,7 @@ function partyFields(
     { key: `${prefix}_party_type`, type: "radio", labelAr: `الصفة القانونية لـ${label}`, required: true, options: partyTypeOptions },
     { key: `${prefix}_name`, type: "text", labelAr: `الاسم الكامل لـ${label}`, required: true },
     { key: `${prefix}_nationality`, type: "text", labelAr: "الجنسية", required: true },
-    { key: `${prefix}_identity_document_type`, type: "radio", labelAr: "نوع مستند إثبات الهوية", required: true, printInDocument: false, options: identityDocumentOptions },
+    { key: `${prefix}_identity_document_type`, type: "radio", labelAr: "نوع مستند إثبات الهوية", required: true, options: identityDocumentOptions },
     { key: `${prefix}_national_id`, type: "text", labelAr: "رقم مستند إثبات الهوية", required: true },
     { key: `${prefix}_id_issuer`, type: "text", labelAr: "جهة الإصدار" },
     { key: `${prefix}_id_issue_date`, type: "date", labelAr: "تاريخ الإصدار" },
