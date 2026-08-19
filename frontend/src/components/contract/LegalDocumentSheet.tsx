@@ -416,7 +416,7 @@ function DocumentDataSections({
     <div className="zd-doc-contract-data">
       {steps.map((step) => {
         const partyPresentation = isPartyStepKey(step.key);
-        const printableFields = step.fields.filter((field) => field.printInDocument !== false && field.type !== "attachment");
+        const printableFields = step.fields.filter((field) => field.printInDocument !== false && field.type !== "attachment" && !/(?:copies|contract_copies)/i.test(field.key) && !/(?:عدد.*نسخ)/i.test(field.labelAr));
         const itemFields = printableFields.filter((field) => {
           const value = fieldValues[field.key];
           const active = field.key === activeFieldKey;
