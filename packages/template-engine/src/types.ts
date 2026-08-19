@@ -67,6 +67,7 @@ export interface RepeaterColumnDefinition {
   visibleWhen?: ConditionDefinition;
   placeholder?: string;
   options?: FieldOptionDefinition[];
+  validation?: FieldValidationDefinition;
 }
 
 export interface WizardFieldDefinition {
