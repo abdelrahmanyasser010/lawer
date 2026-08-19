@@ -23,7 +23,7 @@ return new class extends Migration {
             return;
         }
         if ($canonicalVersion !== $targetVersion) {
-            throw new RuntimeException('Canonical apartment_sale v14 definition is required by this migration.');
+            throw new RuntimeException('Canonical rental v14 definition is required by this migration.');
         }
 
         DB::transaction(function () use ($raw, $definition, $targetVersion): void {
@@ -33,7 +33,7 @@ return new class extends Migration {
                 ->first();
 
             if (!$template) {
-                throw new RuntimeException('Contract template was not found: apartment_sale');
+                throw new RuntimeException('Contract template was not found: rental');
             }
             if ((int) ($template->template_version ?? 0) > $targetVersion) {
                 return;

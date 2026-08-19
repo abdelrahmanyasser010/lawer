@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   apartmentSaleTemplateDefinition,
   auditVariantFieldCoverage,
@@ -7,6 +8,7 @@ import {
   visualIdentityFieldCoverageExternalBindings,
   socialMediaFieldCoverageExternalBindings,
   apartmentSaleFieldCoverageExternalBindings,
+  rentalFieldCoverageExternalBindings,
   createSampleFieldValues,
   evaluateCondition,
   freelancerTemplateDefinition,
@@ -327,58 +329,79 @@ test("social media delay penalty uses exactly one source-backed calculation path
   assert.equal(Boolean(percentageFields.social_delay_penalty_amount), false);
 });
 
-test("rental v13 exposes the three reviewed lease variants without legacy fields", () => {
-  assert.equal(rentalTemplateDefinition.version, 13);
+test("rental v14 publication files stay version-aligned", () => {
+  const backendDefinition = JSON.parse(readFileSync("../../backend/database/template-definitions/rental.json", "utf8"));
+  const migration = readFileSync("../../backend/database/migrations/2026_08_19_000600_publish_rental_contracts_v14.php", "utf8");
+  assert.equal(rentalTemplateDefinition.version, 14);
+  assert.equal(backendDefinition.slug, "rental");
+  assert.equal(backendDefinition.version, 14);
+  assert.match(migration, /\$targetVersion = 14;/);
+  assert.match(migration, /Canonical rental v14 definition is required by this migration\./);
+  assert.doesNotMatch(migration, /apartment_sale/);
+});
+
+test("rental v14 exposes three source-specific lease variants with derived legal values and no court dropdown", () => {
+  assert.equal(rentalTemplateDefinition.version, 14);
   assert.deepEqual(
     rentalTemplateDefinition.variants.map((variant) => variant.key),
     ["residential_lease", "commercial_lease", "administrative_lease"],
   );
-  const legacy = new Set([
+  const forbidden = new Set([
     "landlord_id_card_front", "landlord_id_card_back", "tenant_id_card_front", "tenant_id_card_back",
-    "renewal_policy", "sublease_allowed", "competent_court", "has_deposit", "monthly_rent",
-    "pets_policy", "daily_late_penalty_amount",
+    "renewal_policy", "sublease_allowed", "competent_court", "rental_jurisdiction_court", "has_deposit", "monthly_rent",
+    "pets_policy", "daily_late_penalty_amount", "lease_duration_text", "deposit_amount_words", "rent_amount_words",
   ]);
   for (const variant of rentalTemplateDefinition.variants) {
-    const keys = variant.steps.flatMap((step) => step.fields.map((field) => field.key));
-    for (const key of legacy) assert.equal(keys.includes(key), false, `${variant.key}:${key}`);
+    const fields = variant.steps.flatMap((step) => step.fields);
+    const keys = new Set(fields.map((field) => field.key));
+    for (const key of forbidden) assert.equal(keys.has(key), false, `${variant.key}:${key}`);
+    assert.equal(variant.requiredClauseKeys.includes("rental_property_jurisdiction_clause"), false, `${variant.key}:no duplicate court clause`);
+    assert.equal(fields.find((field) => field.key === "property_governorate")?.required, true);
+    assert.equal(fields.find((field) => field.key === "property_city")?.required, true);
   }
 });
 
-test("rental v13 core finance, duration and source-specific payment fields are required with no fake defaults", () => {
-  const coreRequiredKeys = [
-    "contract_date", "contract_copies_count", "lease_duration_text", "start_date", "end_date", "property_delivery_date",
-    "deposit_amount", "deposit_amount_words", "rent_period", "rent_amount", "rent_amount_words", "rent_due_day",
-    "holdover_daily_compensation", "rental_jurisdiction_court",
+test("rental v14 core finance, duration and source-specific payment semantics are fail-closed", () => {
+  const commonRequired = [
+    "contract_date", "contract_copies_count", "lease_duration_value", "lease_duration_unit", "start_date", "end_date", "property_delivery_date",
+    "deposit_amount", "deposit_payment_status", "rent_period", "rent_amount", "rent_due_day", "holdover_daily_compensation",
+    "property_governorate", "property_city", "property_district", "property_street", "floor_number", "unit_number", "property_area",
+    "electricity_meter_exists", "water_meter_exists", "gas_meter_exists",
   ];
   for (const variant of rentalTemplateDefinition.variants) {
     const fields = Object.fromEntries(variant.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
-    for (const key of coreRequiredKeys) assert.equal(fields[key]?.required, true, `${variant.key}:${key}`);
-    assert.equal(fields.rental_jurisdiction_court.type, "select");
-    assert.ok(fields.rental_jurisdiction_court.options.some((option) => option.value === "القاهرة"));
-    assert.ok(variant.requiredClauseKeys.includes("rental_jurisdiction_court_clause"));
+    for (const key of commonRequired) assert.equal(fields[key]?.required, true, `${variant.key}:${key}`);
     assert.equal(fields.contract_copies_count.validation.min, 2);
-    for (const key of ["deposit_amount", "rent_amount", "annual_increase_rate", "rent_due_day", "late_payment_daily_compensation", "holdover_daily_compensation"]) {
-      assert.equal(Object.hasOwn(variant.defaultFieldValues ?? {}, key), false, `${variant.key}:${key} must not have a fake default`);
-    }
+    assert.equal(variant.defaultFieldValues.contract_copies_count, 2);
+    assert.equal(Object.hasOwn(variant.defaultFieldValues ?? {}, "deposit_amount"), false);
+    assert.equal(Object.hasOwn(variant.defaultFieldValues ?? {}, "rent_amount"), false);
+    assert.equal(Object.hasOwn(variant.defaultFieldValues ?? {}, "rent_due_day"), false);
+    assert.equal(Object.hasOwn(variant.defaultFieldValues ?? {}, "holdover_daily_compensation"), false);
+
     if (variant.key === "residential_lease") {
       assert.equal(fields.rental_payment_methods.required, true);
       assert.equal(fields.rental_payment_methods.minRows, 1);
-      assert.equal(fields.rental_payment_methods.columns.find((column) => column.key === "method").required, true);
       assert.equal(fields.residential_payment_grace_days.required, true);
-      assert.equal(fields.residential_payment_grace_days.validation.min, 1);
       assert.equal(fields.late_payment_daily_compensation.required, true);
+      assert.equal(fields.residential_pets_allowed.required, true);
       assert.equal(Boolean(fields.rental_payment_method), false);
     } else {
       assert.equal(fields.rental_payment_method.required, true);
       assert.equal(Boolean(fields.rental_payment_methods), false);
-      if (variant.key === "commercial_lease") assert.equal(fields.late_payment_daily_compensation.required, true);
-      if (variant.key === "administrative_lease") assert.equal(Boolean(fields.late_payment_daily_compensation), false);
+      assert.equal(fields.late_payment_daily_compensation.required, true);
+      if (variant.key === "commercial_lease") assert.equal(fields.commercial_nonpayment_termination_days.required, true);
+      if (variant.key === "administrative_lease") {
+        assert.equal(fields.administrative_rent_grace_days.required, true);
+        assert.equal(variant.defaultFieldValues.administrative_rent_grace_days, 7);
+      }
     }
   }
 });
 
-test("rental company and optional contact children become required only when their parent condition is active", () => {
-  const companyValues = {
+test("rental company identity and notice contacts are required only on their active branches", () => {
+  const base = rentalTemplateDefinition.variants.find((v) => v.key === "residential_lease").defaultFieldValues;
+  const explicit = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], {
+    ...base,
     landlord_party_type: "company",
     tenant_party_type: "individual",
     rental_email_notices_enabled: true,
@@ -386,42 +409,55 @@ test("rental company and optional contact children become required only when the
     rental_messaging_enabled: true,
     rental_messaging_channel: "أخرى",
     rental_messaging_use_party_phones: false,
-  };
-  const resolved = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], companyValues);
-  const fields = Object.fromEntries(resolved.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
+  });
+  const ef = Object.fromEntries(explicit.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
   for (const key of [
     "landlord_company_name", "landlord_company_legal_form", "landlord_commercial_register", "landlord_tax_card",
-    "landlord_legal_representative", "landlord_representative_capacity", "landlord_company_address", "landlord_company_email",
-  ]) assert.equal(fields[key]?.required, true, key);
-  assert.equal(fields.rental_notice_landlord_email.required, true);
-  assert.equal(fields.rental_notice_tenant_email.required, true);
-  assert.equal(fields.rental_messaging_channel_other.required, true);
-  assert.equal(fields.rental_messaging_landlord_phone.required, true);
-  assert.equal(fields.rental_messaging_tenant_phone.required, true);
+    "landlord_legal_representative", "landlord_representative_capacity", "landlord_company_address",
+  ]) assert.equal(ef[key]?.required, true, key);
+  assert.equal(Boolean(ef.landlord_company_email?.required), false, "company email is not duplicated when explicit notice addresses are used");
+  assert.equal(ef.rental_notice_landlord_email.required, true);
+  assert.equal(ef.rental_notice_tenant_email.required, true);
+  assert.equal(ef.rental_messaging_channel_other.required, true);
+  assert.equal(ef.rental_messaging_landlord_phone.required, true);
+  assert.equal(ef.rental_messaging_tenant_phone.required, true);
+
+  const reuse = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], {
+    ...base,
+    landlord_party_type: "company",
+    tenant_party_type: "individual",
+    rental_email_notices_enabled: true,
+    rental_notice_use_party_emails: true,
+    rental_messaging_enabled: true,
+    rental_messaging_channel: "WhatsApp",
+    rental_messaging_use_party_phones: true,
+  });
+  const rf = Object.fromEntries(reuse.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
+  assert.equal(rf.landlord_company_email.required, true);
+  assert.equal(rf.landlord_company_phone.required, true);
+  assert.equal(Boolean(rf.rental_notice_landlord_email), false);
+  assert.equal(Boolean(rf.rental_messaging_landlord_phone), false);
 });
 
-test("furnished residential lease never auto-adds the optional handover inventory annex", () => {
-  const baseValues = { ...rentalTemplateDefinition.variants.find((v) => v.key === "residential_lease").defaultFieldValues };
-  const without = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], { ...baseValues, residential_is_furnished: false });
-  assert.equal(without.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), false);
-  const withFurnished = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], { ...baseValues, residential_is_furnished: true });
-  assert.equal(withFurnished.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), false);
-  const selected = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", ["rental_handover_inventory_report"], { ...baseValues, residential_is_furnished: true });
-  assert.equal(selected.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), true);
+test("rental handover annex stays manually selected but becomes mandatory when the chosen facts require it", () => {
+  const residentialVariant = rentalTemplateDefinition.variants.find((v) => v.key === "residential_lease");
+  const residentialValues = { ...createSampleFieldValues(rentalTemplateDefinition, "residential_lease", []), residential_is_furnished: true };
+  const residentialResolved = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], residentialValues);
+  assert.equal(residentialResolved.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), false);
+  let issues = validateDynamicDefinition(residentialResolved, { templateSlug: "rental", variantKey: "residential_lease", selectedOptionalClauseKeys: [], fieldValues: residentialValues, touchedFieldKeys: [], attachmentRefs: {} });
+  assert.ok(issues.some((issue) => issue.fieldKey === "rental_handover_inventory_report"));
+  const residentialSelected = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", ["rental_handover_inventory_report"], residentialValues);
+  issues = validateDynamicDefinition(residentialSelected, { templateSlug: "rental", variantKey: "residential_lease", selectedOptionalClauseKeys: ["rental_handover_inventory_report"], fieldValues: residentialValues, touchedFieldKeys: [], attachmentRefs: {} });
+  assert.equal(issues.some((issue) => issue.fieldKey === "rental_handover_inventory_report"), false);
+
+  const adminValues = { ...createSampleFieldValues(rentalTemplateDefinition, "administrative_lease", []), administrative_delivery_condition: "inventory_report" };
+  const adminResolved = resolveWizardDefinition(rentalTemplateDefinition, "administrative_lease", [], adminValues);
+  assert.equal(adminResolved.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), false);
+  issues = validateDynamicDefinition(adminResolved, { templateSlug: "rental", variantKey: "administrative_lease", selectedOptionalClauseKeys: [], fieldValues: adminValues, touchedFieldKeys: [], attachmentRefs: {} });
+  assert.ok(issues.some((issue) => issue.fieldKey === "rental_handover_inventory_report"));
 });
 
-test("administrative inventory-report delivery condition never auto-adds the optional handover annex", () => {
-  const variant = rentalTemplateDefinition.variants.find((v) => v.key === "administrative_lease");
-  const base = { ...variant.defaultFieldValues, administrative_delivery_condition: "vacant" };
-  const without = resolveWizardDefinition(rentalTemplateDefinition, "administrative_lease", [], base);
-  assert.equal(without.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), false);
-  const withReport = resolveWizardDefinition(rentalTemplateDefinition, "administrative_lease", [], { ...base, administrative_delivery_condition: "inventory_report" });
-  assert.equal(withReport.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), false);
-  const selected = resolveWizardDefinition(rentalTemplateDefinition, "administrative_lease", ["rental_handover_inventory_report"], { ...base, administrative_delivery_condition: "inventory_report" });
-  assert.equal(selected.activeClauseKeys.includes("rental_handover_inventory_report_source_document"), true);
-});
-
-test("commercial and administrative optional legal paragraphs enforce dependent values", () => {
+test("commercial and administrative optional legal branches enforce dependent values", () => {
   const commercial = resolveWizardDefinition(rentalTemplateDefinition, "commercial_lease", [], {
     commercial_early_termination_enabled: true,
     commercial_guarantee_checks_enabled: true,
@@ -429,9 +465,11 @@ test("commercial and administrative optional legal paragraphs enforce dependent 
     commercial_legal_fees_enabled: true,
   });
   const cf = Object.fromEntries(commercial.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
+  assert.equal(cf.commercial_early_termination_notice_days.required, true);
   assert.equal(cf.commercial_early_termination_compensation.required, true);
   for (const key of ["commercial_guarantee_checks_count", "commercial_guarantee_bank", "commercial_guarantee_check_numbers", "commercial_guarantee_value_mode", "commercial_guarantee_each_amount", "commercial_legal_fees_bearer"]) assert.equal(cf[key]?.required, true, key);
   assert.equal(Boolean(cf.commercial_guarantee_total_amount), false);
+  assert.deepEqual(cf.commercial_legal_fees_bearer.options.map((option) => option.value), ["المؤجر", "المستأجر", "الطرفان"]);
 
   const administrative = resolveWizardDefinition(rentalTemplateDefinition, "administrative_lease", [], {
     administrative_early_termination_enabled: true,
@@ -440,37 +478,97 @@ test("commercial and administrative optional legal paragraphs enforce dependent 
     administrative_legal_fees_enabled: true,
   });
   const af = Object.fromEntries(administrative.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
+  assert.equal(af.administrative_early_termination_notice_days.required, true);
   assert.equal(af.administrative_early_termination_compensation.required, true);
   for (const key of ["administrative_guarantee_checks_count", "administrative_guarantee_bank", "administrative_guarantee_check_numbers", "administrative_guarantee_value_mode", "administrative_guarantee_total_amount", "administrative_legal_fees_bearer"]) assert.equal(af[key]?.required, true, key);
   assert.equal(Boolean(af.administrative_guarantee_each_amount), false);
 });
 
-test("rental annual increase follows each source: fixed 10% for residential/admin, editable rate only for commercial", () => {
-  for (const key of ["residential_lease", "administrative_lease"]) {
+test("rental annual increase is an explicit editable branch in all three lease variants", () => {
+  for (const key of ["residential_lease", "commercial_lease", "administrative_lease"]) {
     const off = resolveWizardDefinition(rentalTemplateDefinition, key, [], { annual_increase_enabled: false });
     const on = resolveWizardDefinition(rentalTemplateDefinition, key, [], { annual_increase_enabled: true });
     assert.equal(off.steps.flatMap((step) => step.fields).some((field) => field.key === "annual_increase_rate"), false, key);
-    assert.equal(on.steps.flatMap((step) => step.fields).some((field) => field.key === "annual_increase_rate"), false, key);
+    const rate = on.steps.flatMap((step) => step.fields).find((field) => field.key === "annual_increase_rate");
+    assert.equal(rate.required, true, key);
+    assert.equal(rentalTemplateDefinition.variants.find((variant) => variant.key === key).defaultFieldValues.annual_increase_rate, 10);
   }
-  const off = resolveWizardDefinition(rentalTemplateDefinition, "commercial_lease", [], { annual_increase_enabled: false });
-  assert.equal(off.steps.flatMap((step) => step.fields).some((field) => field.key === "annual_increase_rate"), false);
-  const on = resolveWizardDefinition(rentalTemplateDefinition, "commercial_lease", [], { annual_increase_enabled: true });
-  const rate = on.steps.flatMap((step) => step.fields).find((field) => field.key === "annual_increase_rate");
-  assert.equal(rate.required, true);
   const clauses = Object.fromEntries(rentalTemplateDefinition.legalClauses.map((clause) => [clause.key, clause]));
-  assert.match(clauses.rental_residential_annual_increase_clause.bodyAr, /10%/);
-  assert.match(clauses.rental_administrative_annual_increase_clause.bodyAr, /10%/);
-  assert.match(clauses.rental_commercial_annual_increase_clause.bodyAr, /\{\{annual_increase_rate\}\}/);
+  for (const key of ["rental_residential_annual_increase_clause", "rental_commercial_annual_increase_clause", "rental_administrative_annual_increase_clause"]) {
+    assert.match(clauses[key].bodyAr, /\{\{annual_increase_rate\}\}/, key);
+  }
 });
 
-test("rental jurisdiction uses an explicit selected court field and required clause", () => {
+test("rental jurisdiction is derived from the property location inside the source court article", () => {
+  const articleByVariant = {
+    residential_lease: "residential_lease_source_article_18",
+    commercial_lease: "commercial_lease_source_article_19",
+    administrative_lease: "administrative_lease_source_article_19",
+  };
   for (const variant of rentalTemplateDefinition.variants) {
     const fields = Object.fromEntries(variant.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
-    assert.equal(fields.rental_jurisdiction_court.required, true, `${variant.key}:rental_jurisdiction_court`);
-    assert.equal(fields.rental_jurisdiction_court.type, "select");
-    assert.ok(fields.rental_jurisdiction_court.options.some((option) => option.value === "القاهرة"));
-    assert.ok(variant.requiredClauseKeys.includes("rental_jurisdiction_court_clause"));
+    assert.equal(Boolean(fields.rental_jurisdiction_court), false, variant.key);
+    const clause = rentalTemplateDefinition.legalClauses.find((item) => item.key === articleByVariant[variant.key]);
+    assert.ok(clause.variables.includes("rental_property_jurisdiction_text"), variant.key);
+    const values = { ...createSampleFieldValues(rentalTemplateDefinition, variant.key, []), property_city: "طنطا", property_governorate: "الغربية" };
+    const text = renderLegalClauses(rentalTemplateDefinition, variant.key, [], values).find((item) => item.key === articleByVariant[variant.key]).bodyAr;
+    assert.match(text, /طنطا/);
+    assert.match(text, /الغربية/);
   }
+});
+
+test("rental v14 reuses delivery date and meter facts in every governing handover and utilities article", () => {
+  const articleMap = {
+    residential_lease: ["residential_lease_source_article_10", "residential_lease_source_article_11", "residential_lease_source_article_12", "residential_lease_source_article_14"],
+    commercial_lease: ["commercial_lease_source_article_10", "commercial_lease_source_article_12", "commercial_lease_source_article_13", "commercial_lease_source_article_14"],
+    administrative_lease: ["administrative_lease_source_article_10", "administrative_lease_source_article_12", "administrative_lease_source_article_13", "administrative_lease_source_article_14"],
+  };
+  for (const variantKey of Object.keys(articleMap)) {
+    const values = {
+      ...createSampleFieldValues(rentalTemplateDefinition, variantKey, []),
+      property_delivery_date: "2026-09-17",
+      electricity_meter_exists: "yes",
+      electricity_meter: "ELEC-77881",
+      electricity_meter_type: "independent",
+      electricity_meter_reading: "4321",
+      water_meter_exists: "no",
+      gas_meter_exists: "no",
+    };
+    const rendered = Object.fromEntries(renderLegalClauses(rentalTemplateDefinition, variantKey, [], values).map((item) => [item.key, item.bodyAr]));
+    for (const key of articleMap[variantKey]) assert.match(rendered[key], /17\/09\/2026/, `${variantKey}:${key}`);
+    const utilitiesKey = articleMap[variantKey][1];
+    assert.match(rendered[utilitiesKey], /ELEC-77881/, variantKey);
+    assert.match(rendered[utilitiesKey], /4321/, variantKey);
+    assert.match(rendered[utilitiesKey], /المياه: لا يوجد/, variantKey);
+  }
+});
+
+test("administrative guarantee replenishment preserves the source ten-day rule without leaking it into commercial lease", () => {
+  const admin = rentalTemplateDefinition.legalClauses.find((item) => item.key === "rental_administrative_guarantee_checks_clause");
+  const commercial = rentalTemplateDefinition.legalClauses.find((item) => item.key === "rental_commercial_guarantee_checks_clause");
+  assert.match(admin.bodyAr, /عشرة \(10\) أيام/);
+  assert.doesNotMatch(commercial.bodyAr, /عشرة \(10\) أيام/);
+});
+
+test("rental v14 rejects inconsistent dates and mismatched guarantee-check counts", () => {
+  const values = { ...createSampleFieldValues(rentalTemplateDefinition, "commercial_lease", []), start_date: "2026-08-10", end_date: "2026-08-09", commercial_guarantee_checks_enabled: true, commercial_guarantee_checks_count: 2, commercial_guarantee_bank: "بنك الاختبار", commercial_guarantee_check_numbers: "1001", commercial_guarantee_value_mode: "total", commercial_guarantee_total_amount: 2000 };
+  const resolved = resolveWizardDefinition(rentalTemplateDefinition, "commercial_lease", [], values);
+  const issues = validateDynamicDefinition(resolved, { templateSlug: "rental", variantKey: "commercial_lease", selectedOptionalClauseKeys: [], fieldValues: values, touchedFieldKeys: [], attachmentRefs: {} });
+  assert.ok(issues.some((issue) => issue.fieldKey === "end_date"));
+  assert.ok(issues.some((issue) => issue.fieldKey === "commercial_guarantee_check_numbers"));
+});
+
+test("rental v14 variable coverage audit fails closed for all three lease contracts", () => {
+  const minimums = { residential_lease: 110, commercial_lease: 125, administrative_lease: 120 };
+  for (const variant of rentalTemplateDefinition.variants) {
+    const audit = auditVariantFieldCoverage(rentalTemplateDefinition, variant.key, { derivedVariableDependencies: derivedClauseVariableDependencies, externalBindings: rentalFieldCoverageExternalBindings });
+    assert.ok(audit.entries.length >= minimums[variant.key], `${variant.key}:${audit.entries.length}`);
+    assert.deepEqual(audit.uncoveredFieldKeys, [], `${variant.key}: ${audit.uncoveredFieldKeys.join(", ")}`);
+  }
+  const mutated = structuredClone(rentalTemplateDefinition);
+  mutated.variants[0].steps[0].fields.push({ key: "rental_future_unbound_legal_term", type: "text", labelAr: "حقل قانوني مستقبلي غير مربوط" });
+  const inspection = inspectTemplateDefinition(mutated);
+  assert.ok(inspection.errors.some((issue) => issue.code === "UNBOUND_LEGAL_FIELD"));
 });
 
 test("rental reviewed source clauses contain no extraction markers or unconditioned optional paragraphs", () => {
@@ -640,12 +738,13 @@ test("all nine contracts use an explicit national-ID/passport selector and have 
 });
 
 test("explicit identity-document choice controls validation instead of nationality", () => {
-  const resolved = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], {});
+  const base = { ...rentalTemplateDefinition.variants.find((v) => v.key === "residential_lease").defaultFieldValues, landlord_party_type: "individual" };
+  const resolved = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], base);
   const issues = (fieldValues) => validateDynamicDefinition(resolved, {
     templateSlug: "rental",
     variantKey: "residential_lease",
     selectedOptionalClauseKeys: [],
-    fieldValues,
+    fieldValues: { ...base, ...fieldValues },
     touchedFieldKeys: [],
     attachmentRefs: {},
   });
@@ -707,6 +806,7 @@ test("core wizard values are printed inside their governing legal articles", () 
     contract_copies_count: 4,
     residential_compound_name: "كمبوند-اختبار-العقد",
     building_number: "مبنى-77",
+    electricity_meter_exists: "yes",
     electricity_meter: "عداد-12345",
     electricity_meter_type: "independent",
   };
@@ -773,21 +873,21 @@ test("execution, warranty, financial, delivery and court values are rendered ins
   for (const variantKey of ["residential_lease", "commercial_lease", "administrative_lease"]) {
     const values = {
       ...createSampleFieldValues(rentalTemplateDefinition, variantKey, []),
-      lease_duration_text: "سبعة وعشرون شهرًا",
+      lease_duration_value: 27,
+      lease_duration_unit: "months",
       start_date: "2027-02-03",
       end_date: "2029-05-03",
       property_delivery_date: "2027-02-11",
+      property_city: "المنصورة",
+      property_governorate: "الدقهلية",
       deposit_amount: 27111,
-      deposit_amount_words: "سبعة وعشرون ألفًا ومائة وأحد عشر",
       rent_amount: 27891,
-      rent_amount_words: "سبعة وعشرون ألفًا وثمانمائة وواحد وتسعون",
       rent_due_day: 23,
       holdover_daily_compensation: 927,
       late_payment_daily_compensation: 619,
-      rental_jurisdiction_court: "المنصورة",
     };
     const text = renderLegalClauses(rentalTemplateDefinition, variantKey, [], values).map((c) => c.bodyAr).join("\n");
-    for (const sentinel of ["سبعة وعشرون شهرًا", "03/02/2027", "03/05/2029", "11/02/2027", "سبعة وعشرون ألفًا ومائة وأحد عشر", "سبعة وعشرون ألفًا وثمانمائة وواحد وتسعون", "المنصورة"]) assert.match(text, new RegExp(sentinel), `${variantKey}:${sentinel}`);
+    for (const sentinel of ["٢٧ شهرًا", "03/02/2027", "03/05/2029", "11/02/2027", "سبعة وعشرون ألف", "المنصورة", "الدقهلية"]) assert.match(text, new RegExp(sentinel), `${variantKey}:${sentinel}`);
   }
 
   for (const variantKey of ["preliminary_sale", "registrable_sale", "inherited_sale"]) {
