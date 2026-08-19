@@ -112,7 +112,7 @@ test("website manual annexes are active only after explicit user selection and s
 
 
 test("visual identity semantics remain intact in freelancer v15", () => {
-  assert.equal(freelancerTemplateDefinition.version, 15);
+  assert.equal(freelancerTemplateDefinition.version, 16);
   const visual = freelancerTemplateDefinition.variants.find((item) => item.key === "visual_identity_design");
   assert.ok(visual);
   const allFields = visual.steps.flatMap((step) => step.fields);
@@ -335,20 +335,20 @@ test("full nine-contract publication files stay version-aligned", () => {
   const rentalBackend = JSON.parse(readFileSync(new URL("../../../backend/database/template-definitions/rental.json", import.meta.url), "utf8"));
   const saleBackend = JSON.parse(readFileSync(new URL("../../../backend/database/template-definitions/apartment_sale.json", import.meta.url), "utf8"));
   const freelancerBackend = JSON.parse(readFileSync(new URL("../../../backend/database/template-definitions/freelancer.json", import.meta.url), "utf8"));
-  const migration = readFileSync(new URL("../../../backend/database/migrations/2026_08_19_000700_publish_full_nine_contracts_experience.php", import.meta.url), "utf8");
-  assert.equal(rentalTemplateDefinition.version, 15);
-  assert.equal(apartmentSaleTemplateDefinition.version, 14);
-  assert.equal(freelancerTemplateDefinition.version, 15);
-  assert.equal(rentalBackend.version, 15);
-  assert.equal(saleBackend.version, 14);
-  assert.equal(freelancerBackend.version, 15);
-  assert.match(migration, /'slug' => 'freelancer'[\s\S]*'version' => 15/);
-  assert.match(migration, /'slug' => 'apartment_sale'[\s\S]*'version' => 14/);
-  assert.match(migration, /'slug' => 'rental'[\s\S]*'version' => 15/);
+  const migration = readFileSync(new URL("../../../backend/database/migrations/2026_08_19_000800_publish_contract_wizard_cleanup.php", import.meta.url), "utf8");
+  assert.equal(rentalTemplateDefinition.version, 16);
+  assert.equal(apartmentSaleTemplateDefinition.version, 15);
+  assert.equal(freelancerTemplateDefinition.version, 16);
+  assert.equal(rentalBackend.version, 16);
+  assert.equal(saleBackend.version, 15);
+  assert.equal(freelancerBackend.version, 16);
+  assert.match(migration, /'slug' => 'freelancer'[\s\S]*'version' => 16/);
+  assert.match(migration, /'slug' => 'apartment_sale'[\s\S]*'version' => 15/);
+  assert.match(migration, /'slug' => 'rental'[\s\S]*'version' => 16/);
 });
 
 test("rental v15 exposes three source-specific lease variants with derived legal values and no court dropdown", () => {
-  assert.equal(rentalTemplateDefinition.version, 15);
+  assert.equal(rentalTemplateDefinition.version, 16);
   assert.deepEqual(
     rentalTemplateDefinition.variants.map((variant) => variant.key),
     ["residential_lease", "commercial_lease", "administrative_lease"],
@@ -634,7 +634,7 @@ test("rental residential repeater makes other payment details required in the sa
 });
 
 test("sale v14 exposes three source-specific variants with fail-closed property logic", () => {
-  assert.equal(apartmentSaleTemplateDefinition.version, 14);
+  assert.equal(apartmentSaleTemplateDefinition.version, 15);
   assert.deepEqual(apartmentSaleTemplateDefinition.variants.map((item) => item.key), ["preliminary_sale", "registrable_sale", "inherited_sale"]);
   const forbidden = new Set(["sale_jurisdiction_court", "sale_total_price_words", "sale_remaining_amount", "preliminary_include_benefits_clause"]);
   for (const variant of apartmentSaleTemplateDefinition.variants) {
@@ -1524,5 +1524,48 @@ test("preview A4 typography stays aligned with the WeasyPrint PDF hierarchy", ()
   for (const token of ["font-size:11.35pt", "line-height:1.44", "min-height:18mm", "font-size:17.5pt", "font-size:11.25pt", "font-size:9.4pt"]) {
     assert.ok(css.includes(token), `preview ${token}`);
     assert.ok(blade.includes(token), `pdf ${token}`);
+  }
+});
+
+test("all nine contracts have zero copies-count fields in wizard steps and resolve internal copies in legal text without placeholders", () => {
+  const definitions = [
+    { def: rentalTemplateDefinition, variants: ["residential_lease", "commercial_lease", "administrative_lease"] },
+    { def: apartmentSaleTemplateDefinition, variants: ["preliminary_sale", "registrable_sale", "inherited_sale"] },
+    { def: freelancerTemplateDefinition, variants: ["visual_identity_design", "website_development", "social_media_management"] },
+  ];
+
+  const copiesRegex = /(?:copies|عدد.*نسخ)/i;
+
+  for (const { def, variants } of definitions) {
+    for (const variantKey of variants) {
+      const variant = def.variants.find((v) => v.key === variantKey);
+      assert.ok(variant, `Variant ${variantKey} must exist`);
+
+      // 1. Assert NO copies field exists in any wizard step
+      const stepFields = variant.steps.flatMap((step) => step.fields);
+      for (const field of stepFields) {
+        assert.equal(
+          copiesRegex.test(field.key) || copiesRegex.test(field.labelAr),
+          false,
+          `Forbidden copies field ${field.key} (${field.labelAr}) found in wizard steps of ${variantKey}`
+        );
+      }
+
+      // 2. Assert rendered legal clauses resolve copies cleanly without placeholders
+      const sampleValues = createSampleFieldValues(def, variantKey, []);
+      const rendered = renderLegalClauses(def, variantKey, [], sampleValues);
+      const fullText = rendered.map((c) => `${c.titleAr}\n${c.bodyAr}`).join("\n");
+
+      assert.doesNotMatch(
+        fullText,
+        /\{\{[a-zA-Z0-9_]*copies[a-zA-Z0-9_]*\}\}/i,
+        `Unresolved copies placeholder found in rendered legal text for ${variantKey}`
+      );
+      assert.doesNotMatch(
+        fullText,
+        /\{\{[a-zA-Z0-9_]+\}\}/,
+        `Unresolved template variable token found in rendered legal text for ${variantKey}`
+      );
+    }
   }
 });

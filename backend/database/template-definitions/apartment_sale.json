@@ -1,6 +1,6 @@
 {
   "slug": "apartment_sale",
-  "version": 14,
+  "version": 15,
   "nameAr": "عقود بيع الوحدات السكنية",
   "description": "ثلاثة عقود بيع مستقلة مطابقة للنماذج: بيع ابتدائي، بيع قابل للتسجيل بالشهر العقاري، وبيع لوحدة آلت بالميراث، مع ملحق أقساط اختياري وفارغ قابل للطباعة والتعبئة اليدوية.",
   "priceEgp": 0,
@@ -55,7 +55,6 @@
               "type": "radio",
               "labelAr": "صفة البائع",
               "required": true,
-              "printInDocument": false,
               "options": [
                 {
                   "value": "individual",
@@ -101,7 +100,6 @@
               "key": "seller_identity_document_type",
               "type": "radio",
               "labelAr": "نوع مستند إثبات الهوية",
-              "printInDocument": false,
               "options": [
                 {
                   "value": "national_id",
@@ -350,7 +348,6 @@
               "type": "radio",
               "labelAr": "صفة المشتري",
               "required": true,
-              "printInDocument": false,
               "options": [
                 {
                   "value": "individual",
@@ -396,7 +393,6 @@
               "key": "buyer_identity_document_type",
               "type": "radio",
               "labelAr": "نوع مستند إثبات الهوية",
-              "printInDocument": false,
               "options": [
                 {
                   "value": "national_id",
@@ -1771,6 +1767,13 @@
         "sale_installment_schedule"
       ],
       "defaultFieldValues": {
+        "seller_party_type": "individual",
+        "buyer_party_type": "individual",
+        "seller_nationality": "مصري",
+        "buyer_nationality": "مصري",
+        "seller_identity_document_type": "national_id",
+        "buyer_identity_document_type": "national_id",
+        "sale_contract_copies_count": 2,
         "sale_email_notices_enabled": false,
         "sale_notice_use_party_emails": true,
         "sale_messaging_enabled": false,
@@ -1785,9 +1788,7 @@
         "sale_general_breach_cure_days": 15,
         "sale_force_majeure_notice_days": 15,
         "sale_notice_change_days": 15,
-        "preliminary_contractual_penalty_enabled": false,
-        "seller_party_type": "individual",
-        "buyer_party_type": "individual"
+        "preliminary_contractual_penalty_enabled": false
       }
     },
     {
@@ -1813,16 +1814,6 @@
               "type": "text",
               "labelAr": "مدينة تحرير العقد",
               "required": true
-            },
-            {
-              "key": "sale_contract_copies_count",
-              "type": "number",
-              "labelAr": "عدد النسخ الأصلية",
-              "required": true,
-              "validation": {
-                "min": 2,
-                "max": 20
-              }
             }
           ]
         },
@@ -1836,7 +1827,6 @@
               "type": "radio",
               "labelAr": "صفة البائع",
               "required": true,
-              "printInDocument": false,
               "options": [
                 {
                   "value": "individual",
@@ -1882,7 +1872,6 @@
               "key": "seller_identity_document_type",
               "type": "radio",
               "labelAr": "نوع مستند إثبات الهوية",
-              "printInDocument": false,
               "options": [
                 {
                   "value": "national_id",
@@ -2131,7 +2120,6 @@
               "type": "radio",
               "labelAr": "صفة المشتري",
               "required": true,
-              "printInDocument": false,
               "options": [
                 {
                   "value": "individual",
@@ -2177,7 +2165,6 @@
               "key": "buyer_identity_document_type",
               "type": "radio",
               "labelAr": "نوع مستند إثبات الهوية",
-              "printInDocument": false,
               "options": [
                 {
                   "value": "national_id",
@@ -3474,6 +3461,13 @@
         "sale_installment_schedule"
       ],
       "defaultFieldValues": {
+        "seller_party_type": "individual",
+        "buyer_party_type": "individual",
+        "seller_nationality": "مصري",
+        "buyer_nationality": "مصري",
+        "seller_identity_document_type": "national_id",
+        "buyer_identity_document_type": "national_id",
+        "sale_contract_copies_count": 2,
         "sale_email_notices_enabled": false,
         "sale_notice_use_party_emails": true,
         "sale_messaging_enabled": false,
@@ -3488,10 +3482,7 @@
         "sale_general_breach_cure_days": 30,
         "sale_force_majeure_notice_days": 15,
         "sale_notice_change_days": 15,
-        "sale_contract_copies_count": 2,
-        "registrable_contractual_penalty_enabled": false,
-        "seller_party_type": "individual",
-        "buyer_party_type": "individual"
+        "registrable_contractual_penalty_enabled": false
       }
     },
     {
@@ -3517,16 +3508,6 @@
               "type": "text",
               "labelAr": "مدينة تحرير العقد",
               "required": true
-            },
-            {
-              "key": "sale_contract_copies_count",
-              "type": "number",
-              "labelAr": "عدد النسخ الأصلية",
-              "required": true,
-              "validation": {
-                "min": 2,
-                "max": 20
-              }
             }
           ]
         },
@@ -3552,7 +3533,6 @@
               "type": "radio",
               "labelAr": "نوع مستند إثبات الهوية",
               "required": true,
-              "printInDocument": false,
               "options": [
                 {
                   "value": "national_id",
@@ -3633,7 +3613,6 @@
               "type": "radio",
               "labelAr": "نوع مستند إثبات الهوية",
               "required": true,
-              "printInDocument": false,
               "options": [
                 {
                   "value": "national_id",
@@ -4827,6 +4806,13 @@
         "sale_installment_schedule"
       ],
       "defaultFieldValues": {
+        "seller_party_type": "individual",
+        "buyer_party_type": "individual",
+        "seller_nationality": "مصري",
+        "buyer_nationality": "مصري",
+        "seller_identity_document_type": "national_id",
+        "buyer_identity_document_type": "national_id",
+        "sale_contract_copies_count": 2,
         "sale_email_notices_enabled": false,
         "sale_notice_use_party_emails": true,
         "sale_messaging_enabled": false,
@@ -4841,7 +4827,6 @@
         "sale_force_majeure_notice_days": 15,
         "sale_notice_change_days": 15,
         "sale_amicable_settlement_days": 15,
-        "sale_contract_copies_count": 2,
         "inherited_contractual_penalty_enabled": false
       }
     }

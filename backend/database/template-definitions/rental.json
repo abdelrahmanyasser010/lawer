@@ -1,6 +1,6 @@
 {
   "slug": "rental",
-  "version": 15,
+  "version": 16,
   "nameAr": "عقود إيجار الوحدات",
   "description": "ثلاثة عقود إيجار مستقلة مطابقة للنماذج السكنية والتجارية والإدارية، مع محضر استلام وجرد اختياري وفارغ قابل للطباعة والتعبئة اليدوية.",
   "priceEgp": 0,
@@ -29,23 +29,13 @@
         {
           "key": "rental_contract_meta",
           "titleAr": "بيانات العقد",
-          "articleRange": "تاريخ تحرير العقد وعدد النسخ",
+          "articleRange": "تاريخ تحرير العقد",
           "fields": [
             {
               "key": "contract_date",
               "type": "date",
               "labelAr": "تاريخ العقد",
               "required": true
-            },
-            {
-              "key": "contract_copies_count",
-              "type": "number",
-              "labelAr": "عدد النسخ الأصلية للعقد",
-              "required": true,
-              "validation": {
-                "min": 2
-              },
-              "placeholder": "2"
             }
           ]
         },
@@ -59,7 +49,6 @@
               "type": "radio",
               "labelAr": "الصفة القانونية لـالمؤجر",
               "required": true,
-              "printInDocument": false,
               "options": [
                 {
                   "value": "individual",
@@ -118,7 +107,6 @@
                 "operator": "equals",
                 "value": "individual"
               },
-              "printInDocument": false,
               "options": [
                 {
                   "value": "national_id",
@@ -393,7 +381,6 @@
               "type": "radio",
               "labelAr": "الصفة القانونية لـالمستأجر",
               "required": true,
-              "printInDocument": false,
               "options": [
                 {
                   "value": "individual",
@@ -452,7 +439,6 @@
                 "operator": "equals",
                 "value": "individual"
               },
-              "printInDocument": false,
               "options": [
                 {
                   "value": "national_id",
@@ -1768,8 +1754,10 @@
         "contract_copies_count": 2,
         "landlord_party_type": "individual",
         "tenant_party_type": "individual",
-        "landlord_nationality": "مصر",
-        "tenant_nationality": "مصر",
+        "landlord_nationality": "مصري",
+        "tenant_nationality": "مصري",
+        "landlord_identity_document_type": "national_id",
+        "tenant_identity_document_type": "national_id",
         "annual_increase_enabled": false,
         "deposit_payment_status": "received",
         "electricity_meter_exists": "no",
@@ -1799,23 +1787,13 @@
         {
           "key": "rental_contract_meta",
           "titleAr": "بيانات العقد",
-          "articleRange": "تاريخ تحرير العقد وعدد النسخ",
+          "articleRange": "تاريخ تحرير العقد",
           "fields": [
             {
               "key": "contract_date",
               "type": "date",
               "labelAr": "تاريخ العقد",
               "required": true
-            },
-            {
-              "key": "contract_copies_count",
-              "type": "number",
-              "labelAr": "عدد النسخ الأصلية للعقد",
-              "required": true,
-              "validation": {
-                "min": 2
-              },
-              "placeholder": "2"
             }
           ]
         },
@@ -1829,7 +1807,6 @@
               "type": "radio",
               "labelAr": "الصفة القانونية لـالمؤجر",
               "required": true,
-              "printInDocument": false,
               "options": [
                 {
                   "value": "individual",
@@ -1888,7 +1865,6 @@
                 "operator": "equals",
                 "value": "individual"
               },
-              "printInDocument": false,
               "options": [
                 {
                   "value": "national_id",
@@ -2163,7 +2139,6 @@
               "type": "radio",
               "labelAr": "الصفة القانونية لـالمستأجر",
               "required": true,
-              "printInDocument": false,
               "options": [
                 {
                   "value": "individual",
@@ -2222,7 +2197,6 @@
                 "operator": "equals",
                 "value": "individual"
               },
-              "printInDocument": false,
               "options": [
                 {
                   "value": "national_id",
@@ -3836,8 +3810,10 @@
         "contract_copies_count": 2,
         "landlord_party_type": "individual",
         "tenant_party_type": "individual",
-        "landlord_nationality": "مصر",
-        "tenant_nationality": "مصر",
+        "landlord_nationality": "مصري",
+        "tenant_nationality": "مصري",
+        "landlord_identity_document_type": "national_id",
+        "tenant_identity_document_type": "national_id",
         "annual_increase_enabled": false,
         "deposit_payment_status": "received",
         "electricity_meter_exists": "no",
@@ -3871,23 +3847,13 @@
         {
           "key": "rental_contract_meta",
           "titleAr": "بيانات العقد",
-          "articleRange": "تاريخ تحرير العقد وعدد النسخ",
+          "articleRange": "تاريخ تحرير العقد",
           "fields": [
             {
               "key": "contract_date",
               "type": "date",
               "labelAr": "تاريخ العقد",
               "required": true
-            },
-            {
-              "key": "contract_copies_count",
-              "type": "number",
-              "labelAr": "عدد النسخ الأصلية للعقد",
-              "required": true,
-              "validation": {
-                "min": 2
-              },
-              "placeholder": "2"
             }
           ]
         },
@@ -3901,7 +3867,6 @@
               "type": "radio",
               "labelAr": "الصفة القانونية لـالمؤجر",
               "required": true,
-              "printInDocument": false,
               "options": [
                 {
                   "value": "individual",
@@ -3960,7 +3925,6 @@
                 "operator": "equals",
                 "value": "individual"
               },
-              "printInDocument": false,
               "options": [
                 {
                   "value": "national_id",
@@ -4235,7 +4199,6 @@
               "type": "radio",
               "labelAr": "الصفة القانونية لـالمستأجر",
               "required": true,
-              "printInDocument": false,
               "options": [
                 {
                   "value": "individual",
@@ -4294,7 +4257,6 @@
                 "operator": "equals",
                 "value": "individual"
               },
-              "printInDocument": false,
               "options": [
                 {
                   "value": "national_id",
@@ -5860,8 +5822,10 @@
         "contract_copies_count": 2,
         "landlord_party_type": "individual",
         "tenant_party_type": "individual",
-        "landlord_nationality": "مصر",
-        "tenant_nationality": "مصر",
+        "landlord_nationality": "مصري",
+        "tenant_nationality": "مصري",
+        "landlord_identity_document_type": "national_id",
+        "tenant_identity_document_type": "national_id",
         "annual_increase_enabled": false,
         "deposit_payment_status": "received",
         "electricity_meter_exists": "no",

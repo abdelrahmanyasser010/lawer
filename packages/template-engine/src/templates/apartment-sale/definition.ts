@@ -481,6 +481,7 @@ const sharedDefaults: Record<string, string | number | boolean | null> = {
   buyer_nationality: "مصري",
   seller_identity_document_type: "national_id",
   buyer_identity_document_type: "national_id",
+  sale_contract_copies_count: 2,
   sale_email_notices_enabled: false,
   sale_notice_use_party_emails: true,
   sale_messaging_enabled: false,
@@ -977,7 +978,7 @@ const installmentAnnexClause: LegalClauseDefinition = {
 
 export const apartmentSaleTemplateDefinition: ContractTemplateDefinition = {
   slug: "apartment_sale",
-  version: 14,
+  version: 15,
   nameAr: "عقود بيع الوحدات السكنية",
   description: "ثلاثة عقود بيع مستقلة مطابقة للنماذج: بيع ابتدائي، بيع قابل للتسجيل بالشهر العقاري، وبيع لوحدة آلت بالميراث، مع ملحق أقساط اختياري وفارغ قابل للطباعة والتعبئة اليدوية.",
   priceEgp: 0,
