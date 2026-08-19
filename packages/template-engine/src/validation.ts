@@ -125,32 +125,35 @@ export function validateDynamicDefinition(
     }
   }
 
-  // Nationality vs Identity logic:
-  // If Egyptian -> National ID must be exactly 14 numeric digits.
-  // If Non-Egyptian -> Passport number required with valid length.
+  // Identity-document validation is driven by the user's explicit choice, not nationality.
+  // Legacy drafts without the selector keep a nationality-based fallback for compatibility.
   for (const step of definition.steps) {
     for (const field of step.fields) {
-      if (field.key.endsWith("_national_id")) {
-        const natKey = field.key.replace(/_national_id$/, "_nationality");
-        const nationalityVal = String(draft.fieldValues[natKey] ?? "").trim();
-        const idVal = String(draft.fieldValues[field.key] ?? "").trim();
-        if (idVal) {
-          const isEgyptian = nationalityVal === "مصري" || nationalityVal === "egyptian" || nationalityVal === "مصرية" || nationalityVal === "مصري الجنسية";
-          const digitsOnly = idVal.replace(/\D/g, "");
-          if (isEgyptian && (digitsOnly.length !== 14 || digitsOnly !== idVal)) {
-            issues.push({
-              stepKey: step.key,
-              fieldKey: field.key,
-              labelAr: `${field.labelAr} — مطلوب 14 رقمًا قوميًا للمواطن المصري`,
-            });
-          } else if (!isEgyptian && nationalityVal && idVal.length < 5) {
-            issues.push({
-              stepKey: step.key,
-              fieldKey: field.key,
-              labelAr: `${field.labelAr} — رقم جواز السفر يجب ألا يقل عن 5 خانات`,
-            });
-          }
-        }
+      if (!field.key.endsWith("_national_id")) continue;
+
+      const typeKey = field.key.replace(/_national_id$/, "_identity_document_type");
+      const natKey = field.key.replace(/_national_id$/, "_nationality");
+      const selectedType = String(draft.fieldValues[typeKey] ?? "").trim();
+      const nationalityVal = String(draft.fieldValues[natKey] ?? "").trim().toLowerCase();
+      const idVal = String(draft.fieldValues[field.key] ?? "").trim();
+      if (!idVal) continue;
+
+      const legacyEgyptian = ["مصري", "egyptian", "مصرية", "مصري الجنسية"].includes(nationalityVal);
+      const effectiveType = selectedType || (nationalityVal ? (legacyEgyptian ? "national_id" : "passport") : "");
+      const digitsOnly = idVal.replace(/\D/g, "");
+
+      if (effectiveType === "national_id" && (digitsOnly.length !== 14 || digitsOnly !== idVal)) {
+        issues.push({
+          stepKey: step.key,
+          fieldKey: field.key,
+          labelAr: "الرقم القومي — مطلوب 14 رقمًا بدون مسافات أو حروف",
+        });
+      } else if (effectiveType === "passport" && idVal.length < 5) {
+        issues.push({
+          stepKey: step.key,
+          fieldKey: field.key,
+          labelAr: "رقم جواز السفر — يجب ألا يقل عن 5 خانات",
+        });
       }
     }
   }

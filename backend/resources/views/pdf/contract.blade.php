@@ -101,7 +101,12 @@ body {
 .repeater th { background:#f7f7f7; font-weight:700; }
 .clause { margin:0 0 2.4mm; break-inside:auto; }
 .clause p { margin:0; text-align:justify; line-height:1.46; white-space:normal; orphans:3; widows:3; }
+.clause-line { display:block; }
 .clause-number { direction:ltr; unicode-bidi:isolate; display:inline-block; min-width:1.8em; text-align:right; font-weight:600; }
+.legal-subclause { display:block; margin-top:1.25mm; text-align:justify; }
+.legal-subclause:first-child { margin-top:0; }
+.legal-subclause-heading { display:inline; font-size:1.045em; font-weight:700; }
+.legal-subclause-number { direction:ltr; unicode-bidi:isolate; display:inline-block; margin-left:.35em; font-weight:800; }
 .clause + .clause { margin-top:.5mm; }
 .signatures { margin-top:8mm; break-inside:avoid-page; }
 .signatures-title { font-size:11.5pt; font-weight:800; border-bottom:.55pt solid #777; padding-bottom:1mm; margin-bottom:3mm; }
@@ -119,15 +124,59 @@ body {
   $formatClauseBody = static function ($body): string {
       $text = str_replace(["\r\n", "\r"], "\n", (string) $body);
       $text = preg_replace('/\n[ \t]*\n+/u', "\n", $text) ?? $text;
-      $escaped = e($text);
-      return preg_replace_callback(
-          '/(^|\n)\s*(?:\.(\d{1,3})(?=\s|$)|(\d{1,3})\.(?=\s|$))\s*/u',
-          static function (array $match): string {
-              $number = (($match[2] ?? '') !== '' ? $match[2] : ($match[3] ?? ''));
-              return ($match[1] ?? '') . '<span class="clause-number" dir="ltr">' . $number . '.</span> ';
-          },
-          $escaped,
-      ) ?? $escaped;
+
+      // Source PDFs sometimes extract legal subclauses such as 7-1 / 7-2 / 22-1
+      // as one continuous paragraph. Split only markers that share the first
+      // detected article prefix so dates and other numeric values stay intact.
+      if (preg_match('/(?:^|\s)(\d{1,3})-\d{1,3}[.)]?(?=\s)/u', $text, $firstSubclause) === 1) {
+          $articlePrefix = preg_quote((string) $firstSubclause[1], '/');
+          $text = preg_replace(
+              '/[^\S\n]+(?=' . $articlePrefix . '-\d{1,3}[.)]?(?=\s))/u',
+              "\n",
+              $text,
+          ) ?? $text;
+      }
+
+      $lines = preg_split('/\n/u', $text) ?: [$text];
+      $rendered = [];
+
+      foreach ($lines as $line) {
+          $trimmed = trim((string) $line);
+          if ($trimmed === '') {
+              continue;
+          }
+
+          if (preg_match('/^(\d{1,3}-\d{1,3}[.)]?)(?:\s+|$)(.*)$/u', $trimmed, $subclause) === 1) {
+              $marker = e((string) ($subclause[1] ?? ''));
+              $rest = (string) ($subclause[2] ?? '');
+              $headingHtml = '';
+              $bodyHtml = e($rest);
+
+              if (preg_match('/^([^:：]{1,120}:)(.*)$/u', $rest, $heading) === 1) {
+                  $headingHtml = '<span class="legal-subclause-heading"><span class="legal-subclause-number" dir="ltr">'
+                      . $marker . '</span>' . e((string) ($heading[1] ?? '')) . '</span>';
+                  $bodyHtml = e((string) ($heading[2] ?? ''));
+              } else {
+                  $headingHtml = '<span class="legal-subclause-heading"><span class="legal-subclause-number" dir="ltr">'
+                      . $marker . '</span></span>';
+              }
+
+              $rendered[] = '<span class="legal-subclause">' . $headingHtml . $bodyHtml . '</span>';
+              continue;
+          }
+
+          if (preg_match('/^(?:\.(\d{1,3})(?=\s|$)|(\d{1,3})\.(?=\s|$))\s*(.*)$/u', $trimmed, $numbered) === 1) {
+              $number = (($numbered[1] ?? '') !== '' ? $numbered[1] : ($numbered[2] ?? ''));
+              $content = (string) ($numbered[3] ?? '');
+              $rendered[] = '<span class="clause-line"><span class="clause-number" dir="ltr">'
+                  . e((string) $number) . '.</span> ' . e($content) . '</span>';
+              continue;
+          }
+
+          $rendered[] = '<span class="clause-line">' . e($trimmed) . '</span>';
+      }
+
+      return implode('', $rendered);
   };
   $manualStandaloneAnnex = $documentKind === 'annex' && ($manualAnnex ?? false);
 @endphp
@@ -216,7 +265,7 @@ body {
   @if(trim((string)($clause['bodyAr'] ?? '')) !== '')
   <div class="clause">
     <h2>{{ $clause['titleAr'] ?: ('البند '.($index+1)) }}</h2>
-    <p>{!! nl2br($formatClauseBody($clause['bodyAr'])) !!}</p>
+    <p>{!! $formatClauseBody($clause['bodyAr']) !!}</p>
   </div>
   @endif
 @endforeach
@@ -235,7 +284,7 @@ body {
         <div class="signature-line">البصمة: ................................................</div>
         @elseif(($rentalSignatureLayout ?? null) === 'administrative')
         <div class="signature-line">الصفة: {{ $manualStandaloneAnnex ? '................................................' : ($party['capacity'] ?? '................................................') }}</div>
-        <div class="signature-line">الرقم القومي / رقم الجواز: <span class="ltr">{{ $manualStandaloneAnnex ? '................................' : ($party['nationalId'] ?? '................................') }}</span></div>
+        <div class="signature-line">{{ $party['identityLabel'] ?? 'رقم مستند إثبات الهوية' }}: <span class="ltr">{{ $manualStandaloneAnnex ? '................................' : ($party['nationalId'] ?? '................................') }}</span></div>
         <div class="signature-line">التوقيع: ................................................</div>
         <div class="signature-line">البصمة: ................................................</div>
         @elseif(($rentalSignatureLayout ?? null) === 'standard')
@@ -339,7 +388,7 @@ body {
 
 @foreach($annex['clauses'] as $index=>$clause)
   @if(trim((string)($clause['bodyAr'] ?? '')) !== '')
-  <div class="clause"><h2>{{ $clause['titleAr'] ?: ('البند '.($index+1)) }}</h2><p>{!! nl2br($formatClauseBody($clause['bodyAr'])) !!}</p></div>
+  <div class="clause"><h2>{{ $clause['titleAr'] ?: ('البند '.($index+1)) }}</h2><p>{!! $formatClauseBody($clause['bodyAr']) !!}</p></div>
   @endif
 @endforeach
 

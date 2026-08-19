@@ -108,13 +108,38 @@ export function formatContractFieldValue(
   return raw;
 }
 
+
+export function resolveWizardFieldLabel(
+  field: WizardFieldDefinition,
+  fieldValues: Record<string, ContractFieldValue | unknown>,
+): string {
+  if (!field.key.endsWith("_national_id")) return field.labelAr;
+
+  const typeKey = field.key.replace(/_national_id$/, "_identity_document_type");
+  const selectedType = String(fieldValues[typeKey] ?? "").trim();
+  if (selectedType === "passport") return "رقم جواز السفر";
+  if (selectedType === "national_id") return "الرقم القومي";
+
+  // Backward compatibility for drafts created before the explicit identity-document selector.
+  const nationalityKey = field.key.replace(/_national_id$/, "_nationality");
+  const nationality = String(fieldValues[nationalityKey] ?? "").trim().toLowerCase();
+  if (["مصري", "مصرية", "مصري الجنسية", "egyptian"].includes(nationality)) return "الرقم القومي";
+  if (nationality) return "رقم جواز السفر";
+
+  return "رقم مستند إثبات الهوية";
+}
+
 export function formatWizardFieldValue(
   field: WizardFieldDefinition,
   value: ContractFieldValue | undefined,
   fieldValues: Record<string, ContractFieldValue>,
 ): string {
-  if (value === "أخرى") {
-    const otherValue = fieldValues[`${field.key}_other`];
+  if (value === "أخرى" || value === "other") {
+    const directOther = fieldValues[`${field.key}_other`];
+    const payerOther = field.key.endsWith("_payer")
+      ? fieldValues[`${field.key.slice(0, -"_payer".length)}_other`]
+      : undefined;
+    const otherValue = !isEmpty(directOther) ? directOther : payerOther;
     if (!isEmpty(otherValue)) return String(otherValue);
   }
   return formatContractFieldValue(field.key, value, field.options ?? [], field.type);

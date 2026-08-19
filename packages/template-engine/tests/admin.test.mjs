@@ -7,6 +7,7 @@ import {
   freelancerTemplateDefinition,
   inspectTemplateDefinition,
   moveArrayItem,
+  renderLegalClauses,
   resolveWizardDefinition,
   validateDynamicDefinition,
   rentalTemplateDefinition,
@@ -100,8 +101,8 @@ test("website manual annexes are active only after explicit user selection and s
 });
 
 
-test("visual identity semantics remain intact in freelancer v10", () => {
-  assert.equal(freelancerTemplateDefinition.version, 10);
+test("visual identity semantics remain intact in freelancer v11", () => {
+  assert.equal(freelancerTemplateDefinition.version, 11);
   const visual = freelancerTemplateDefinition.variants.find((item) => item.key === "visual_identity_design");
   assert.ok(visual);
   const allFields = visual.steps.flatMap((step) => step.fields);
@@ -307,8 +308,8 @@ test("social media delay penalty uses exactly one source-backed calculation path
   assert.equal(Boolean(percentageFields.social_delay_penalty_amount), false);
 });
 
-test("rental v12 exposes the three reviewed lease variants without legacy fields", () => {
-  assert.equal(rentalTemplateDefinition.version, 12);
+test("rental v13 exposes the three reviewed lease variants without legacy fields", () => {
+  assert.equal(rentalTemplateDefinition.version, 13);
   assert.deepEqual(
     rentalTemplateDefinition.variants.map((variant) => variant.key),
     ["residential_lease", "commercial_lease", "administrative_lease"],
@@ -324,7 +325,7 @@ test("rental v12 exposes the three reviewed lease variants without legacy fields
   }
 });
 
-test("rental v12 core finance, duration and source-specific payment fields are required with no fake defaults", () => {
+test("rental v13 core finance, duration and source-specific payment fields are required with no fake defaults", () => {
   const coreRequiredKeys = [
     "contract_date", "contract_copies_count", "lease_duration_text", "start_date", "end_date", "property_delivery_date",
     "deposit_amount", "deposit_amount_words", "rent_period", "rent_amount", "rent_amount_words", "rent_due_day",
@@ -509,8 +510,8 @@ test("rental residential repeater makes other payment details required in the sa
   assert.equal(cashIssues.some((issue) => issue.fieldKey === "rental_payment_methods.0.details"), false);
 });
 
-test("sale v11 exposes three source-specific variants without legacy sale fields", () => {
-  assert.equal(apartmentSaleTemplateDefinition.version, 11);
+test("sale v12 exposes three source-specific variants without legacy sale fields", () => {
+  assert.equal(apartmentSaleTemplateDefinition.version, 12);
   assert.deepEqual(apartmentSaleTemplateDefinition.variants.map((item) => item.key), ["preliminary_sale", "registrable_sale", "inherited_sale"]);
   const legacy = new Set(["sale_competent_court", "sale_payment_method", "sale_installment_rows", "sale_seller_id_front", "sale_buyer_id_front"]);
   for (const variant of apartmentSaleTemplateDefinition.variants) {
@@ -585,67 +586,189 @@ test("sale conditional company, notices, inheritance and meter rules resolve in 
   assert.equal(inf.sale_electricity_meter_reading.required, true);
 });
 
-test("nationality rules enforce 14-digit national ID for Egyptians and valid passport for non-Egyptians", async () => {
-  const { validateDynamicDefinition } = await import("../dist/index.js");
+
+test("all nine contracts use an explicit national-ID/passport selector and have no generic optional-terms wizard step", () => {
+  const definitions = [freelancerTemplateDefinition, rentalTemplateDefinition, apartmentSaleTemplateDefinition];
+  let variants = 0;
+  for (const definition of definitions) {
+    for (const variant of definition.variants) {
+      variants += 1;
+      assert.equal(variant.steps.some((step) => step.titleAr.trim() === "بنود اختيارية"), false, `${definition.slug}:${variant.key}`);
+      const fields = variant.steps.flatMap((step) => step.fields);
+      const identityFields = fields.filter((field) => field.key.endsWith("_identity_document_type"));
+      assert.ok(identityFields.length >= 2, `${definition.slug}:${variant.key}:identity selectors`);
+      for (const field of identityFields) {
+        assert.equal(field.required, true, `${variant.key}:${field.key}`);
+        assert.deepEqual(field.options.map((option) => option.value), ["national_id", "passport"]);
+      }
+    }
+  }
+  assert.equal(variants, 9);
+});
+
+test("explicit identity-document choice controls validation instead of nationality", () => {
   const resolved = resolveWizardDefinition(rentalTemplateDefinition, "residential_lease", [], {});
-
-  // Case 1: Egyptian with invalid ID (10 digits instead of 14)
-  const draftInvalidEgyptian = {
+  const issues = (fieldValues) => validateDynamicDefinition(resolved, {
     templateSlug: "rental",
     variantKey: "residential_lease",
     selectedOptionalClauseKeys: [],
-    fieldValues: {
-      landlord_nationality: "مصري",
-      landlord_national_id: "1234567890", // 10 digits
-    },
+    fieldValues,
     touchedFieldKeys: [],
     attachmentRefs: {},
-  };
-  const issues1 = validateDynamicDefinition(resolved, draftInvalidEgyptian);
-  assert.ok(issues1.some((issue) => issue.fieldKey === "landlord_national_id" && issue.labelAr.includes("14 رقمًا")));
+  });
 
-  // Case 2: Egyptian with valid 14-digit ID
-  const draftValidEgyptian = {
-    templateSlug: "rental",
-    variantKey: "residential_lease",
-    selectedOptionalClauseKeys: [],
-    fieldValues: {
-      landlord_nationality: "مصري",
-      landlord_national_id: "29501011234567", // 14 digits
-    },
-    touchedFieldKeys: [],
-    attachmentRefs: {},
-  };
-  const issues2 = validateDynamicDefinition(resolved, draftValidEgyptian);
-  assert.equal(issues2.some((issue) => issue.fieldKey === "landlord_national_id"), false);
+  assert.ok(issues({ landlord_nationality: "مصري", landlord_identity_document_type: "national_id", landlord_national_id: "1234567890" })
+    .some((issue) => issue.fieldKey === "landlord_national_id" && issue.labelAr.includes("14 رقمًا")));
+  assert.equal(issues({ landlord_nationality: "مصري", landlord_identity_document_type: "national_id", landlord_national_id: "29501011234567" })
+    .some((issue) => issue.fieldKey === "landlord_national_id"), false);
+  assert.equal(issues({ landlord_nationality: "مصري", landlord_identity_document_type: "passport", landlord_national_id: "EGP987654" })
+    .some((issue) => issue.fieldKey === "landlord_national_id"), false);
+  assert.ok(issues({ landlord_nationality: "سعودي", landlord_identity_document_type: "passport", landlord_national_id: "AB1" })
+    .some((issue) => issue.fieldKey === "landlord_national_id" && issue.labelAr.includes("جواز السفر")));
+});
 
-  // Case 3: Non-Egyptian with too short passport number
-  const draftInvalidForeigner = {
-    templateSlug: "rental",
-    variantKey: "residential_lease",
-    selectedOptionalClauseKeys: [],
-    fieldValues: {
-      landlord_nationality: "أجنبي",
-      landlord_national_id: "AB1", // only 3 chars
-    },
-    touchedFieldKeys: [],
-    attachmentRefs: {},
-  };
-  const issues3 = validateDynamicDefinition(resolved, draftInvalidForeigner);
-  assert.ok(issues3.some((issue) => issue.fieldKey === "landlord_national_id" && issue.labelAr.includes("جواز السفر")));
+test("sample data for every published contract renders without missing legal values or unresolved tokens", () => {
+  const definitions = [freelancerTemplateDefinition, rentalTemplateDefinition, apartmentSaleTemplateDefinition];
+  let variants = 0;
+  for (const definition of definitions) {
+    for (const variant of definition.variants) {
+      variants += 1;
+      const values = createSampleFieldValues(definition, variant.key, []);
+      const rendered = renderLegalClauses(definition, variant.key, [], values);
+      const text = rendered.map((clause) => `${clause.titleAr}\n${clause.bodyAr}`).join("\n");
+      assert.equal(text.includes("{{"), false, `${definition.slug}:${variant.key}: unresolved token`);
+      assert.equal(text.includes("بيان مطلوب"), false, `${definition.slug}:${variant.key}: missing legal value`);
+      assert.equal(/\.{3,}|…|[ـ_]{4,}/u.test(text), false, `${definition.slug}:${variant.key}: blank placeholder leaked into legal text`);
+    }
+  }
+  assert.equal(variants, 9);
+});
 
-  // Case 4: Non-Egyptian with valid passport number
-  const draftValidForeigner = {
-    templateSlug: "rental",
-    variantKey: "residential_lease",
-    selectedOptionalClauseKeys: [],
-    fieldValues: {
-      landlord_nationality: "سعودي",
-      landlord_national_id: "KSA9876543",
-    },
-    touchedFieldKeys: [],
-    attachmentRefs: {},
+test("core wizard values are printed inside their governing legal articles", () => {
+  const websiteValues = {
+    ...createSampleFieldValues(freelancerTemplateDefinition, "website_development", []),
+    website_project_name: "مشروع-ربط-الموقع",
+    website_project_manager: "مدير-المشروع-اختبار",
+    website_approval_person: "مسؤول-الاعتماد-اختبار",
+    website_billing_contact: "مسؤول-المدفوعات-اختبار",
+    website_contact_email: "binding@example.test",
+    website_total_price_words: "قيمة الاختبار كتابة",
+    website_warranty_duration_unit: "شهرًا",
+    website_competent_court: "القاهرة",
   };
-  const issues4 = validateDynamicDefinition(resolved, draftValidForeigner);
-  assert.equal(issues4.some((issue) => issue.fieldKey === "landlord_national_id"), false);
+  const websiteText = renderLegalClauses(freelancerTemplateDefinition, "website_development", [], websiteValues).map((c) => c.bodyAr).join("\n");
+  for (const sentinel of ["مشروع-ربط-الموقع", "مدير-المشروع-اختبار", "مسؤول-الاعتماد-اختبار", "مسؤول-المدفوعات-اختبار", "binding@example.test", "قيمة الاختبار كتابة", "القاهرة"]) assert.match(websiteText, new RegExp(sentinel));
+
+  const socialValues = {
+    ...createSampleFieldValues(freelancerTemplateDefinition, "social_media_management", []),
+    social_target_market: "السوق-المستهدف-اختبار",
+    social_target_audience: "الجمهور-المستهدف-اختبار",
+    social_project_manager: "مدير-السوشيال-اختبار",
+  };
+  const socialText = renderLegalClauses(freelancerTemplateDefinition, "social_media_management", [], socialValues).map((c) => c.bodyAr).join("\n");
+  for (const sentinel of ["السوق-المستهدف-اختبار", "الجمهور-المستهدف-اختبار", "مدير-السوشيال-اختبار"]) assert.match(socialText, new RegExp(sentinel));
+
+  const rentalValues = {
+    ...createSampleFieldValues(rentalTemplateDefinition, "residential_lease", []),
+    contract_copies_count: 4,
+    residential_compound_name: "كمبوند-اختبار-العقد",
+    building_number: "مبنى-77",
+    electricity_meter: "عداد-12345",
+    electricity_meter_type: "independent",
+  };
+  const rentalText = renderLegalClauses(rentalTemplateDefinition, "residential_lease", [], rentalValues).map((c) => c.bodyAr).join("\n");
+  for (const sentinel of ["كمبوند-اختبار-العقد", "مبنى-77", "عداد-12345", "نسخ أصلية متطابقة"]) assert.match(rentalText, new RegExp(sentinel));
+
+  const saleValues = {
+    ...createSampleFieldValues(apartmentSaleTemplateDefinition, "registrable_sale", []),
+    sale_compound_name: "كمبوند-بيع-اختبار",
+    sale_building_number: "عقار-991",
+    sale_electricity_meter: "كهرباء-987",
+    sale_electricity_meter_type: "independent",
+    sale_electricity_meter_reading: "قراءة-456",
+    sale_total_price_words: "ثمن البيع كتابة اختبار",
+    registered_deed_number: "سند-123",
+    registered_deed_year: "2026",
+    registry_office: "مأمورية-اختبار",
+  };
+  const saleText = renderLegalClauses(apartmentSaleTemplateDefinition, "registrable_sale", [], saleValues).map((c) => c.bodyAr).join("\n");
+  for (const sentinel of ["كمبوند-بيع-اختبار", "عقار-991", "كهرباء-987", "قراءة-456", "ثمن البيع كتابة اختبار", "سند-123", "مأمورية-اختبار"]) assert.match(saleText, new RegExp(sentinel));
+});
+
+test("execution, warranty, financial, delivery and court values are rendered inside governing articles across all nine contracts", () => {
+  const visualValues = {
+    ...createSampleFieldValues(freelancerTemplateDefinition, "visual_identity_design", []),
+    visual_execution_duration: "سبعة وأربعون يوم عمل",
+    visual_contract_value: 47321,
+    visual_contract_value_words: "سبعة وأربعون ألفًا وثلاثمائة وواحد وعشرون",
+    visual_competent_court: "القاهرة",
+  };
+  const visualText = renderLegalClauses(freelancerTemplateDefinition, "visual_identity_design", [], visualValues).map((c) => c.bodyAr).join("\n");
+  for (const sentinel of ["سبعة وأربعون يوم عمل", "سبعة وأربعون ألفًا وثلاثمائة وواحد وعشرون", "القاهرة"]) assert.match(visualText, new RegExp(sentinel));
+
+  const websiteValues = {
+    ...createSampleFieldValues(freelancerTemplateDefinition, "website_development", []),
+    website_execution_duration_value: 37,
+    website_execution_duration_unit: "يومًا",
+    website_duration_basis: "بأيام العمل، ما لم يتفق الطرفان كتابةً على احتسابها بالأيام التقويمية",
+    website_total_price: 37421,
+    website_total_price_words: "سبعة وثلاثون ألفًا وأربعمائة وواحد وعشرون",
+    website_warranty_duration_value: 19,
+    website_warranty_duration_unit: "شهرًا",
+    website_confidentiality_years: 11,
+    website_competent_court: "الجيزة",
+  };
+  const websiteText = renderLegalClauses(freelancerTemplateDefinition, "website_development", [], websiteValues).map((c) => c.bodyAr).join("\n");
+  for (const sentinel of ["٣٧ يوم", "سبعة وثلاثون ألفًا وأربعمائة وواحد وعشرون", "١٩ شهر", "١١ سنوات", "الجيزة"]) assert.match(websiteText, new RegExp(sentinel));
+
+  const socialValues = {
+    ...createSampleFieldValues(freelancerTemplateDefinition, "social_media_management", []),
+    social_contract_duration: "سبعة عشر شهرًا",
+    social_fee: 17891,
+    social_fee_words: "سبعة عشر ألفًا وثمانمائة وواحد وتسعون",
+    social_delay_penalty_mode: "amount",
+    social_delay_penalty_amount: 731,
+    social_delay_penalty_cap_percentage: 17,
+    social_competent_court: "الإسكندرية",
+  };
+  const socialText = renderLegalClauses(freelancerTemplateDefinition, "social_media_management", [], socialValues).map((c) => c.bodyAr).join("\n");
+  for (const sentinel of ["سبعة عشر شهرًا", "سبعة عشر ألفًا وثمانمائة وواحد وتسعون", "٧٣١", "١٧", "الإسكندرية"]) assert.match(socialText, new RegExp(sentinel));
+
+  for (const variantKey of ["residential_lease", "commercial_lease", "administrative_lease"]) {
+    const values = {
+      ...createSampleFieldValues(rentalTemplateDefinition, variantKey, []),
+      lease_duration_text: "سبعة وعشرون شهرًا",
+      start_date: "2027-02-03",
+      end_date: "2029-05-03",
+      property_delivery_date: "2027-02-11",
+      deposit_amount: 27111,
+      deposit_amount_words: "سبعة وعشرون ألفًا ومائة وأحد عشر",
+      rent_amount: 27891,
+      rent_amount_words: "سبعة وعشرون ألفًا وثمانمائة وواحد وتسعون",
+      rent_due_day: 23,
+      holdover_daily_compensation: 927,
+      late_payment_daily_compensation: 619,
+      rental_jurisdiction_court: "المنصورة",
+    };
+    const text = renderLegalClauses(rentalTemplateDefinition, variantKey, [], values).map((c) => c.bodyAr).join("\n");
+    for (const sentinel of ["سبعة وعشرون شهرًا", "03/02/2027", "03/05/2029", "11/02/2027", "سبعة وعشرون ألفًا ومائة وأحد عشر", "سبعة وعشرون ألفًا وثمانمائة وواحد وتسعون", "المنصورة"]) assert.match(text, new RegExp(sentinel), `${variantKey}:${sentinel}`);
+  }
+
+  for (const variantKey of ["preliminary_sale", "registrable_sale", "inherited_sale"]) {
+    const values = {
+      ...createSampleFieldValues(apartmentSaleTemplateDefinition, variantKey, []),
+      sale_total_price: 987654,
+      sale_total_price_words: "تسعمائة وسبعة وثمانون ألفًا وستمائة وأربعة وخمسون",
+      sale_payment_plan: "installments",
+      sale_down_payment: 234567,
+      sale_remaining_amount: 753087,
+      sale_delivery_delay_daily_compensation: 813,
+      sale_delivery_delay_threshold_days: 29,
+      sale_jurisdiction_court: "طنطا",
+    };
+    if (variantKey === "preliminary_sale") values.preliminary_hidden_defect_warranty_years = 7;
+    const text = renderLegalClauses(apartmentSaleTemplateDefinition, variantKey, [], values).map((c) => c.bodyAr).join("\n");
+    for (const sentinel of ["تسعمائة وسبعة وثمانون ألفًا وستمائة وأربعة وخمسون", "٢٣٤٬٥٦٧", "٧٥٣٬٠٨٧", "٨١٣", "طنطا"]) assert.match(text, new RegExp(sentinel), `${variantKey}:${sentinel}`);
+    if (variantKey === "preliminary_sale") assert.match(text, /٧ سنوات/);
+  }
 });

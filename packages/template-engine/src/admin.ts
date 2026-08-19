@@ -30,6 +30,17 @@ export interface TemplateDefinitionInspection {
   };
 }
 
+const derivedClauseVariableKeys = new Set([
+  "website_legal_fees_text",
+  "rental_property_additional_details",
+  "sale_property_additional_details",
+  "preliminary_ownership_detail",
+  "registrable_ownership_detail",
+  "inheritance_disposition_detail",
+  "commercial_guarantee_value_text",
+  "administrative_guarantee_value_text",
+]);
+
 const knownFieldTypes = new Set([
   "text",
   "textarea",
@@ -251,7 +262,7 @@ export function inspectTemplateDefinition(definition: ContractTemplateDefinition
     ];
     for (const variable of variables) {
       for (const target of applicableFieldSets) {
-        if (!target.fields.has(variable)) issue(issues, "error", "CLAUSE_VARIABLE_UNKNOWN", `المتغير {{${variable}}} غير موجود في حقول ${target.name}`, `${clausePath}.bodyAr`);
+        if (!target.fields.has(variable) && !derivedClauseVariableKeys.has(variable)) issue(issues, "error", "CLAUSE_VARIABLE_UNKNOWN", `المتغير {{${variable}}} غير موجود في حقول ${target.name}`, `${clausePath}.bodyAr`);
       }
     }
     const allKnownFields = new Set(definition.variants.flatMap((variant) => [...fieldKeysForVariant(variant)]));

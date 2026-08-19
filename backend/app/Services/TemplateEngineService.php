@@ -133,19 +133,22 @@ final class TemplateEngineService
         foreach ($resolved['steps'] as $step) {
             foreach ($step['fields'] ?? [] as $field) {
                 $fKey = (string)($field['key'] ?? '');
-                if (str_ends_with($fKey, '_national_id')) {
-                    $natKey = preg_replace('/_national_id$/', '_nationality', $fKey);
-                    $natVal = trim((string)($fieldValues[$natKey] ?? ''));
-                    $idVal = trim((string)($fieldValues[$fKey] ?? ''));
-                    if ($idVal !== '') {
-                        $isEgyptian = in_array(mb_strtolower($natVal), ['مصري', 'egyptian', 'مصرية', 'مصري الجنسية'], true);
-                        $digitsOnly = preg_replace('/\D/', '', $idVal);
-                        if ($isEgyptian && (strlen($digitsOnly) !== 14 || $digitsOnly !== $idVal)) {
-                            $issues[] = ($field['labelAr'] ?? $fKey) . ' — مطلوب 14 رقمًا قوميًا للمواطن المصري';
-                        } elseif (!$isEgyptian && $natVal !== '' && mb_strlen($idVal) < 5) {
-                            $issues[] = ($field['labelAr'] ?? $fKey) . ' — رقم جواز السفر يجب ألا يقل عن 5 خانات';
-                        }
-                    }
+                if (!str_ends_with($fKey, '_national_id')) continue;
+
+                $typeKey = preg_replace('/_national_id$/', '_identity_document_type', $fKey);
+                $natKey = preg_replace('/_national_id$/', '_nationality', $fKey);
+                $selectedType = trim((string)($fieldValues[$typeKey] ?? ''));
+                $natVal = mb_strtolower(trim((string)($fieldValues[$natKey] ?? '')));
+                $idVal = trim((string)($fieldValues[$fKey] ?? ''));
+                if ($idVal === '') continue;
+
+                $legacyEgyptian = in_array($natVal, ['مصري', 'egyptian', 'مصرية', 'مصري الجنسية'], true);
+                $effectiveType = $selectedType !== '' ? $selectedType : ($natVal !== '' ? ($legacyEgyptian ? 'national_id' : 'passport') : '');
+                $digitsOnly = preg_replace('/\D/', '', $idVal);
+                if ($effectiveType === 'national_id' && (strlen($digitsOnly) !== 14 || $digitsOnly !== $idVal)) {
+                    $issues[] = 'الرقم القومي — مطلوب 14 رقمًا بدون مسافات أو حروف';
+                } elseif ($effectiveType === 'passport' && mb_strlen($idVal) < 5) {
+                    $issues[] = 'رقم جواز السفر — يجب ألا يقل عن 5 خانات';
                 }
             }
         }
@@ -168,22 +171,106 @@ final class TemplateEngineService
         foreach($resolved['activeClauseKeys'] as$key){
             $key=(string)$key;$clause=$clauseByKey[$key]??null;if(!$clause||!$this->evaluate($clause['visibleWhen']??null,$fieldValues))continue;
             $manual=isset($manualClauseKeys[$key]);$body=(string)($clause['bodyAr']??'');$vars=$manual?[]:($clause['variables']??[]);
-            foreach($vars as$var){$token='{{'.$var.'}}';$value=$fieldValues[$var]??null;if($this->emptyValue($value)){$missing[]=(string)$var;continue;}$body=str_replace($token,$this->displayClauseValue((string)$var,$value,$fieldByKey[(string)$var]??null,$fieldValues),$body);}
+            foreach($vars as$var){$token='{{'.$var.'}}';$value=$fieldValues[$var]??null;$isDerived=false;if($this->emptyValue($value)){$value=$this->derivedClauseValue((string)$var,$fieldValues);$isDerived=!$this->emptyValue($value);}if($this->emptyValue($value)){$missing[]=(string)$var;continue;}$display=$isDerived?trim((string)$value):$this->displayClauseValue((string)$var,$value,$fieldByKey[(string)$var]??null,$fieldValues);$body=str_replace($token,$display,$body);}
             $clauses[]=['key'=>$key,'titleAr'=>$clause['titleAr']??$key,'bodyAr'=>$body,'sourceDocumentName'=>$clause['sourceDocumentName']??null,'sourcePageStart'=>$clause['sourcePageStart']??null,'sourcePageEnd'=>$clause['sourcePageEnd']??null];
         }
         return ['clauses'=>$clauses,'missingVariables'=>array_values(array_unique($missing)),'missingClauseKeys'=>$missingKeys];
     }
 
+    private function derivedClauseValue(string $key,array $fieldValues):?string
+    {
+        $valueText=function(string $fieldKey)use($fieldValues):?string{$value=$fieldValues[$fieldKey]??null;if($this->emptyValue($value))return null;$text=trim((string)$value);if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$text)===1){$parts=explode('-',$text);return implode('/',array_reverse($parts));}return$text;};
+        if($key==='rental_property_additional_details'){
+            $parts=[];
+            $add=function(string $label,string $fieldKey)use(&$parts,$valueText):void{$value=$valueText($fieldKey);if($value!==null)$parts[]=$label.': '.$value;};
+            $addYesNo=function(string $label,string $fieldKey)use(&$parts,$valueText):void{$value=$valueText($fieldKey);if($value!==null)$parts[]=$label.': '.($value==='yes'?'نعم':($value==='no'?'لا':$value));};
+            $meterType=fn(?string $value)=>$value==='independent'?'مستقل':($value==='shared'?'مشترك':$value);
+            $add('رقم العقار/المبنى','building_number');
+            foreach([['electricity','الكهرباء'],['water','المياه'],['gas','الغاز الطبيعي']] as[$prefix,$label]){$number=$valueText($prefix.'_meter');$type=$meterType($valueText($prefix.'_meter_type'));if($number||$type){$detail='عداد '.$label.': ';if($number)$detail.='رقم '.$number;if($number&&$type)$detail.=' — ';if($type)$detail.='نوعه '.$type;$parts[]=$detail;}}
+            if(array_key_exists('residential_property_type',$fieldValues)){
+                $add('اسم الكمبوند','residential_compound_name');$add('رقم القطعة','residential_plot_number');$add('رقم المجاورة','residential_adjacency_number');$add('اسم البرج/العمارة','residential_building_name');
+                $annexes=[];if($fieldValues['residential_includes_garage']??false)$annexes[]='جراج';if($fieldValues['residential_includes_storage']??false)$annexes[]='مخزن';if($fieldValues['residential_includes_garden']??false)$annexes[]='حديقة';if($fieldValues['residential_includes_roof']??false)$annexes[]='سطح/رووف';if($fieldValues['residential_includes_service_room']??false)$annexes[]='غرفة خدمات';if($fieldValues['residential_includes_parking']??false)$annexes[]='مكان انتظار سيارة';if($other=$valueText('residential_other_annex'))$annexes[]=$other;if($annexes)$parts[]='ملحقات العين: '.implode('، ',$annexes);
+            }elseif(array_key_exists('commercial_activity_name',$fieldValues)){
+                $add('اسم المول/المشروع التجاري','commercial_project_name');$add('رقم الترخيص','commercial_license_number');$add('رقم القطعة','commercial_plot_number');$site=$valueText('commercial_site_type');if($site==='أخرى')$site=$valueText('commercial_site_type_other');if($site)$parts[]='موقع الوحدة: '.$site;$addYesNo('وجود ميزانين','commercial_has_mezzanine');$add('عرض الواجهة بالمتر','commercial_frontage_width');$add('عدد الواجهات','commercial_frontage_count');$addYesNo('مخزن تابع','commercial_has_storage');$addYesNo('مكان تحميل وتنزيل','commercial_has_loading_area');if((string)($fieldValues['commercial_finishing_level']??'')==='أخرى')$add('وصف التشطيب','commercial_finishing_other');
+            }elseif(array_key_exists('administrative_activity_name',$fieldValues)){
+                $add('اسم المشروع/البرج الإداري','administrative_project_name');$add('رقم الترخيص','administrative_license_number');$add('رقم القطعة','administrative_plot_number');$site=$valueText('administrative_site_type');if($site==='أخرى')$site=$valueText('administrative_site_type_other');if($site)$parts[]='موقع العين: '.$site;$addYesNo('قاعة اجتماعات','administrative_meeting_room');$addYesNo('استقبال','administrative_reception');$addYesNo('مخزن تابع','administrative_storage');$addYesNo('مصعد','administrative_lift');$add('عدد أماكن الانتظار','administrative_parking_count');$addYesNo('غرفة خوادم','administrative_server_room');$add('نظام التكييف','administrative_ac_system');$add('شبكة البيانات','administrative_data_network');$delivery=$valueText('administrative_delivery_condition');$deliveryMap=['vacant'=>'خالية','furnished'=>'مؤثثة','fully_equipped'=>'مجهزة بالكامل','inventory_report'=>'وفقًا لمحضر الجرد'];if($delivery)$parts[]='حالة العين عند التسليم: '.($deliveryMap[$delivery]??$delivery);$add('قراءة الكهرباء عند التسليم','administrative_electricity_reading');$add('قراءة المياه عند التسليم','administrative_water_reading');$add('قراءة الغاز عند التسليم','administrative_gas_reading');
+            }
+            return $parts?'وتُستكمل بيانات وصف العين بما يلي: '.implode('؛ ',$parts).'.':'ولا توجد بيانات تعريفية إضافية للعين بخلاف ما تقدم.';
+        }
+        if($key==='sale_property_additional_details'){
+            $parts=[];$add=function(string $label,string $fieldKey)use(&$parts,$valueText):void{$value=$valueText($fieldKey);if($value!==null)$parts[]=$label.': '.$value;};$meterType=fn(?string $value)=>$value==='independent'?'مستقل':($value==='shared'?'مشترك':$value);
+            $add('اسم الكمبوند','sale_compound_name');$add('رقم القطعة','sale_plot_number');$add('رقم المجاورة','sale_adjacency_number');$add('رقم العقار','sale_building_number');$add('اسم البرج/العمارة','sale_building_name');
+            foreach([['electricity','الكهرباء'],['water','المياه'],['gas','الغاز الطبيعي']] as[$prefix,$label]){$number=$valueText('sale_'.$prefix.'_meter');$type=$meterType($valueText('sale_'.$prefix.'_meter_type'));$reading=$valueText('sale_'.$prefix.'_meter_reading');if($number||$type||$reading){$detail='عداد '.$label.': ';if($number)$detail.='رقم '.$number;if($number&&$type)$detail.=' — ';if($type)$detail.='نوعه '.$type;if(($number||$type)&&$reading)$detail.=' — ';if($reading)$detail.='قراءته عند التسليم '.$reading;$parts[]=$detail;}}
+            return $parts?'وتشمل البيانات التعريفية الإضافية للوحدة: '.implode('؛ ',$parts).'.':'ولا توجد بيانات تعريفية إضافية للوحدة بخلاف ما تقدم.';
+        }
+        if($key==='website_legal_fees_text'){
+            if((bool)($fieldValues['website_legal_fees_enabled']??false)){
+                $raw=$fieldValues['website_legal_fees_payer']??null;$payer=($raw==='أخرى'||$raw==='other')?$valueText('website_legal_fees_other'):$valueText('website_legal_fees_payer');if(!$payer)return null;
+                return "اتفق الطرفان على أن يتحمل {$payer} رسوم الدمغة أو الضرائب أو المصروفات القانونية الخاصة بهذا العقد أو تحريره أو إثبات تاريخه أو توثيقه أو أي إجراء قانوني مرتبط به، وذلك في الحدود التي تجيزها القوانين واللوائح السارية ودون إخلال بما يفرضه القانون على أي طرف بصفته.";
+            }
+            return 'ما لم يتفق الطرفان كتابةً على خلاف ذلك، يتحمل كل طرف الرسوم والضرائب والمصروفات التي يفرضها عليه القانون بحكم صفته أو التزاماته أو التصرفات الصادرة عنه.';
+        }
+        if($key==='preliminary_ownership_detail'){
+            return match((string)($fieldValues['preliminary_ownership_source']??'')){
+                'preliminary_contract'=>($date=$valueText('preliminary_contract_date'))?"عقد بيع ابتدائي مؤرخ {$date}":null,
+                'custom_contract'=>($date=$valueText('custom_contract_date'))?"عقد بيع عرفي مؤرخ {$date}":null,
+                'court_judgment'=>(($number=$valueText('ownership_judgment_number'))&&($year=$valueText('ownership_judgment_year')))?"حكم قضائي رقم {$number} لسنة {$year}":null,
+                'allocation'=>($authority=$valueText('ownership_allocation_authority'))?"تخصيص صادر من {$authority}":null,
+                default=>null,
+            };
+        }
+        if($key==='registrable_ownership_detail'){
+            return match((string)($fieldValues['registered_title_type']??'')){
+                'registered_contract'=>(($number=$valueText('registered_deed_number'))&&($year=$valueText('registered_deed_year'))&&($office=$valueText('registry_office')))?"عقد مسجل رقم {$number} لسنة {$year} لدى {$office}":null,
+                'final_judgment'=>(($number=$valueText('registered_judgment_number'))&&($year=$valueText('registered_judgment_year'))&&($court=$valueText('registered_judgment_court')))?"حكم نهائي رقم {$number} لسنة {$year} صادر من {$court}":null,
+                'allocation'=>($authority=$valueText('registered_allocation_authority'))?"عقد تخصيص صادر من {$authority}":null,
+                'other'=>($other=$valueText('registered_other_title'))?"سند آخر: {$other}":null,
+                default=>null,
+            };
+        }
+        if($key==='inheritance_disposition_detail'){
+            return match((string)($fieldValues['inheritance_disposition_basis']??'')){
+                'power_of_attorney'=>(($number=$valueText('inheritance_poa_number'))&&($year=$valueText('inheritance_poa_year'))&&($office=$valueText('inheritance_poa_office'))&&($date=$valueText('inheritance_poa_date')))?"توكيل رسمي رقم {$number} لسنة {$year} موثق لدى {$office} بتاريخ {$date}":null,
+                'partition_contract'=>($date=$valueText('inheritance_partition_date'))?"عقد قسمة وتراضٍ بين الورثة مؤرخ {$date}":null,
+                'relinquishment_contract'=>($date=$valueText('inheritance_relinquishment_date'))?"عقد تخارج أو تنازل مؤرخ {$date}":null,
+                'sale_from_heirs'=>($date=$valueText('inheritance_heirs_sale_date'))?"عقد بيع أو تصرف من باقي الورثة مؤرخ {$date}":null,
+                'sole_heir'=>'البائع هو الوارث الوحيد وفق إعلام الوراثة المثبت بالعقد',
+                'other'=>($other=$valueText('inheritance_other_basis'))?"سند قانوني آخر: {$other}":null,
+                default=>null,
+            };
+        }
+        if($key==='commercial_guarantee_value_text'){
+            $mode=(string)($fieldValues['commercial_guarantee_value_mode']??'');$amount=$valueText($mode==='each'?'commercial_guarantee_each_amount':($mode==='total'?'commercial_guarantee_total_amount':''));if(!$amount)return null;return$mode==='each'?"وقيمة كل شيك {$amount} جنيه مصري":"وإجمالي قيمة الشيكات {$amount} جنيه مصري";
+        }
+        if($key==='administrative_guarantee_value_text'){
+            $mode=(string)($fieldValues['administrative_guarantee_value_mode']??'');$amount=$valueText($mode==='each'?'administrative_guarantee_each_amount':($mode==='total'?'administrative_guarantee_total_amount':''));if(!$amount)return null;return$mode==='each'?"وقيمة كل شيك {$amount} جنيه مصري":"وإجمالي قيمة الشيكات {$amount} جنيه مصري";
+        }
+        return null;
+    }
+
     private function displayClauseValue(string $key,mixed $value,?array $field,array $fieldValues):string
     {
-        if($value==='أخرى'){$other=$fieldValues[$key.'_other']??null;if(!$this->emptyValue($other))return trim((string)$other);}
+        if($value==='أخرى'||$value==='other'){$other=$fieldValues[$key.'_other']??null;if($this->emptyValue($other)&&str_ends_with($key,'_payer')){$base=substr($key,0,-strlen('_payer'));$other=$fieldValues[$base.'_other']??null;}if(!$this->emptyValue($other))return trim((string)$other);}
         foreach($field['options']??[]as$option)if((string)($option['value']??'')===(string)$value)return(string)($option['labelAr']??$value);
         if(is_bool($value))return$value?'نعم':'لا';
         if(is_array($value)){
             $parts=[];
             foreach($value as$item){
-                if(is_array($item)){$row=array_values(array_filter(array_map('strval',$item),fn($entry)=>trim($entry)!==''));if($row)$parts[]=implode(' — ',$row);}
-                elseif($item!==null&&trim((string)$item)!=='')$parts[]=(string)$item;
+                if(is_array($item)){
+                    $columns=$field['columns']??[];$rowParts=[];
+                    if(!$columns){foreach(array_keys($item) as$columnKey)$columns[]=['key'=>$columnKey];}
+                    foreach($columns as$column){
+                        $columnKey=(string)($column['key']??'');if($columnKey==='')continue;$raw=$item[$columnKey]??null;if($this->emptyValue($raw))continue;
+                        if($columnKey==='details'&&(string)($item['method']??'')==='other')continue;
+                        if(($raw==='other'||$raw==='أخرى')&&!$this->emptyValue($item['details']??null)){$rowParts[]=trim((string)$item['details']);continue;}
+                        $label=null;foreach($column['options']??[]as$option){if((string)($option['value']??'')===(string)$raw){$label=(string)($option['labelAr']??$raw);break;}}
+                        if($label!==null){$rowParts[]=$label;continue;}
+                        if(is_bool($raw)){$rowParts[]=$raw?'نعم':'لا';continue;}
+                        $text=trim((string)$raw);if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$text)===1){$dateParts=explode('-',$text);$text=implode('/',array_reverse($dateParts));}if($text!=='')$rowParts[]=$text;
+                    }
+                    if($rowParts)$parts[]=implode(' — ',$rowParts);
+                }
+                elseif($item!==null&&trim((string)$item)!==''){$label=null;foreach($field['options']??[]as$option){if((string)($option['value']??'')===(string)$item){$label=(string)($option['labelAr']??$item);break;}}$parts[]=$label??(string)$item;}
             }
             return implode('، ',$parts);
         }

@@ -14,7 +14,7 @@ import type { ContractSlug, CreationMode } from "@/types/zdraft";
 import type { ContractDetails } from "@/types/customer";
 import { useTemplateDefinition } from "@/features/contracts/hooks/useTemplateDefinition";
 import { renderLegalClauses, resolveWizardDefinition } from "@/features/contracts/wizard/resolveWizardDefinition";
-import { formatWizardFieldValue } from "@/features/contracts/domain/contractDisplay";
+import { formatWizardFieldValue, resolveWizardFieldLabel } from "@/features/contracts/domain/contractDisplay";
 import { useWizardStore } from "@/store/wizardStore";
 import VariantSelector from "@/features/contracts/wizard/VariantSelector";
 import OptionalClauseSelector from "@/features/contracts/wizard/OptionalClauseSelector";
@@ -455,7 +455,7 @@ export default function WizardPage() {
           : field.type === "repeater"
             ? (entries ? `${entries} بند` : "—")
             : formatWizardFieldValue(field, raw, formData);
-        return { key: field.key, label: field.labelAr, value, complete };
+        return { key: field.key, label: resolveWizardFieldLabel(field, formData), value, complete };
       }),
   ), [draft?.attachmentRefs, formData, resolvedWizard]);
 
@@ -567,7 +567,7 @@ export default function WizardPage() {
   const mobilePreviewRows = activeSteps.flatMap((step) => step.fields).filter((item) => !["attachment", "repeater"].includes(item.type)).map((item) => {
     const raw = formData[item.key];
     const value = formatWizardFieldValue(item, raw, formData);
-    return { label: item.labelAr, value };
+    return { label: resolveWizardFieldLabel(item, formData), value };
   }).filter((item) => item.value !== "—" && item.value.trim() !== "");
   const mobilePreviewControls = <>
     <div className="fixed bottom-5 right-4 z-40 xl:hidden">

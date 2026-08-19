@@ -1,6 +1,6 @@
 {
   "slug": "apartment_sale",
-  "version": 11,
+  "version": 12,
   "nameAr": "عقود بيع الوحدات السكنية",
   "description": "ثلاثة عقود بيع مستقلة مطابقة للنماذج: بيع ابتدائي، بيع قابل للتسجيل بالشهر العقاري، وبيع لوحدة آلت بالميراث، مع ملحق أقساط اختياري وفارغ قابل للطباعة والتعبئة اليدوية.",
   "priceEgp": 0,
@@ -80,9 +80,26 @@
               "required": true
             },
             {
+              "key": "seller_identity_document_type",
+              "type": "radio",
+              "labelAr": "نوع مستند إثبات الهوية",
+              "required": true,
+              "printInDocument": false,
+              "options": [
+                {
+                  "value": "national_id",
+                  "labelAr": "رقم قومي"
+                },
+                {
+                  "value": "passport",
+                  "labelAr": "جواز سفر"
+                }
+              ]
+            },
+            {
               "key": "seller_national_id",
               "type": "text",
-              "labelAr": "الرقم القومي / رقم جواز السفر",
+              "labelAr": "رقم مستند إثبات الهوية",
               "required": true
             },
             {
@@ -256,9 +273,26 @@
               "required": true
             },
             {
+              "key": "buyer_identity_document_type",
+              "type": "radio",
+              "labelAr": "نوع مستند إثبات الهوية",
+              "required": true,
+              "printInDocument": false,
+              "options": [
+                {
+                  "value": "national_id",
+                  "labelAr": "رقم قومي"
+                },
+                {
+                  "value": "passport",
+                  "labelAr": "جواز سفر"
+                }
+              ]
+            },
+            {
               "key": "buyer_national_id",
               "type": "text",
-              "labelAr": "الرقم القومي / رقم جواز السفر",
+              "labelAr": "رقم مستند إثبات الهوية",
               "required": true
             },
             {
@@ -1669,9 +1703,26 @@
               "required": true
             },
             {
+              "key": "seller_identity_document_type",
+              "type": "radio",
+              "labelAr": "نوع مستند إثبات الهوية",
+              "required": true,
+              "printInDocument": false,
+              "options": [
+                {
+                  "value": "national_id",
+                  "labelAr": "رقم قومي"
+                },
+                {
+                  "value": "passport",
+                  "labelAr": "جواز سفر"
+                }
+              ]
+            },
+            {
               "key": "seller_national_id",
               "type": "text",
-              "labelAr": "الرقم القومي / رقم جواز السفر",
+              "labelAr": "رقم مستند إثبات الهوية",
               "required": true
             },
             {
@@ -1845,9 +1896,26 @@
               "required": true
             },
             {
+              "key": "buyer_identity_document_type",
+              "type": "radio",
+              "labelAr": "نوع مستند إثبات الهوية",
+              "required": true,
+              "printInDocument": false,
+              "options": [
+                {
+                  "value": "national_id",
+                  "labelAr": "رقم قومي"
+                },
+                {
+                  "value": "passport",
+                  "labelAr": "جواز سفر"
+                }
+              ]
+            },
+            {
               "key": "buyer_national_id",
               "type": "text",
-              "labelAr": "الرقم القومي / رقم جواز السفر",
+              "labelAr": "رقم مستند إثبات الهوية",
               "required": true
             },
             {
@@ -3025,9 +3093,26 @@
               "required": true
             },
             {
+              "key": "seller_identity_document_type",
+              "type": "radio",
+              "labelAr": "نوع مستند إثبات الهوية",
+              "required": true,
+              "printInDocument": false,
+              "options": [
+                {
+                  "value": "national_id",
+                  "labelAr": "رقم قومي"
+                },
+                {
+                  "value": "passport",
+                  "labelAr": "جواز سفر"
+                }
+              ]
+            },
+            {
               "key": "seller_national_id",
               "type": "text",
-              "labelAr": "الرقم القومي / رقم جواز السفر",
+              "labelAr": "رقم مستند إثبات الهوية",
               "required": true
             },
             {
@@ -3089,9 +3174,26 @@
               "required": true
             },
             {
+              "key": "buyer_identity_document_type",
+              "type": "radio",
+              "labelAr": "نوع مستند إثبات الهوية",
+              "required": true,
+              "printInDocument": false,
+              "options": [
+                {
+                  "value": "national_id",
+                  "labelAr": "رقم قومي"
+                },
+                {
+                  "value": "passport",
+                  "labelAr": "جواز سفر"
+                }
+              ]
+            },
+            {
               "key": "buyer_national_id",
               "type": "text",
-              "labelAr": "الرقم القومي / رقم جواز السفر",
+              "labelAr": "رقم مستند إثبات الهوية",
               "required": true
             },
             {
@@ -4540,32 +4642,57 @@
     {
       "key": "preliminary_sale_source_article_04",
       "titleAr": "المادة الرابعة: بيانات ووصف الوحدة السكنية",
-      "bodyAr": "تحدد الوحدة السكنية محل البيع بالبيانات والمواصفات والحدود والعدادات المثبتة في قسم بيانات الوحدة بهذا العقد. ويقر الطرفان بأن تلك البيانات هي المرجع الأساسي في تعيين محل البيع، مع تحمل كل طرف المسؤولية عن صحة البيانات التي قدمها وفقًا لأحكام العقد والقانون.",
+      "bodyAr": "محل البيع هو الوحدة رقم {{sale_unit_number}} بالدور {{sale_floor_number}}، الكائنة بشارع {{sale_unit_street}}، حي/منطقة {{sale_unit_district}}، بمدينة/مركز {{sale_unit_city}}، محافظة {{sale_unit_governorate}}، وتبلغ مساحتها الإجمالية {{sale_unit_area}} مترًا مربعًا تقريبًا بحسب المستندات. وتتكون من {{sale_bedrooms_count}} غرف نوم، و{{sale_reception_count}} صالات استقبال، و{{sale_bathrooms_count}} حمامات، و{{sale_balconies_count}} بلكونات، والمطبخ موصوف بأنه {{sale_kitchen_description}}، ومستوى التشطيب {{sale_finishing_level}}. وحدود الوحدة: البحري {{sale_north_boundary}}، والقبلي {{sale_south_boundary}}، والشرقي {{sale_east_boundary}}، والغربي {{sale_west_boundary}}. {{sale_property_additional_details}}",
       "sourceDocumentName": "عقد بيع ابتدائي Z DRAFT.pdf",
       "sourcePageStart": 3,
       "sourcePageEnd": 4,
       "enabled": true,
-      "variables": []
+      "variables": [
+        "sale_unit_number",
+        "sale_floor_number",
+        "sale_unit_street",
+        "sale_unit_district",
+        "sale_unit_city",
+        "sale_unit_governorate",
+        "sale_unit_area",
+        "sale_bedrooms_count",
+        "sale_reception_count",
+        "sale_bathrooms_count",
+        "sale_balconies_count",
+        "sale_kitchen_description",
+        "sale_finishing_level",
+        "sale_north_boundary",
+        "sale_south_boundary",
+        "sale_east_boundary",
+        "sale_west_boundary",
+        "sale_property_additional_details"
+      ]
     },
     {
       "key": "preliminary_sale_source_article_05",
       "titleAr": "المادة الخامسة: مصدر ملكية البائع للعقار (سند الملكية)",
-      "bodyAr": "يثبت مصدر ملكية البائع وسند حقه في التصرف في قسم سند الملكية بهذا العقد بحسب النوع المختار، ويلتزم البائع بصحة وسريان ونفاذ المستندات التي يستند إليها وبإتاحة المستندات اللازمة للمشتري واتخاذ الإجراءات التي يوجبها العقد والقانون لإتمام آثار البيع.",
+      "bodyAr": "يستند البائع في ملكيته وحقه في التصرف إلى السند المختار: {{preliminary_ownership_source}}، وبياناته: {{preliminary_ownership_detail}}. ويلتزم بصحة وسريان ونفاذ هذا السند وبإتاحة مستنداته للمشتري واتخاذ الإجراءات التي يوجبها العقد والقانون لإتمام آثار البيع.",
       "sourceDocumentName": "عقد بيع ابتدائي Z DRAFT.pdf",
       "sourcePageStart": 4,
       "sourcePageEnd": 4,
       "enabled": true,
-      "variables": []
+      "variables": [
+        "preliminary_ownership_source",
+        "preliminary_ownership_detail"
+      ]
     },
     {
       "key": "preliminary_sale_source_article_06",
       "titleAr": "المادة السادسة: ثمن البيع وطريقة السداد",
-      "bodyAr": "اتفق الطرفان على إجمالي ثمن البيع المبين رقمًا وكتابةً في بيانات العقد، ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.",
+      "bodyAr": "اتفق الطرفان على أن إجمالي ثمن البيع هو {{sale_total_price}} جنيه مصري، فقط ({{sale_total_price_words}} جنيه مصري لا غير)، ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.",
       "sourceDocumentName": "عقد بيع ابتدائي Z DRAFT.pdf",
       "sourcePageStart": 4,
       "sourcePageEnd": 5,
       "enabled": true,
-      "variables": []
+      "variables": [
+        "sale_total_price",
+        "sale_total_price_words"
+      ]
     },
     {
       "key": "preliminary_sale_source_article_07",
@@ -4627,7 +4754,9 @@
       "sourcePageStart": 7,
       "sourcePageEnd": 8,
       "enabled": true,
-      "variables": []
+      "variables": [
+        "preliminary_disposition_tax_payer"
+      ]
     },
     {
       "key": "preliminary_sale_source_article_13",
@@ -4795,32 +4924,57 @@
     {
       "key": "registrable_sale_source_article_04",
       "titleAr": "المادة الرابعة: بيانات ووصف الوحدة السكنية",
-      "bodyAr": "تحدد الوحدة السكنية محل البيع بالبيانات والمواصفات والحدود والعدادات المثبتة في قسم بيانات الوحدة بهذا العقد. ويقر الطرفان بأن تلك البيانات هي المرجع الأساسي في تعيين محل البيع، مع تحمل كل طرف المسؤولية عن صحة البيانات التي قدمها وفقًا لأحكام العقد والقانون.",
+      "bodyAr": "محل البيع هو الوحدة رقم {{sale_unit_number}} بالدور {{sale_floor_number}}، الكائنة بشارع {{sale_unit_street}}، حي/منطقة {{sale_unit_district}}، بمدينة/مركز {{sale_unit_city}}، محافظة {{sale_unit_governorate}}، وتبلغ مساحتها الإجمالية {{sale_unit_area}} مترًا مربعًا تقريبًا بحسب المستندات. وتتكون من {{sale_bedrooms_count}} غرف نوم، و{{sale_reception_count}} صالات استقبال، و{{sale_bathrooms_count}} حمامات، و{{sale_balconies_count}} بلكونات، والمطبخ موصوف بأنه {{sale_kitchen_description}}، ومستوى التشطيب {{sale_finishing_level}}. وحدود الوحدة: البحري {{sale_north_boundary}}، والقبلي {{sale_south_boundary}}، والشرقي {{sale_east_boundary}}، والغربي {{sale_west_boundary}}. {{sale_property_additional_details}}",
       "sourceDocumentName": "عقد بيع قابل للتسجيل في الشهر العقاري Z DRAFT.pdf",
       "sourcePageStart": 2,
       "sourcePageEnd": 3,
       "enabled": true,
-      "variables": []
+      "variables": [
+        "sale_unit_number",
+        "sale_floor_number",
+        "sale_unit_street",
+        "sale_unit_district",
+        "sale_unit_city",
+        "sale_unit_governorate",
+        "sale_unit_area",
+        "sale_bedrooms_count",
+        "sale_reception_count",
+        "sale_bathrooms_count",
+        "sale_balconies_count",
+        "sale_kitchen_description",
+        "sale_finishing_level",
+        "sale_north_boundary",
+        "sale_south_boundary",
+        "sale_east_boundary",
+        "sale_west_boundary",
+        "sale_property_additional_details"
+      ]
     },
     {
       "key": "registrable_sale_source_article_05",
       "titleAr": "المادة الخامسة: مصدر ملكية البائع للعقار (سند الملكية)",
-      "bodyAr": "يثبت مصدر ملكية البائع وسند حقه في التصرف في قسم سند الملكية بهذا العقد بحسب النوع المختار، ويلتزم البائع بصحة وسريان ونفاذ المستندات التي يستند إليها وبإتاحة المستندات اللازمة للمشتري واتخاذ الإجراءات التي يوجبها العقد والقانون لإتمام آثار البيع.",
+      "bodyAr": "يستند البائع في ملكيته وحقه في التصرف إلى سند صالح للتسجيل من النوع: {{registered_title_type}}، وبياناته: {{registrable_ownership_detail}}. ويلتزم بصحة وسريان ونفاذ هذا السند وبإتاحة مستنداته للمشتري واتخاذ الإجراءات اللازمة للشهر أو التسجيل وفقًا للعقد والقانون.",
       "sourceDocumentName": "عقد بيع قابل للتسجيل في الشهر العقاري Z DRAFT.pdf",
       "sourcePageStart": 4,
       "sourcePageEnd": 4,
       "enabled": true,
-      "variables": []
+      "variables": [
+        "registered_title_type",
+        "registrable_ownership_detail"
+      ]
     },
     {
       "key": "registrable_sale_source_article_06",
       "titleAr": "المادة السادسة: ثمن البيع وإقرار بالمخالصة النهائية",
-      "bodyAr": "اتفق الطرفان على إجمالي ثمن البيع المبين رقمًا وكتابةً في بيانات العقد، ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.",
+      "bodyAr": "اتفق الطرفان على أن إجمالي ثمن البيع هو {{sale_total_price}} جنيه مصري، فقط ({{sale_total_price_words}} جنيه مصري لا غير)، ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.",
       "sourceDocumentName": "عقد بيع قابل للتسجيل في الشهر العقاري Z DRAFT.pdf",
       "sourcePageStart": 4,
       "sourcePageEnd": 5,
       "enabled": true,
-      "variables": []
+      "variables": [
+        "sale_total_price",
+        "sale_total_price_words"
+      ]
     },
     {
       "key": "registrable_sale_source_article_07",
@@ -4860,7 +5014,9 @@
       "sourcePageStart": 7,
       "sourcePageEnd": 8,
       "enabled": true,
-      "variables": []
+      "variables": [
+        "registrable_disposition_tax_payer"
+      ]
     },
     {
       "key": "registrable_sale_source_article_11",
@@ -5040,32 +5196,61 @@
     {
       "key": "inherited_sale_source_article_04",
       "titleAr": "المادة الرابعة: بيانات ووصف الوحدة السكنية",
-      "bodyAr": "تحدد الوحدة السكنية محل البيع بالبيانات والمواصفات والحدود والعدادات المثبتة في قسم بيانات الوحدة بهذا العقد. ويقر الطرفان بأن تلك البيانات هي المرجع الأساسي في تعيين محل البيع، مع تحمل كل طرف المسؤولية عن صحة البيانات التي قدمها وفقًا لأحكام العقد والقانون.",
+      "bodyAr": "محل البيع هو الوحدة رقم {{sale_unit_number}} بالدور {{sale_floor_number}}، الكائنة بشارع {{sale_unit_street}}، حي/منطقة {{sale_unit_district}}، بمدينة/مركز {{sale_unit_city}}، محافظة {{sale_unit_governorate}}، وتبلغ مساحتها الإجمالية {{sale_unit_area}} مترًا مربعًا تقريبًا بحسب المستندات. وتتكون من {{sale_bedrooms_count}} غرف نوم، و{{sale_reception_count}} صالات استقبال، و{{sale_bathrooms_count}} حمامات، و{{sale_balconies_count}} بلكونات، والمطبخ موصوف بأنه {{sale_kitchen_description}}، ومستوى التشطيب {{sale_finishing_level}}. وحدود الوحدة: البحري {{sale_north_boundary}}، والقبلي {{sale_south_boundary}}، والشرقي {{sale_east_boundary}}، والغربي {{sale_west_boundary}}. {{sale_property_additional_details}}",
       "sourceDocumentName": "عقد بيع وحدة عن طريق الورث (Z DRAFT (.pdf",
       "sourcePageStart": 2,
       "sourcePageEnd": 3,
       "enabled": true,
-      "variables": []
+      "variables": [
+        "sale_unit_number",
+        "sale_floor_number",
+        "sale_unit_street",
+        "sale_unit_district",
+        "sale_unit_city",
+        "sale_unit_governorate",
+        "sale_unit_area",
+        "sale_bedrooms_count",
+        "sale_reception_count",
+        "sale_bathrooms_count",
+        "sale_balconies_count",
+        "sale_kitchen_description",
+        "sale_finishing_level",
+        "sale_north_boundary",
+        "sale_south_boundary",
+        "sale_east_boundary",
+        "sale_west_boundary",
+        "sale_property_additional_details"
+      ]
     },
     {
       "key": "inherited_sale_source_article_05",
       "titleAr": "المادة الخامسة: مصدر ملكية البائع للعقار (سند الملكية)",
-      "bodyAr": "يثبت مصدر ملكية البائع وسند حقه في التصرف في قسم سند الملكية بهذا العقد بحسب النوع المختار، ويلتزم البائع بصحة وسريان ونفاذ المستندات التي يستند إليها وبإتاحة المستندات اللازمة للمشتري واتخاذ الإجراءات التي يوجبها العقد والقانون لإتمام آثار البيع.",
+      "bodyAr": "آلت ملكية الوحدة بطريق الميراث عن المرحوم {{deceased_owner_name}} بموجب إعلام الوراثة رقم {{inheritance_declaration_number}} الصادر من {{inheritance_declaration_court}} بتاريخ {{inheritance_declaration_date}}، ويستند البائع في حقه في التصرف إلى {{inheritance_disposition_basis}}، وبيانات هذا السند: {{inheritance_disposition_detail}}. ويلتزم بصحة وسريان المستندات المؤيدة لذلك وبإتاحتها للمشتري وفقًا للعقد والقانون.",
       "sourceDocumentName": "عقد بيع وحدة عن طريق الورث (Z DRAFT (.pdf",
       "sourcePageStart": 3,
       "sourcePageEnd": 3,
       "enabled": true,
-      "variables": []
+      "variables": [
+        "deceased_owner_name",
+        "inheritance_declaration_number",
+        "inheritance_declaration_court",
+        "inheritance_declaration_date",
+        "inheritance_disposition_basis",
+        "inheritance_disposition_detail"
+      ]
     },
     {
       "key": "inherited_sale_source_article_06",
       "titleAr": "المادة السادسة: ثمن البيع وإقرار بالمخالصة النهائية",
-      "bodyAr": "اتفق الطرفان على إجمالي ثمن البيع المبين رقمًا وكتابةً في بيانات العقد، ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.",
+      "bodyAr": "اتفق الطرفان على أن إجمالي ثمن البيع هو {{sale_total_price}} جنيه مصري، فقط ({{sale_total_price_words}} جنيه مصري لا غير)، ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.",
       "sourceDocumentName": "عقد بيع وحدة عن طريق الورث (Z DRAFT (.pdf",
       "sourcePageStart": 3,
       "sourcePageEnd": 4,
       "enabled": true,
-      "variables": []
+      "variables": [
+        "sale_total_price",
+        "sale_total_price_words"
+      ]
     },
     {
       "key": "inherited_sale_source_article_07",
@@ -5105,7 +5290,9 @@
       "sourcePageStart": 6,
       "sourcePageEnd": 7,
       "enabled": true,
-      "variables": []
+      "variables": [
+        "inherited_disposition_tax_payer"
+      ]
     },
     {
       "key": "inherited_sale_source_article_11",
@@ -5273,7 +5460,11 @@
     {
       "key": "sale_full_payment_clause",
       "titleAr": "السداد الكامل في مجلس العقد",
-      "bodyAr": "يقر البائع بأنه تسلم من المشتري قبل التوقيع وفي مجلس العقد كامل ثمن البيع المبين في بيانات العقد، ويُعد توقيعه مخالصة نهائية باستلام كامل الثمن وإبراءً لذمة المشتري من الالتزام المالي الناشئ عن الثمن، دون إخلال بأي التزامات أخرى ناشئة عن العقد أو القانون.",
+      "variables": [
+        "sale_total_price",
+        "sale_total_price_words"
+      ],
+      "bodyAr": "يقر البائع بأنه تسلم من المشتري قبل التوقيع وفي مجلس العقد كامل ثمن البيع وقدره {{sale_total_price}} جنيه مصري، فقط ({{sale_total_price_words}} جنيه مصري لا غير)، ويُعد توقيعه مخالصة نهائية باستلام كامل الثمن وإبراءً لذمة المشتري من الالتزام المالي الناشئ عن الثمن، دون إخلال بأي التزامات أخرى ناشئة عن العقد أو القانون.",
       "visibleWhen": {
         "fieldKey": "sale_payment_plan",
         "operator": "equals",
@@ -5399,8 +5590,11 @@
     },
     {
       "key": "sale_occupied_unit_clause",
-      "titleAr": "الوحدة المؤجرة أو المشغولة (إن وجدت)",
-      "bodyAr": "إذا كانت الوحدة مؤجرة أو مشغولة بعلاقة قانونية قائمة كما هو مثبت في بيانات العقد، يقر المشتري بعلمه بذلك ويلتزم البائع بتسليمه المستندات المتعلقة بالحيازة أو العلاقة القانونية القائمة وفقًا لما اتفق عليه الطرفان.",
+      "titleAr": "الوحدة المؤجرة أو المشغولة",
+      "variables": [
+        "sale_occupancy_details"
+      ],
+      "bodyAr": "يقر المشتري بعلمه بأن الوحدة مؤجرة أو مشغولة بعلاقة قانونية قائمة، وبيانات هذا الإشغال هي: {{sale_occupancy_details}}. ويلتزم البائع بتسليم المشتري المستندات المتعلقة بالحيازة أو العلاقة القانونية القائمة وفقًا لما اتفق عليه الطرفان.",
       "visibleWhen": {
         "fieldKey": "sale_unit_is_occupied",
         "operator": "truthy"

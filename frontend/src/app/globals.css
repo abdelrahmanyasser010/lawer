@@ -396,6 +396,31 @@ input[type="number"] {
   white-space: normal;
 }
 
+.zdraft-document-page .zd-doc-subclause {
+  display: block;
+  margin-top: 1.25mm;
+  text-align: justify;
+}
+
+.zdraft-document-page .zd-doc-subclause:first-child {
+  margin-top: 0;
+}
+
+.zdraft-document-page .zd-doc-subclause-heading {
+  display: inline;
+  margin-inline-end: 0.35em;
+  font-size: 1.045em;
+  font-weight: 700;
+}
+
+.zdraft-document-page .zd-doc-subclause-number {
+  display: inline-block;
+  margin-inline-end: 0.28em;
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-weight: 800;
+}
+
 .zdraft-document-page .zd-doc-signatures {
   margin-top: 8mm !important;
 }

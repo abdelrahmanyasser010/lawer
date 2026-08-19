@@ -18,6 +18,11 @@ const partyTypeOptions = [
   { value: "individual", labelAr: "فرد" },
   { value: "company", labelAr: "شركة / منشأة" },
 ];
+
+const identityDocumentOptions = [
+  { value: "national_id", labelAr: "رقم قومي" },
+  { value: "passport", labelAr: "جواز سفر" },
+];
 const meterTypeOptions = [
   { value: "independent", labelAr: "مستقل" },
   { value: "shared", labelAr: "مشترك" },
@@ -46,7 +51,8 @@ function partyFields(prefix: "seller" | "buyer", label: string, allowCompany: bo
   fields.push(
     { key: `${prefix}_name`, type: "text", labelAr: `الاسم الكامل لـ${label}`, required: true },
     { key: `${prefix}_nationality`, type: "text", labelAr: "الجنسية", required: true },
-    { key: `${prefix}_national_id`, type: "text", labelAr: "الرقم القومي / رقم جواز السفر", required: true },
+    { key: `${prefix}_identity_document_type`, type: "radio", labelAr: "نوع مستند إثبات الهوية", required: true, printInDocument: false, options: identityDocumentOptions },
+    { key: `${prefix}_national_id`, type: "text", labelAr: "رقم مستند إثبات الهوية", required: true },
     { key: `${prefix}_id_issuer`, type: "text", labelAr: "جهة الإصدار" },
     { key: `${prefix}_id_issue_date`, type: "date", labelAr: "تاريخ الإصدار" },
     { key: `${prefix}_address`, type: "text", labelAr: "العنوان", required: true },
@@ -510,13 +516,30 @@ const reviewedSourceClauses = saleSourceLegalClauses.map((item): LegalClauseDefi
     body = "تثبت بيانات الطرف الأول (البائع) والطرف الثاني (المشتري) وصفتهما وبيانات هويتهما واتصالهما في قسم بيانات العقد، وتُعد هذه البيانات جزءًا لا يتجزأ منه. وإذا كان الطرف شخصًا اعتباريًا في النوع الذي يسمح بذلك، فتثبت بيانات الشركة وممثلها القانوني وصفته ومقرها وبياناتها الرسمية ضمن ذات القسم.";
   }
   if (key.endsWith("_source_article_04")) {
-    body = "تحدد الوحدة السكنية محل البيع بالبيانات والمواصفات والحدود والعدادات المثبتة في قسم بيانات الوحدة بهذا العقد. ويقر الطرفان بأن تلك البيانات هي المرجع الأساسي في تعيين محل البيع، مع تحمل كل طرف المسؤولية عن صحة البيانات التي قدمها وفقًا لأحكام العقد والقانون.";
+    body = "محل البيع هو الوحدة رقم {{sale_unit_number}} بالدور {{sale_floor_number}}، الكائنة بشارع {{sale_unit_street}}، حي/منطقة {{sale_unit_district}}، بمدينة/مركز {{sale_unit_city}}، محافظة {{sale_unit_governorate}}، وتبلغ مساحتها الإجمالية {{sale_unit_area}} مترًا مربعًا تقريبًا بحسب المستندات. وتتكون من {{sale_bedrooms_count}} غرف نوم، و{{sale_reception_count}} صالات استقبال، و{{sale_bathrooms_count}} حمامات، و{{sale_balconies_count}} بلكونات، والمطبخ موصوف بأنه {{sale_kitchen_description}}، ومستوى التشطيب {{sale_finishing_level}}. وحدود الوحدة: البحري {{sale_north_boundary}}، والقبلي {{sale_south_boundary}}، والشرقي {{sale_east_boundary}}، والغربي {{sale_west_boundary}}. {{sale_property_additional_details}}";
+    variables.push(
+      "sale_unit_number", "sale_floor_number", "sale_unit_street", "sale_unit_district", "sale_unit_city", "sale_unit_governorate", "sale_unit_area",
+      "sale_bedrooms_count", "sale_reception_count", "sale_bathrooms_count", "sale_balconies_count", "sale_kitchen_description", "sale_finishing_level",
+      "sale_north_boundary", "sale_south_boundary", "sale_east_boundary", "sale_west_boundary", "sale_property_additional_details",
+    );
   }
   if (key === "preliminary_sale_source_article_03") body = removeRange(body, "فقرة ( في حالة اختيار ان البيع يشمل المنافع والملحقات والجراج )");
-  if (key === "preliminary_sale_source_article_05" || key === "registrable_sale_source_article_05" || key === "inherited_sale_source_article_05") {
-    body = "يثبت مصدر ملكية البائع وسند حقه في التصرف في قسم سند الملكية بهذا العقد بحسب النوع المختار، ويلتزم البائع بصحة وسريان ونفاذ المستندات التي يستند إليها وبإتاحة المستندات اللازمة للمشتري واتخاذ الإجراءات التي يوجبها العقد والقانون لإتمام آثار البيع.";
+  if (key === "preliminary_sale_source_article_05") {
+    body = "يستند البائع في ملكيته وحقه في التصرف إلى السند المختار: {{preliminary_ownership_source}}، وبياناته: {{preliminary_ownership_detail}}. ويلتزم بصحة وسريان ونفاذ هذا السند وبإتاحة مستنداته للمشتري واتخاذ الإجراءات التي يوجبها العقد والقانون لإتمام آثار البيع.";
+    variables.push("preliminary_ownership_source", "preliminary_ownership_detail");
   }
-  if (key.endsWith("_source_article_06")) body = "اتفق الطرفان على إجمالي ثمن البيع المبين رقمًا وكتابةً في بيانات العقد، ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.";
+  if (key === "registrable_sale_source_article_05") {
+    body = "يستند البائع في ملكيته وحقه في التصرف إلى سند صالح للتسجيل من النوع: {{registered_title_type}}، وبياناته: {{registrable_ownership_detail}}. ويلتزم بصحة وسريان ونفاذ هذا السند وبإتاحة مستنداته للمشتري واتخاذ الإجراءات اللازمة للشهر أو التسجيل وفقًا للعقد والقانون.";
+    variables.push("registered_title_type", "registrable_ownership_detail");
+  }
+  if (key === "inherited_sale_source_article_05") {
+    body = "آلت ملكية الوحدة بطريق الميراث عن المرحوم {{deceased_owner_name}} بموجب إعلام الوراثة رقم {{inheritance_declaration_number}} الصادر من {{inheritance_declaration_court}} بتاريخ {{inheritance_declaration_date}}، ويستند البائع في حقه في التصرف إلى {{inheritance_disposition_basis}}، وبيانات هذا السند: {{inheritance_disposition_detail}}. ويلتزم بصحة وسريان المستندات المؤيدة لذلك وبإتاحتها للمشتري وفقًا للعقد والقانون.";
+    variables.push("deceased_owner_name", "inheritance_declaration_number", "inheritance_declaration_court", "inheritance_declaration_date", "inheritance_disposition_basis", "inheritance_disposition_detail");
+  }
+  if (key.endsWith("_source_article_06")) {
+    body = "اتفق الطرفان على أن إجمالي ثمن البيع هو {{sale_total_price}} جنيه مصري، فقط ({{sale_total_price_words}} جنيه مصري لا غير)، ويُعمل في طريقة السداد بالحالة المختارة أدناه دون غيرها.";
+    variables.push("sale_total_price", "sale_total_price_words");
+  }
   if (key.endsWith("_source_article_07")) body = "يتم تسليم الوحدة ونقل الحيازة وفق طريقة سداد الثمن المبينة في بيانات العقد، وبالشروط والضوابط الواردة أدناه، مع التزام البائع بتسليم الوحدة بالحالة المتفق عليها وخالية من الشواغل ما لم يثبت في بيانات العقد وجود إشغال متفق عليه.";
   if (key === "preliminary_sale_source_article_08") {
     body = "تنتقل الحيازة الفعلية والقانونية والهادئة للوحدة السكنية إلى المشتري من تاريخ التسليم الفعلي المحدد وفق المادة السابعة بحسب طريقة السداد المختارة. ومن تاريخ التسليم تنتقل إلى المشتري تبعة المحافظة على الوحدة والمسؤولية عن استعمالها والمخاطر اللاحقة للتسليم، مع بقاء مسؤولية البائع عن أي سبب سابق على التسليم أو عيب خفي أو ضمان يلتزم به بموجب العقد أو القانون. وتبرأ ذمة البائع من التزام التسليم عند تحقق التسليم الفعلي، لا بمجرد التوقيع إذا كان التسليم مؤجلاً إلى ما بعد سداد كامل الثمن.";
@@ -542,13 +565,16 @@ const reviewedSourceClauses = saleSourceLegalClauses.map((item): LegalClauseDefi
     variables.push("preliminary_hidden_defect_warranty_years");
   }
   if (key === "preliminary_sale_source_article_12") {
-    body = replaceRange(body, ".1ضريبة التصرفات العقارية", ". 2مصاريف دعوى صحة التوقيع", ".1ضريبة التصرفات العقارية: يلتزم الطرف المحدد في بيانات العقد بسداد ضريبة التصرفات العقارية المستحقة قانونًا عن هذا البيع وفقًا للنسبة والإجراءات المقررة قانونًا، مع مراعاة ما قد يتفق عليه الطرفان كتابةً بشأن توزيع هذا الالتزام فيما بينهما.\n");
+    body = replaceRange(body, ".1ضريبة التصرفات العقارية", ". 2مصاريف دعوى صحة التوقيع", ".1ضريبة التصرفات العقارية: اتفق الطرفان فيما بينهما على أن يتحمل {{preliminary_disposition_tax_payer}} ضريبة التصرفات العقارية المستحقة قانونًا عن هذا البيع وفقًا للنسبة والإجراءات المقررة قانونًا، دون إخلال بحق الجهات المختصة في الرجوع على الملتزم بها قانونًا.\n");
+    variables.push("preliminary_disposition_tax_payer");
   }
   if (key === "registrable_sale_source_article_10") {
-    body = replaceRange(body, ".2ضريبة التصرفات العقارية", ".3مصروفات دعوى صحة ونفاذ", ".2ضريبة التصرفات العقارية: يلتزم الطرف المحدد في بيانات العقد بسداد ضريبة التصرفات العقارية المستحقة قانونًا عن هذا البيع، دون إخلال بحق الجهات المختصة في الرجوع على الملتزم بها قانونًا، ويجوز للطرفين تنظيم تحملها فيما بينهما كتابةً في الحدود التي يجيزها القانون.\n");
+    body = replaceRange(body, ".2ضريبة التصرفات العقارية", ".3مصروفات دعوى صحة ونفاذ", ".2ضريبة التصرفات العقارية: اتفق الطرفان فيما بينهما على أن يتحمل {{registrable_disposition_tax_payer}} ضريبة التصرفات العقارية المستحقة قانونًا عن هذا البيع، دون إخلال بحق الجهات المختصة في الرجوع على الملتزم بها قانونًا.\n");
+    variables.push("registrable_disposition_tax_payer");
   }
   if (key === "inherited_sale_source_article_10") {
-    body = replaceRange(body, ".1ضريبة التصرفات العقارية", ".2رسوم وإجراءات نقل الملكية أو إثبات التصرف", ".1ضريبة التصرفات العقارية: يلتزم الطرف المحدد في بيانات العقد بسداد ضريبة التصرفات العقارية المستحقة قانونًا عن هذا التصرف وفقًا للمواعيد والإجراءات المقررة قانونًا، دون إخلال بحق الجهات المختصة في الرجوع على الملتزم بها قانونًا.\n");
+    body = replaceRange(body, ".1ضريبة التصرفات العقارية", ".2رسوم وإجراءات نقل الملكية أو إثبات التصرف", ".1ضريبة التصرفات العقارية: اتفق الطرفان فيما بينهما على أن يتحمل {{inherited_disposition_tax_payer}} ضريبة التصرفات العقارية المستحقة قانونًا عن هذا التصرف وفقًا للمواعيد والإجراءات المقررة قانونًا، دون إخلال بحق الجهات المختصة في الرجوع على الملتزم بها قانونًا.\n");
+    variables.push("inherited_disposition_tax_payer");
   }
   if (key === "inherited_sale_source_article_12") {
     body = body.replace("المرحوم[كما هو مثبت ببيانات العقد]", "المرحوم {{deceased_owner_name}}");
@@ -594,7 +620,7 @@ const conditionalClauses: LegalClauseDefinition[] = [
     variables: ["sale_jurisdiction_court"],
     bodyAr: "تختص محكمة {{sale_jurisdiction_court}} الابتدائية ودوائرها الجزئية بحسب الأحوال بنظر أي نزاع ينشأ عن هذا العقد أو يتعلق بتفسيره أو تنفيذه أو آثاره، وذلك مع عدم الإخلال بقواعد الاختصاص الولائي والنوعي والمكاني الآمرة.",
   }),
-  customClause({ key: "sale_full_payment_clause", titleAr: "السداد الكامل في مجلس العقد", bodyAr: "يقر البائع بأنه تسلم من المشتري قبل التوقيع وفي مجلس العقد كامل ثمن البيع المبين في بيانات العقد، ويُعد توقيعه مخالصة نهائية باستلام كامل الثمن وإبراءً لذمة المشتري من الالتزام المالي الناشئ عن الثمن، دون إخلال بأي التزامات أخرى ناشئة عن العقد أو القانون.", visibleWhen: fullPaymentCondition }),
+  customClause({ key: "sale_full_payment_clause", titleAr: "السداد الكامل في مجلس العقد", variables: ["sale_total_price", "sale_total_price_words"], bodyAr: "يقر البائع بأنه تسلم من المشتري قبل التوقيع وفي مجلس العقد كامل ثمن البيع وقدره {{sale_total_price}} جنيه مصري، فقط ({{sale_total_price_words}} جنيه مصري لا غير)، ويُعد توقيعه مخالصة نهائية باستلام كامل الثمن وإبراءً لذمة المشتري من الالتزام المالي الناشئ عن الثمن، دون إخلال بأي التزامات أخرى ناشئة عن العقد أو القانون.", visibleWhen: fullPaymentCondition }),
   customClause({ key: "sale_installment_payment_clause", titleAr: "السداد بالتقسيط أو على دفعات", variables: ["sale_down_payment", "sale_remaining_amount", "sale_installment_grace_days"], bodyAr: `يقر البائع باستلام مقدم قدره {{sale_down_payment}} جنيه مصري، ويلتزم المشتري بسداد باقي الثمن وقدره {{sale_remaining_amount}} جنيه مصري وفق ملحق جدول الأقساط المرفق بهذا العقد، ويُعد الملحق جزءًا لا يتجزأ من العقد وتكون بياناته ملزمة للطرفين.
 
 إذا تأخر المشتري عن سداد أي قسط في موعد استحقاقه لمدة تتجاوز {{sale_installment_grace_days}} يومًا (فترة سماح)، حلت واستحقت باقي الأقساط المؤجلة فورًا بقوة الاتفاق ودون حاجة لتوجيه إنذار، ويلتزم بسداد كامل المتبقي من الثمن فورًا كدفعة واحدة. وإذا تأخر عن سداد قسطين متتاليين أو أي ثلاثة أقساط متفرقة، يُعتبر العقد مفسوخًا من تلقاء نفسه وبمرتبة الشرط الفاسخ الصريح، دون حاجة إلى إعذار أو الحصول على حكم قضائي بالفسخ، وفق الصياغة الواردة بالمصدر.
@@ -610,7 +636,7 @@ const conditionalClauses: LegalClauseDefinition[] = [
   customClause({ key: "sale_installment_delivery_clause", titleAr: "التسليم في حالة التقسيط", variables: ["sale_delivery_delay_daily_compensation", "sale_delivery_delay_threshold_days"], bodyAr: "في حالة التقسيط، يلتزم البائع بتسليم الوحدة للمشتري بعد سداد كامل الثمن ومن تاريخ سداد آخر قسط. وإذا تخلف عن التسليم بعد استحقاقه، يطبق التعويض الاتفاقي المبين ببيانات العقد وقدره {{sale_delivery_delay_daily_compensation}} جنيه مصري عن كل يوم تأخير، ويعد تجاوز مدة {{sale_delivery_delay_threshold_days}} يومًا إخلالًا جوهريًا وفق أحكام العقد.", visibleWhen: installmentCondition }),
   customClause({ key: "registrable_full_delivery_clause", titleAr: "التسليم في حالة السداد الكامل", variables: ["sale_delivery_delay_daily_compensation"], bodyAr: "يلتزم البائع بتسليم الوحدة للمشتري تسليم الحيازة القانونية والهادئة فور التوقيع على العقد في حالة السداد الكامل. وإذا تخلف عن التسليم، يطبق التعويض الاتفاقي وقدره {{sale_delivery_delay_daily_compensation}} جنيه مصري عن كل يوم تأخير، وإذا تجاوز التأخير ثلاثين (30) يومًا عُد ذلك إخلالًا جوهريًا وفق أحكام العقد.", visibleWhen: fullPaymentCondition, sourceDocumentName: "عقد بيع قابل للتسجيل في الشهر العقاري Z DRAFT.pdf", sourcePageStart: 6, sourcePageEnd: 6 }),
   customClause({ key: "registrable_installment_delivery_clause", titleAr: "التسليم في حالة التقسيط", variables: ["sale_delivery_delay_daily_compensation"], bodyAr: "في حالة التقسيط، يلتزم البائع بتسليم الوحدة للمشتري بعد سداد كامل الثمن ومن تاريخ سداد آخر قسط. وإذا تخلف عن التسليم بعد استحقاقه، يطبق التعويض الاتفاقي وقدره {{sale_delivery_delay_daily_compensation}} جنيه مصري عن كل يوم تأخير، وإذا تجاوز التأخير ثلاثين (30) يومًا عُد ذلك إخلالًا جوهريًا وفق أحكام العقد.", visibleWhen: installmentCondition, sourceDocumentName: "عقد بيع قابل للتسجيل في الشهر العقاري Z DRAFT.pdf", sourcePageStart: 6, sourcePageEnd: 6 }),
-  customClause({ key: "sale_occupied_unit_clause", titleAr: "الوحدة المؤجرة أو المشغولة (إن وجدت)", bodyAr: "إذا كانت الوحدة مؤجرة أو مشغولة بعلاقة قانونية قائمة كما هو مثبت في بيانات العقد، يقر المشتري بعلمه بذلك ويلتزم البائع بتسليمه المستندات المتعلقة بالحيازة أو العلاقة القانونية القائمة وفقًا لما اتفق عليه الطرفان.", visibleWhen: { fieldKey: "sale_unit_is_occupied", operator: "truthy" } }),
+  customClause({ key: "sale_occupied_unit_clause", titleAr: "الوحدة المؤجرة أو المشغولة", variables: ["sale_occupancy_details"], bodyAr: "يقر المشتري بعلمه بأن الوحدة مؤجرة أو مشغولة بعلاقة قانونية قائمة، وبيانات هذا الإشغال هي: {{sale_occupancy_details}}. ويلتزم البائع بتسليم المشتري المستندات المتعلقة بالحيازة أو العلاقة القانونية القائمة وفقًا لما اتفق عليه الطرفان.", visibleWhen: { fieldKey: "sale_unit_is_occupied", operator: "truthy" } }),
   customClause({ key: "preliminary_benefits_clause", titleAr: "المنافع والملحقات والحصة الشائعة (فقرة اختيارية)", bodyAr: "يشمل البيع، وفق اختيار الطرفين، الحقوق والارتفاقات والمنافع والملحقات الخاصة بالوحدة المبيعة وحصتها الشائعة في أرض العقار والأجزاء والمرافق المشتركة، في الحدود المبينة بسند البائع وطبيعة العقار وأحكام العقد.", visibleWhen: { fieldKey: "preliminary_include_benefits_clause", operator: "truthy" }, sourceDocumentName: "عقد بيع ابتدائي Z DRAFT.pdf", sourcePageStart: 2, sourcePageEnd: 2 }),
   customClause({ key: "preliminary_garage_included_clause", titleAr: "الموقف العرفي للجراج — يشمل مكان سيارة", bodyAr: "يشمل البيع حق المشتري في تخصيص حيازة مكان لسيارة واحدة (باركينج) بالجراج الخاص بالعقار كحق تابع للوحدة وفق ما ورد بالعقد.", visibleWhen: { fieldKey: "preliminary_garage_status", operator: "equals", value: "included" }, sourceDocumentName: "عقد بيع ابتدائي Z DRAFT.pdf", sourcePageStart: 6, sourcePageEnd: 7 }),
   customClause({ key: "preliminary_garage_excluded_clause", titleAr: "الموقف العرفي للجراج — غير مشمول", bodyAr: "اتفق الطرفان على أن البيع لا يشمل أي حصة أو حق للمشتري في استعمال أو حيازة جراج العقار، ويظل الجراج خارج نطاق التعاقد.", visibleWhen: { fieldKey: "preliminary_garage_status", operator: "equals", value: "not_included" }, sourceDocumentName: "عقد بيع ابتدائي Z DRAFT.pdf", sourcePageStart: 6, sourcePageEnd: 7 }),
@@ -747,7 +773,7 @@ const installmentAnnexClause: LegalClauseDefinition = {
 
 export const apartmentSaleTemplateDefinition: ContractTemplateDefinition = {
   slug: "apartment_sale",
-  version: 11,
+  version: 12,
   nameAr: "عقود بيع الوحدات السكنية",
   description: "ثلاثة عقود بيع مستقلة مطابقة للنماذج: بيع ابتدائي، بيع قابل للتسجيل بالشهر العقاري، وبيع لوحدة آلت بالميراث، مع ملحق أقساط اختياري وفارغ قابل للطباعة والتعبئة اليدوية.",
   priceEgp: 0,

@@ -10,6 +10,7 @@ import type {
   RepeaterRowValue,
   WizardFieldDefinition,
 } from "../domain/contractTemplate.types";
+import { resolveWizardFieldLabel } from "../domain/contractDisplay";
 
 interface DynamicFieldRendererProps {
   field: WizardFieldDefinition;
@@ -281,22 +282,22 @@ export default function DynamicFieldRenderer({
     return <div onFocusCapture={onFocus}><RepeaterRenderer field={field} value={listValue} onChange={onChange} /></div>;
   }
 
-  let label = field.labelAr;
+  const label = resolveWizardFieldLabel(field, allFormValues);
   let placeholder = field.placeholder;
   let helpText = field.helpText;
 
   if (field.key.endsWith("_national_id")) {
-    const natKey = field.key.replace(/_national_id$/, "_nationality");
-    const natVal = String(allFormValues[natKey] ?? "").trim();
-    const isNonEgyptian = natVal !== "" && natVal !== "مصري" && natVal !== "egyptian" && natVal !== "مصرية" && natVal !== "مصري الجنسية";
-    if (isNonEgyptian) {
-      label = "رقم جواز السفر";
+    const typeKey = field.key.replace(/_national_id$/, "_identity_document_type");
+    const selectedType = String(allFormValues[typeKey] ?? "").trim();
+    if (selectedType === "passport" || label === "رقم جواز السفر") {
       placeholder = "أدخل رقم جواز السفر الساري";
-      helpText = "رقم جواز السفر للمتعاقد غير المصري";
-    } else {
-      label = "الرقم القومي";
+      helpText = "أدخل رقم جواز السفر كما هو مثبت بالمستند";
+    } else if (selectedType === "national_id" || label === "الرقم القومي") {
       placeholder = "14 رقمًا قوميًا";
-      helpText = "الرقم القومي المكون من 14 رقمًا للمواطن المصري";
+      helpText = "أدخل الرقم القومي المكون من 14 رقمًا";
+    } else {
+      placeholder = "اختر نوع مستند إثبات الهوية أولًا";
+      helpText = "اختر رقم قومي أو جواز سفر، ثم أدخل الرقم كما هو بالمستند";
     }
   }
 

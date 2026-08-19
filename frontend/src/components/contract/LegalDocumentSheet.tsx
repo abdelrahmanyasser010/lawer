@@ -18,7 +18,7 @@ import {
   type WizardFieldDefinition,
   type WizardStepDefinition,
 } from "@zdraft/template-engine";
-import { formatContractFieldValue } from "@/features/contracts/domain/contractDisplay";
+import { formatContractFieldValue, resolveWizardFieldLabel } from "@/features/contracts/domain/contractDisplay";
 
 interface Props {
   serialNumber: string;
@@ -295,9 +295,23 @@ export function formatLegalValue(
   return formatContractFieldValue(key, value, options, type);
 }
 
+function normalizeInlineLegalSubclauses(text: string): string {
+  const normalized = text.replace(/\r\n?/g, "\n");
+  const firstSubclause = normalized.match(/(?:^|\s)(\d{1,3})-\d{1,3}[.)]?(?=\s)/);
+  if (!firstSubclause) return normalized;
+
+  // Legal source PDFs frequently keep 7-1 / 7-2 / 22-1 style subclauses
+  // in a single extracted paragraph. The article prefix lets us split only
+  // genuine subclauses and avoid touching dates, amounts, or phone numbers.
+  const articlePrefix = firstSubclause[1];
+  return normalized.replace(
+    new RegExp("[^\\S\\n]+(?=" + articlePrefix + "-\\d{1,3}[.)]?(?=\\s))", "g"),
+    "\n",
+  );
+}
+
 function LegalTextBody({ text, className = "" }: { text: string; className?: string }) {
-  const paragraphs = text
-    .replace(/\r\n?/g, "\n")
+  const paragraphs = normalizeInlineLegalSubclauses(text)
     .split(/\n\s*\n/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
@@ -308,6 +322,21 @@ function LegalTextBody({ text, className = "" }: { text: string; className?: str
         <p key={paragraphIndex} className="text-justify leading-[1.46]">
           {paragraph.split("\n").map((line, lineIndex) => {
             const trimmed = line.trim();
+            const subclause = trimmed.match(/^(\d{1,3}-\d{1,3}[.)]?)(?:\s+|$)(.*)$/);
+            if (subclause) {
+              const rest = subclause[2] ?? "";
+              const heading = rest.match(/^([^:：]{1,120}:)(.*)$/);
+              return (
+                <span key={lineIndex} dir="rtl" className="zd-doc-subclause">
+                  <span className="zd-doc-subclause-heading">
+                    <bdi dir="ltr" className="zd-doc-subclause-number">{subclause[1]}</bdi>
+                    {heading ? <span>{heading[1]}</span> : null}
+                  </span>
+                  {heading ? (heading[2] ? <span>{heading[2]}</span> : null) : (rest ? <span>{rest}</span> : null)}
+                </span>
+              );
+            }
+
             const numbered = trimmed.match(/^(\d{1,3})\.(?:\s+|$)(.*)$/) || trimmed.match(/^\.(\d{1,3})(?:\s+|$)(.*)$/);
             return numbered ? (
               <span key={lineIndex} dir="rtl" className="flex items-start gap-1">
@@ -404,6 +433,7 @@ function DocumentDataSections({
               <p className="zd-doc-party-line">
                 {itemFields.map((field) => {
                   const active = field.key === activeFieldKey;
+                  const displayLabel = resolveWizardFieldLabel(field, fieldValues);
                   return (
                     <span
                       key={field.key}
@@ -411,8 +441,8 @@ function DocumentDataSections({
                       data-active-preview={active ? "exact" : undefined}
                       className={`zd-doc-party-item ${active ? "relative rounded-sm outline outline-2 outline-[#d9a84e]" : ""}`}
                     >
-                      {active && <LiveFieldMarker label={activeFieldLabel ?? field.labelAr} />}
-                      <span className="zd-doc-data-label">{field.labelAr}:</span>{" "}
+                      {active && <LiveFieldMarker label={activeFieldLabel ?? displayLabel} />}
+                      <span className="zd-doc-data-label">{displayLabel}:</span>{" "}
                       <span className={`zd-doc-data-value ${isLtrDocumentField(field.key, field.type) ? "inline-block" : ""}`} dir={isLtrDocumentField(field.key, field.type) ? "ltr" : undefined}>
                         {formatPrintDocumentValue(field, fieldValues[field.key])}
                       </span>
@@ -430,6 +460,7 @@ function DocumentDataSections({
                         {pair.map((field) => {
                           const active = field.key === activeFieldKey;
                           const ltr = isLtrDocumentField(field.key, field.type);
+                          const displayLabel = resolveWizardFieldLabel(field, fieldValues);
                           return (
                             <td
                               key={field.key}
@@ -437,8 +468,8 @@ function DocumentDataSections({
                               data-active-preview={active ? "exact" : undefined}
                               className={active ? "relative outline outline-2 outline-[#d9a84e]" : ""}
                             >
-                              {active && <LiveFieldMarker label={activeFieldLabel ?? field.labelAr} />}
-                              <div className="zd-doc-data-label">{field.labelAr}</div>
+                              {active && <LiveFieldMarker label={activeFieldLabel ?? displayLabel} />}
+                              <div className="zd-doc-data-label">{displayLabel}</div>
                               <div className="zd-doc-data-value" dir={ltr ? "ltr" : undefined}>
                                 {formatPrintDocumentValue(field, fieldValues[field.key])}
                               </div>

@@ -107,7 +107,7 @@ final class ProcessDocumentJobs extends Command
                     if($rows)$repeaters[]=['title'=>$field['labelAr']??$key,'columns'=>$columns,'rows'=>$rows];
                     continue;
                 }
-                $items[]=['label'=>$field['labelAr']??$key,'value'=>$this->display($value,$field),'ltr'=>$this->isLtrField($key,$type)];
+                $items[]=['label'=>$this->fieldLabel($field,$fields),'value'=>$this->display($value,$field),'ltr'=>$this->isLtrField($key,$type)];
             }
             if($items||$repeaters){$stepKey=(string)($step['key']??'');$presentation=$this->isPartyStep($stepKey)?'party':'grid';$sections[]=['title'=>$step['titleAr']??'بيانات العقد','items'=>$items,'repeaters'=>$repeaters,'presentation'=>$presentation];}
         }
@@ -149,6 +149,34 @@ final class ProcessDocumentJobs extends Command
         return$sections;
     }
 
+    private function fieldLabel(array $field,array $fields):string
+    {
+        $key=(string)($field['key']??'');
+        if(str_ends_with($key,'_national_id')){
+            $typeKey=preg_replace('/_national_id$/','_identity_document_type',$key);
+            $selectedType=trim((string)($fields[$typeKey]??''));
+            if($selectedType==='passport')return'رقم جواز السفر';
+            if($selectedType==='national_id')return'الرقم القومي';
+            $natKey=preg_replace('/_national_id$/','_nationality',$key);
+            $nat=mb_strtolower(trim((string)($fields[$natKey]??'')));
+            if(in_array($nat,['مصري','مصرية','مصري الجنسية','egyptian'],true))return'الرقم القومي';
+            if($nat!=='')return'رقم جواز السفر';
+            return'رقم مستند إثبات الهوية';
+        }
+        return(string)($field['labelAr']??($key?:'بيان'));
+    }
+
+    private function identityDocumentLabel(string $prefix,array $fields):string
+    {
+        $selectedType=trim((string)($fields[$prefix.'_identity_document_type']??''));
+        if($selectedType==='passport')return'رقم جواز السفر';
+        if($selectedType==='national_id')return'الرقم القومي';
+        $nat=mb_strtolower(trim((string)($fields[$prefix.'_nationality']??'')));
+        if(in_array($nat,['مصري','مصرية','مصري الجنسية','egyptian'],true))return'الرقم القومي';
+        if($nat!=='')return'رقم جواز السفر';
+        return'رقم مستند إثبات الهوية';
+    }
+
     private function isPartyStep(string $stepKey):bool
     {
         return in_array($stepKey,['rental_landlord','rental_tenant','sale_seller','sale_buyer'],true)
@@ -158,18 +186,18 @@ final class ProcessDocumentJobs extends Command
     private function partyMeta(string $slug,string $variantKey,array $fields):array
     {
         if($slug==='rental')return[
-            ['label'=>'الطرف الأول – المؤجر','name'=>(string)($fields['landlord_name']??''),'capacity'=>(string)(($fields['landlord_party_type']??'individual')==='company'?($fields['landlord_representative_capacity']??''):'المؤجر'),'nationalId'=>(string)($fields['landlord_national_id']??'')],
-            ['label'=>'الطرف الثاني – المستأجر','name'=>(string)($fields['tenant_name']??''),'capacity'=>(string)(($fields['tenant_party_type']??'individual')==='company'?($fields['tenant_representative_capacity']??''):'المستأجر'),'nationalId'=>(string)($fields['tenant_national_id']??'')],
+            ['label'=>'الطرف الأول – المؤجر','name'=>(string)($fields['landlord_name']??''),'capacity'=>(string)(($fields['landlord_party_type']??'individual')==='company'?($fields['landlord_representative_capacity']??''):'المؤجر'),'nationalId'=>(string)($fields['landlord_national_id']??''),'identityLabel'=>$this->identityDocumentLabel('landlord',$fields)],
+            ['label'=>'الطرف الثاني – المستأجر','name'=>(string)($fields['tenant_name']??''),'capacity'=>(string)(($fields['tenant_party_type']??'individual')==='company'?($fields['tenant_representative_capacity']??''):'المستأجر'),'nationalId'=>(string)($fields['tenant_national_id']??''),'identityLabel'=>$this->identityDocumentLabel('tenant',$fields)],
         ];
         if($slug==='apartment_sale')return[
-            ['label'=>'الطرف الأول – البائع','name'=>(string)($fields['seller_name']??''),'capacity'=>(string)(($fields['seller_party_type']??'individual')==='company'?($fields['seller_representative_capacity']??''):'البائع'),'nationalId'=>(string)($fields['seller_national_id']??'')],
-            ['label'=>'الطرف الثاني – المشتري','name'=>(string)($fields['buyer_name']??''),'capacity'=>(string)(($fields['buyer_party_type']??'individual')==='company'?($fields['buyer_representative_capacity']??''):'المشتري'),'nationalId'=>(string)($fields['buyer_national_id']??'')],
+            ['label'=>'الطرف الأول – البائع','name'=>(string)($fields['seller_name']??''),'capacity'=>(string)(($fields['seller_party_type']??'individual')==='company'?($fields['seller_representative_capacity']??''):'البائع'),'nationalId'=>(string)($fields['seller_national_id']??''),'identityLabel'=>$this->identityDocumentLabel('seller',$fields)],
+            ['label'=>'الطرف الثاني – المشتري','name'=>(string)($fields['buyer_name']??''),'capacity'=>(string)(($fields['buyer_party_type']??'individual')==='company'?($fields['buyer_representative_capacity']??''):'المشتري'),'nationalId'=>(string)($fields['buyer_national_id']??''),'identityLabel'=>$this->identityDocumentLabel('buyer',$fields)],
         ];
         $prefix=match($variantKey){'visual_identity_design'=>'visual','website_development'=>'website','social_media_management'=>'social',default=>'website'};
         $second=match($variantKey){'visual_identity_design'=>'المصمم','website_development'=>'مقدم الخدمة / المطور','social_media_management'=>'مقدم الخدمة',default=>'مقدم الخدمة'};
         return[
-            ['label'=>'الطرف الأول – العميل','name'=>(string)($fields[$prefix.'_client_name']??''),'capacity'=>(string)(($fields[$prefix.'_client_party_type']??'individual')==='company'?($fields[$prefix.'_client_representative_capacity']??''):'العميل')],
-            ['label'=>'الطرف الثاني – '.$second,'name'=>(string)($fields[$prefix.'_provider_name']??''),'capacity'=>(string)(($fields[$prefix.'_provider_party_type']??'individual')==='company'?($fields[$prefix.'_provider_representative_capacity']??''):$second)],
+            ['label'=>'الطرف الأول – العميل','name'=>(string)($fields[$prefix.'_client_name']??''),'capacity'=>(string)(($fields[$prefix.'_client_party_type']??'individual')==='company'?($fields[$prefix.'_client_representative_capacity']??''):'العميل'),'nationalId'=>(string)($fields[$prefix.'_client_national_id']??''),'identityLabel'=>$this->identityDocumentLabel($prefix.'_client',$fields)],
+            ['label'=>'الطرف الثاني – '.$second,'name'=>(string)($fields[$prefix.'_provider_name']??''),'capacity'=>(string)(($fields[$prefix.'_provider_party_type']??'individual')==='company'?($fields[$prefix.'_provider_representative_capacity']??''):$second),'nationalId'=>(string)($fields[$prefix.'_provider_national_id']??''),'identityLabel'=>$this->identityDocumentLabel($prefix.'_provider',$fields)],
         ];
     }
 
