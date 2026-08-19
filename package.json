@@ -26,6 +26,10 @@
     "backend:test": "php backend/artisan test",
     "backend:routes": "php backend/artisan route:list --path=api/v1",
     "verify:laravel": "php backend/tools/run_python.php backend/tools/verify_laravel_final_v20.py",
-    "test": "npm run test:engine && npm run verify:laravel"
+    "verify:website-coverage": "npm run build:engine && node tools/verify_website_variable_coverage.mjs",
+    "test": "npm run test:engine && npm run verify:laravel",
+    "verify:visual-coverage": "npm run build:engine && node tools/verify_visual_identity_variable_coverage.mjs",
+    "verify:social-coverage": "npm run build:engine && node tools/verify_social_media_variable_coverage.mjs",
+    "verify:sale-coverage": "npm run build:engine && node tools/verify_sale_variable_coverage.mjs"
   }
 }

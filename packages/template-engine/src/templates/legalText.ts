@@ -95,7 +95,6 @@ export function normalizeLegalClauseDefinition(
   let bodyAr = normalizeLegalArabicText(clause.bodyAr);
   if ([
     "residential_lease_source_article_18",
-    "inherited_sale_source_article_20",
   ].includes(clause.key)) {
     bodyAr = bodyAr.replace(/^2\. الاختصاص المحلي:/m, "1. الاختصاص المحلي:");
   }

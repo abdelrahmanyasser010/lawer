@@ -22,10 +22,13 @@ function validateScalarField(
   stepKey: string,
   field: WizardFieldDefinition,
   value: unknown,
+  fieldValues: ContractDraftData["fieldValues"],
 ): DraftValidationIssue[] {
   const issues: DraftValidationIssue[] = [];
 
-  if (field.required) {
+  const requiredNow = field.required || Boolean(field.requiredWhen && evaluateCondition(field.requiredWhen, fieldValues));
+
+  if (requiredNow) {
     const missing = field.type === "checkbox" ? value !== true : isEmpty(value);
     if (missing) {
       issues.push({ stepKey, fieldKey: field.key, labelAr: field.labelAr });
@@ -77,9 +80,11 @@ function validateRepeaterField(
   stepKey: string,
   field: WizardFieldDefinition,
   value: unknown,
+  fieldValues: ContractDraftData["fieldValues"],
 ): DraftValidationIssue[] {
   const rows = Array.isArray(value) ? (value as RepeaterRowValue[]) : [];
-  const minimumRows = field.minRows ?? (field.required ? 1 : 0);
+  const requiredNow = field.required || Boolean(field.requiredWhen && evaluateCondition(field.requiredWhen, fieldValues));
+  const minimumRows = field.minRows ?? (requiredNow ? 1 : 0);
 
   if (rows.length < minimumRows) {
     return [{ stepKey, fieldKey: field.key, labelAr: field.labelAr }];
@@ -103,14 +108,70 @@ export function validateDynamicDefinition(
 ): DraftValidationIssue[] {
   const issues = definition.steps.flatMap((step) =>
     step.fields.flatMap((field) => {
+      if (field.visibleWhen && !evaluateCondition(field.visibleWhen, draft.fieldValues)) return [];
       const value = field.type === "attachment"
         ? (draft.attachmentRefs[field.key] ?? draft.fieldValues[field.key])
         : draft.fieldValues[field.key];
       return field.type === "repeater"
-        ? validateRepeaterField(step.key, field, value)
-        : validateScalarField(step.key, field, value);
+        ? validateRepeaterField(step.key, field, value, draft.fieldValues)
+        : validateScalarField(step.key, field, value, draft.fieldValues);
     }),
   );
+
+  if (definition.template.slug === "freelancer" && draft.variantKey === "social_media_management") {
+    const serviceKeys = [
+      "social_service_account_management", "social_service_strategy", "social_service_copywriting", "social_service_design",
+      "social_service_content_production", "social_service_publishing", "social_service_paid_ads", "social_service_reports",
+      "social_service_community_management", "social_service_coordination", "social_service_photography", "social_service_influencers",
+      "social_service_other_enabled",
+    ];
+    if (!serviceKeys.some((key) => Boolean(draft.fieldValues[key]))) {
+      issues.push({
+        stepKey: "social_services",
+        fieldKey: "social_service_account_management",
+        labelAr: "يجب اختيار خدمة واحدة على الأقل ضمن نطاق خدمات إدارة حسابات ومنصات التواصل الاجتماعي",
+      });
+    }
+
+    if (draft.fieldValues.social_fee_nature === "total" && draft.fieldValues.social_payment_mode === "installments") {
+      const total = Number(draft.fieldValues.social_fee ?? 0);
+      const rows = Array.isArray(draft.fieldValues.social_payment_schedule) ? draft.fieldValues.social_payment_schedule : [];
+      const installmentsTotal = rows.reduce((sum, row) => sum + Number((row as RepeaterRowValue).amount ?? 0), 0);
+      if (total > 0 && rows.length > 0 && Math.abs(installmentsTotal - total) > 0.01) {
+        issues.push({
+          stepKey: "social_term_finance",
+          fieldKey: "social_payment_schedule",
+          labelAr: `مجموع الدفعات (${installmentsTotal}) يجب أن يساوي إجمالي المقابل المالي (${total})`,
+        });
+      }
+    }
+  }
+
+  if (definition.template.slug === "freelancer" && draft.variantKey === "visual_identity_design" && draft.fieldValues.visual_payment_mode === "installments") {
+    const total = Number(draft.fieldValues.visual_contract_value ?? 0);
+    const rows = Array.isArray(draft.fieldValues.visual_main_payment_schedule) ? draft.fieldValues.visual_main_payment_schedule : [];
+    const installmentsTotal = rows.reduce((sum, row) => sum + Number((row as RepeaterRowValue).amount ?? 0), 0);
+    if (total > 0 && rows.length > 0 && Math.abs(installmentsTotal - total) > 0.01) {
+      issues.push({
+        stepKey: "visual_execution_finance",
+        fieldKey: "visual_main_payment_schedule",
+        labelAr: `مجموع الدفعات (${installmentsTotal}) يجب أن يساوي إجمالي المقابل المالي (${total})`,
+      });
+    }
+  }
+
+  if (definition.template.slug === "freelancer" && draft.variantKey === "website_development" && draft.fieldValues.website_payment_mode === "installments") {
+    const total = Number(draft.fieldValues.website_total_price ?? 0);
+    const rows = Array.isArray(draft.fieldValues.website_payment_schedule) ? draft.fieldValues.website_payment_schedule : [];
+    const installmentsTotal = rows.reduce((sum, row) => sum + Number((row as RepeaterRowValue).amount ?? 0), 0);
+    if (total > 0 && rows.length > 0 && Math.abs(installmentsTotal - total) > 0.01) {
+      issues.push({
+        stepKey: "website_finance_acceptance",
+        fieldKey: "website_payment_schedule",
+        labelAr: `مجموع الدفعات (${installmentsTotal}) يجب أن يساوي إجمالي المقابل المالي (${total})`,
+      });
+    }
+  }
 
   if (definition.template.slug === "apartment_sale" && draft.fieldValues.sale_payment_plan !== "installments" && draft.selectedOptionalClauseKeys.includes("sale_installment_schedule")) {
     issues.push({ stepKey: "sale_payment", fieldKey: "sale_payment_plan", labelAr: "ملحق جدول الأقساط يُستخدم فقط عند اختيار السداد بالتقسيط" });
@@ -119,9 +180,19 @@ export function validateDynamicDefinition(
   if (definition.template.slug === "apartment_sale" && draft.fieldValues.sale_payment_plan === "installments") {
     const total = Number(draft.fieldValues.sale_total_price ?? 0);
     const down = Number(draft.fieldValues.sale_down_payment ?? 0);
-    const remaining = Number(draft.fieldValues.sale_remaining_amount ?? 0);
-    if (total > 0 && Number.isFinite(total) && Math.abs(total - (down + remaining)) > 0.01) {
-      issues.push({ stepKey: "sale_payment", fieldKey: "sale_total_price", labelAr: "إجمالي الثمن يجب أن يساوي الدفعة المقدمة + باقي الثمن" });
+    const remaining = total - down;
+    const rows = Array.isArray(draft.fieldValues.sale_installment_schedule_rows) ? draft.fieldValues.sale_installment_schedule_rows : [];
+    const installmentsTotal = rows.reduce((sum, row) => sum + Number((row as RepeaterRowValue).amount ?? 0), 0);
+
+    if (Number.isFinite(total) && total > 0 && Number.isFinite(down) && (down < 0 || down > total)) {
+      issues.push({ stepKey: "sale_payment", fieldKey: "sale_down_payment", labelAr: "الدفعة المقدمة يجب ألا تتجاوز إجمالي ثمن البيع" });
+    }
+    if (Number.isFinite(remaining) && remaining >= 0 && rows.length > 0 && Math.abs(installmentsTotal - remaining) > 0.01) {
+      issues.push({
+        stepKey: "sale_payment",
+        fieldKey: "sale_installment_schedule_rows",
+        labelAr: `مجموع الأقساط (${installmentsTotal}) يجب أن يساوي باقي الثمن (${remaining})`,
+      });
     }
   }
 

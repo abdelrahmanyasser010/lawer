@@ -8,6 +8,7 @@ import type {
   WizardFieldDefinition,
   WizardStepDefinition,
 } from "./types";
+import { derivedClauseVariableDependencies } from "./resolver";
 
 export type TemplateIssueSeverity = "error" | "warning";
 
@@ -31,9 +32,88 @@ export interface TemplateDefinitionInspection {
 }
 
 const derivedClauseVariableKeys = new Set([
+  "social_client_party_definition",
+  "social_provider_party_definition",
+  "social_activity_definition",
+  "social_accounts_text",
+  "social_responsible_people_text",
+  "social_scope_services_text",
+  "social_excluded_services_text",
+  "social_content_plan_text",
+  "social_ads_terms_text",
+  "social_reports_kpi_text",
+  "social_contract_duration_text",
+  "social_service_start_text",
+  "social_fee_nature_text",
+  "social_fee_words",
+  "social_payment_schedule_text",
+  "social_payment_method_text",
+  "social_review_rounds_text",
+  "social_source_files_text",
+  "social_portfolio_permission_text",
+  "social_ai_permission_text",
+  "social_email_notices_text",
+  "social_messaging_notices_text",
+  "social_competent_court_text",
+  "social_contract_copies_text",
+  "social_legal_fees_text",
+  "visual_client_party_definition",
+  "visual_provider_party_definition",
+  "visual_project_definition",
+  "visual_scope_services_text",
+  "visual_source_files_text",
+  "visual_execution_duration_text",
+  "visual_execution_start_text",
+  "visual_payment_schedule_text",
+  "visual_ip_rights_text",
+  "visual_portfolio_permission_text",
+  "visual_email_notices_text",
+  "visual_messaging_notices_text",
+  "visual_competent_court_text",
+  "website_client_party_definition",
+  "website_provider_party_definition",
+  "website_project_definition",
+  "website_project_type_text",
+  "website_execution_duration_text",
+  "website_execution_start_text",
+  "website_duration_basis_text",
+  "website_warranty_duration_text",
+  "website_contract_copies_text",
+  "website_confidentiality_duration_text",
+  "website_non_solicitation_duration_text",
+  "website_approval_authority_text",
+  "website_payment_schedule_text",
+  "website_restart_fee_text",
+  "website_portfolio_permission_text",
+  "website_external_services_text",
+  "website_email_notices_text",
+  "website_messaging_notices_text",
+  "website_project_platform_text",
+  "website_competent_court_text",
   "website_legal_fees_text",
   "rental_property_additional_details",
   "sale_property_additional_details",
+  "preliminary_ownership_detail",
+  "registrable_ownership_detail",
+  "sale_seller_party_definition",
+  "sale_buyer_party_definition",
+  "sale_total_price_words",
+  "sale_remaining_amount",
+  "sale_installment_schedule_text",
+  "sale_delivery_rule_text",
+  "sale_inspection_ack_text",
+  "sale_occupancy_status_text",
+  "sale_property_jurisdiction_text",
+  "sale_email_notices_text",
+  "sale_messaging_notices_text",
+  "preliminary_disposition_tax_payer_text",
+  "registrable_disposition_tax_payer_text",
+  "inherited_disposition_tax_payer_text",
+  "preliminary_garage_scope_text",
+  "preliminary_reconciliation_legal_text",
+  "inheritance_heirs_capacity_text",
+  "registrable_negative_certificate_text",
+  "inherited_contractual_penalty_text",
   "preliminary_ownership_detail",
   "registrable_ownership_detail",
   "inheritance_disposition_detail",
@@ -70,6 +150,197 @@ export function extractClauseVariables(clause: LegalClauseDefinition): string[] 
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(clause.bodyAr)) !== null) found.add(match[1]);
   return [...found].sort();
+}
+
+
+export interface VariantFieldCoverageExternalBinding {
+  sectionAr: string;
+  reasonAr?: string;
+}
+
+export interface VariantFieldCoverageOptions {
+  /** Maps a rendered/derived clause variable to the wizard fields used to build it. */
+  derivedVariableDependencies?: Record<string, readonly string[]>;
+  /** Fields rendered outside legal-clause bodies, e.g. dedicated signature/witness blocks. */
+  externalBindings?: Record<string, VariantFieldCoverageExternalBinding>;
+}
+
+export const visualIdentityFieldCoverageExternalBindings: Record<string, VariantFieldCoverageExternalBinding> = {
+  visual_witness_1_enabled: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يتحكم في ظهور بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  visual_witness_1_name: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  visual_witness_1_national_id: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  visual_witness_2_enabled: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يتحكم في ظهور بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+  visual_witness_2_name: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+  visual_witness_2_national_id: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+};
+
+export const websiteFieldCoverageExternalBindings: Record<string, VariantFieldCoverageExternalBinding> = {
+  website_witness_1_enabled: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يتحكم في ظهور بلوك الشاهد الأول في LegalDocumentSheet." },
+  website_witness_1_name: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  website_witness_1_national_id: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  website_witness_2_enabled: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يتحكم في ظهور بلوك الشاهد الثاني في LegalDocumentSheet." },
+  website_witness_2_name: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+  website_witness_2_national_id: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+};
+
+export const socialMediaFieldCoverageExternalBindings: Record<string, VariantFieldCoverageExternalBinding> = {
+  social_witness_1_enabled: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يتحكم في ظهور بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  social_witness_1_name: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  social_witness_1_national_id: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  social_witness_2_enabled: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يتحكم في ظهور بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+  social_witness_2_name: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+  social_witness_2_national_id: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+};
+
+export const apartmentSaleFieldCoverageExternalBindings: Record<string, VariantFieldCoverageExternalBinding> = {
+  sale_seller_identity_copy: { sectionAr: "قسم المرفقات", reasonAr: "مستند إثبات هوية البائع يُرفق بالمستند ولا يُطبع كقيمة نصية." },
+  sale_buyer_identity_copy: { sectionAr: "قسم المرفقات", reasonAr: "مستند إثبات هوية المشتري يُرفق بالمستند ولا يُطبع كقيمة نصية." },
+  sale_ownership_documents: { sectionAr: "قسم المرفقات", reasonAr: "سند الملكية ومستندات التسلسل تُرفق مع العقد." },
+  sale_occupancy_documents: { sectionAr: "قسم المرفقات", reasonAr: "مستندات الإشغال تُرفق إذا كانت الوحدة مشغولة." },
+  preliminary_reconciliation_documents: { sectionAr: "قسم المرفقات", reasonAr: "مستندات طلب التصالح تُرفق عند وجود طلب قائم." },
+  sale_utility_receipts: { sectionAr: "قسم المرفقات", reasonAr: "إيصالات أو بيانات المرافق تُرفق عند توافرها." },
+  sale_building_docs: { sectionAr: "قسم المرفقات", reasonAr: "رخصة البناء أو المستندات التنظيمية تُرفق عند توافرها." },
+  sale_handover_report: { sectionAr: "قسم المرفقات", reasonAr: "محضر الاستلام مستند خارجي يُرفق عند توافره." },
+  sale_engineering_docs: { sectionAr: "قسم المرفقات", reasonAr: "الخرائط والرسومات الهندسية تُرفق عند توافرها." },
+  sale_extra_docs: { sectionAr: "قسم المرفقات", reasonAr: "المستندات الإضافية تُرفق عند اعتمادها." },
+  registrable_negative_certificate: { sectionAr: "قسم المرفقات", reasonAr: "شهادة التصرفات العقارية السلبية تُرفق عند تفعيلها." },
+  inheritance_declaration_attachment: { sectionAr: "قسم المرفقات", reasonAr: "إعلام الوراثة مستند لازم لعقد البيع عن طريق الميراث." },
+  deceased_death_certificate: { sectionAr: "قسم المرفقات", reasonAr: "شهادة وفاة المورث تُرفق بالعقد." },
+  deceased_title_document: { sectionAr: "قسم المرفقات", reasonAr: "سند ملكية المورث يُرفق بالعقد." },
+  inheritance_disposition_basis_attachment: { sectionAr: "قسم المرفقات", reasonAr: "سند حق البائع في التصرف عن باقي الورثة يُرفق بالعقد." },
+  sale_witness_1_enabled: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يتحكم في ظهور بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  sale_witness_1_name: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  sale_witness_1_national_id: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الأول خارج جسم المواد القانونية." },
+  sale_witness_2_enabled: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يتحكم في ظهور بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+  sale_witness_2_name: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+  sale_witness_2_national_id: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
+};
+
+function conditionFieldKeys(condition: ConditionDefinition | undefined): string[] {
+  if (!condition) return [];
+  if ("all" in condition) return condition.all.flatMap(conditionFieldKeys);
+  if ("any" in condition) return condition.any.flatMap(conditionFieldKeys);
+  if ("not" in condition) return conditionFieldKeys(condition.not);
+  return [condition.fieldKey];
+}
+
+export interface VariantFieldCoverageEntry {
+  fieldKey: string;
+  labelAr: string;
+  stepKey: string;
+  stepTitleAr: string;
+  status: "clause_bound" | "external_bound" | "uncovered";
+  viaVariables: string[];
+  clauseKeys: string[];
+  clauseTitlesAr: string[];
+  externalSectionAr?: string;
+  externalReasonAr?: string;
+}
+
+export interface VariantFieldCoverageAudit {
+  variantKey: string;
+  entries: VariantFieldCoverageEntry[];
+  uncoveredFieldKeys: string[];
+}
+
+/**
+ * Proves wizard-to-document coverage for a contract variant.
+ *
+ * A field is covered when it is used directly by an active legal clause, is a
+ * dependency of a derived variable used by an active legal clause, or is
+ * explicitly registered as rendered by a dedicated document section.
+ * New fields are uncovered by default, so CI fails instead of silently adding
+ * an input that never reaches the contract text.
+ */
+export function auditVariantFieldCoverage(
+  definition: ContractTemplateDefinition,
+  variantKey: string,
+  options: VariantFieldCoverageOptions = {},
+): VariantFieldCoverageAudit {
+  const variant = definition.variants.find((item) => item.key === variantKey);
+  if (!variant) throw new Error(`Variant ${variantKey} is not available for ${definition.slug}`);
+
+  const clauseByKey = new Map((definition.legalClauses ?? []).map((clause) => [clause.key, clause]));
+  const activeClauses = variant.requiredClauseKeys
+    .map((key) => clauseByKey.get(key))
+    .filter((clause): clause is LegalClauseDefinition => Boolean(clause && clause.enabled !== false));
+
+  const clausesByVariable = new Map<string, LegalClauseDefinition[]>();
+  for (const clause of activeClauses) {
+    for (const variable of extractClauseVariables(clause)) {
+      const current = clausesByVariable.get(variable) ?? [];
+      current.push(clause);
+      clausesByVariable.set(variable, current);
+    }
+  }
+
+  const clausesByConditionField = new Map<string, LegalClauseDefinition[]>();
+  for (const clause of activeClauses) {
+    for (const fieldKey of conditionFieldKeys(clause.visibleWhen)) {
+      const current = clausesByConditionField.get(fieldKey) ?? [];
+      current.push(clause);
+      clausesByConditionField.set(fieldKey, current);
+    }
+  }
+
+  const derivedByField = new Map<string, string[]>();
+  for (const [derivedVariable, dependencies] of Object.entries(options.derivedVariableDependencies ?? {})) {
+    for (const dependency of dependencies) {
+      const current = derivedByField.get(dependency) ?? [];
+      current.push(derivedVariable);
+      derivedByField.set(dependency, current);
+    }
+  }
+
+  const entries: VariantFieldCoverageEntry[] = [];
+  for (const step of variant.steps) {
+    for (const field of step.fields) {
+      const viaVariables = new Set<string>();
+      const clauses = new Map<string, LegalClauseDefinition>();
+
+      const direct = clausesByVariable.get(field.key) ?? [];
+      if (direct.length) viaVariables.add(field.key);
+      for (const clause of direct) clauses.set(clause.key, clause);
+
+      const conditional = clausesByConditionField.get(field.key) ?? [];
+      if (conditional.length) viaVariables.add(`@condition:${field.key}`);
+      for (const clause of conditional) clauses.set(clause.key, clause);
+
+      for (const derivedVariable of derivedByField.get(field.key) ?? []) {
+        const derivedClauses = clausesByVariable.get(derivedVariable) ?? [];
+        if (!derivedClauses.length) continue;
+        viaVariables.add(derivedVariable);
+        for (const clause of derivedClauses) clauses.set(clause.key, clause);
+      }
+
+      const external = options.externalBindings?.[field.key];
+      const status: VariantFieldCoverageEntry["status"] = clauses.size
+        ? "clause_bound"
+        : external
+          ? "external_bound"
+          : "uncovered";
+
+      const clauseList = [...clauses.values()];
+      entries.push({
+        fieldKey: field.key,
+        labelAr: field.labelAr,
+        stepKey: step.key,
+        stepTitleAr: step.titleAr,
+        status,
+        viaVariables: [...viaVariables].sort(),
+        clauseKeys: clauseList.map((clause) => clause.key),
+        clauseTitlesAr: clauseList.map((clause) => clause.titleAr),
+        externalSectionAr: external?.sectionAr,
+        externalReasonAr: external?.reasonAr,
+      });
+    }
+  }
+
+  return {
+    variantKey,
+    entries,
+    uncoveredFieldKeys: entries.filter((entry) => entry.status === "uncovered").map((entry) => entry.fieldKey),
+  };
 }
 
 function validateCondition(
@@ -210,6 +481,70 @@ export function inspectTemplateDefinition(definition: ContractTemplateDefinition
       if (!optional) issue(issues, "error", "OPTIONAL_CLAUSE_UNKNOWN", `الإضافة الاختيارية غير موجودة: ${optionalKey}`, `${variantPath}.allowedOptionalClauseKeys[${index}]`);
       else if (!optional.applicableVariantKeys.includes(variant.key)) issue(issues, "error", "OPTIONAL_VARIANT_MISMATCH", `الإضافة ${optionalKey} غير مفعلة لهذا النوع`, `${variantPath}.allowedOptionalClauseKeys[${index}]`);
     });
+
+    if (definition.slug === "freelancer" && variant.key === "visual_identity_design") {
+      const coverage = auditVariantFieldCoverage(definition, variant.key, {
+        derivedVariableDependencies: derivedClauseVariableDependencies,
+        externalBindings: visualIdentityFieldCoverageExternalBindings,
+      });
+      coverage.uncoveredFieldKeys.forEach((fieldKey) => {
+        issue(
+          issues,
+          "error",
+          "UNBOUND_LEGAL_FIELD",
+          `حقل عقد الهوية البصرية لا يصل إلى أي مادة قانونية أو قسم مستند مسجل: ${fieldKey}`,
+          `${variantPath}.steps`,
+        );
+      });
+    }
+
+    if (definition.slug === "freelancer" && variant.key === "social_media_management") {
+      const coverage = auditVariantFieldCoverage(definition, variant.key, {
+        derivedVariableDependencies: derivedClauseVariableDependencies,
+        externalBindings: socialMediaFieldCoverageExternalBindings,
+      });
+      coverage.uncoveredFieldKeys.forEach((fieldKey) => {
+        issue(
+          issues,
+          "error",
+          "UNBOUND_LEGAL_FIELD",
+          `حقل عقد إدارة حسابات التواصل الاجتماعي لا يصل إلى أي مادة قانونية أو قسم مستند مسجل: ${fieldKey}`,
+          `${variantPath}.steps`,
+        );
+      });
+    }
+
+    if (definition.slug === "freelancer" && variant.key === "website_development") {
+      const coverage = auditVariantFieldCoverage(definition, variant.key, {
+        derivedVariableDependencies: derivedClauseVariableDependencies,
+        externalBindings: websiteFieldCoverageExternalBindings,
+      });
+      coverage.uncoveredFieldKeys.forEach((fieldKey) => {
+        issue(
+          issues,
+          "error",
+          "UNBOUND_LEGAL_FIELD",
+          `حقل عقد الموقع لا يصل إلى أي مادة قانونية أو قسم مستند مسجل: ${fieldKey}`,
+          `${variantPath}.steps`,
+        );
+      });
+    }
+
+    if (definition.slug === "apartment_sale") {
+      const coverage = auditVariantFieldCoverage(definition, variant.key, {
+        derivedVariableDependencies: derivedClauseVariableDependencies,
+        externalBindings: apartmentSaleFieldCoverageExternalBindings,
+      });
+      coverage.uncoveredFieldKeys.forEach((fieldKey) => {
+        issue(
+          issues,
+          "error",
+          "UNBOUND_LEGAL_FIELD",
+          `حقل عقد البيع «${variant.nameAr}» لا يصل إلى أي مادة قانونية أو قسم مستند مسجل: ${fieldKey}`,
+          `${variantPath}.steps`,
+        );
+      });
+    }
 
   });
 

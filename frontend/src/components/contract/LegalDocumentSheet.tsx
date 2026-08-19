@@ -629,7 +629,7 @@ function AnnexPreviewSheet({
   return (
     <article
       data-annex-number={annexNumber}
-      className={`zdraft-document-page relative mx-auto min-h-[297mm] w-[210mm] min-w-[210mm] overflow-hidden border border-slate-200 bg-white px-[15mm] py-[16mm] text-[#1a1a1a] shadow-sm print:break-before-page print:border-none print:shadow-none ${isDraft ? "select-none print:hidden" : "select-text"}`}
+      className={`zdraft-document-page relative mx-auto min-h-[297mm] w-[210mm] min-w-[210mm] overflow-hidden border border-slate-200 bg-white px-[13mm] py-[14mm] text-[#1a1a1a] shadow-sm print:break-before-page print:border-none print:shadow-none ${isDraft ? "select-none print:hidden" : "select-text"}`}
       onCopy={isDraft ? (event) => event.preventDefault() : undefined}
       onCut={isDraft ? (event) => event.preventDefault() : undefined}
       onContextMenu={isDraft ? (event) => event.preventDefault() : undefined}
@@ -998,7 +998,7 @@ export default function LegalDocumentSheet({
         </div>
       )}
       <article
-        className={`zdraft-document-page relative mx-auto min-h-[297mm] w-[210mm] min-w-[210mm] overflow-hidden border border-slate-200 bg-white px-[15mm] pb-[16mm] pt-[13mm] text-[#1a1a1a] shadow-sm print:border-none print:shadow-none ${isDraft ? "select-none print:hidden" : "select-text"}`}
+        className={`zdraft-document-page relative mx-auto min-h-[297mm] w-[210mm] min-w-[210mm] overflow-hidden border border-slate-200 bg-white px-[13mm] pb-[14mm] pt-[12mm] text-[#1a1a1a] shadow-sm print:border-none print:shadow-none ${isDraft ? "select-none print:hidden" : "select-text"}`}
         onCopy={isDraft ? (event) => event.preventDefault() : undefined}
         onCut={isDraft ? (event) => event.preventDefault() : undefined}
         onContextMenu={isDraft ? (event) => event.preventDefault() : undefined}
@@ -1017,7 +1017,6 @@ export default function LegalDocumentSheet({
         <div className="zd-doc-masthead">
           <div>
             <div className="zd-doc-office">Z draft</div>
-            <div className="zd-doc-kind">محرر تعاقدي</div>
           </div>
           <img src="/logo.png" alt="Z draft" className="zd-doc-logo" />
         </div>
@@ -1412,7 +1411,7 @@ export default function LegalDocumentSheet({
       </div>
 
       <div className="zd-doc-final-note relative z-10">
-        النسخة الإلكترونية المرجعية لهذا المحرر محفوظة في سجل العقد برقم المستند المبين أعلاه.
+        النسخة الإلكترونية المرجعية لهذا العقد محفوظة في سجل العقد برقم المستند المبين أعلاه.
       </div>
 
       </article>

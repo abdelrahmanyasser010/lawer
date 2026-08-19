@@ -45,6 +45,7 @@ const freelancerCourtOptions = [
 ];
 
 const allConditions = (...conditions: ConditionDefinition[]): ConditionDefinition => ({ all: conditions });
+const anyConditions = (...conditions: ConditionDefinition[]): ConditionDefinition => ({ any: conditions });
 
 function partyFields(
   prefix: string,
@@ -107,74 +108,170 @@ function visualPartySteps(): WizardStepDefinition[] {
     { fieldKey: "visual_email_notices_enabled", operator: "truthy" },
     { fieldKey: "visual_notice_use_party_emails", operator: "truthy" },
   );
+  const reusePartyPhones = allConditions(
+    { fieldKey: "visual_messaging_apps_enabled", operator: "truthy" },
+    { fieldKey: "visual_messaging_use_party_phones", operator: "truthy" },
+  );
+  const individualSuffixes = ["_name", "_nationality", "_identity_document_type", "_national_id", "_id_issuer", "_id_issue_date", "_address", "_phone", "_email"];
   return commonPartySteps("visual", "المصمم", "المصمم", false).map((step) => ({
     ...step,
     fields: step.fields.flatMap((field): WizardFieldDefinition[] => {
-      if (field.key === "visual_client_email" || field.key === "visual_provider_email") {
-        return [{ ...field, requiredWhen: reusePartyEmails }];
-      }
+      const prefix = field.key.startsWith("visual_client_") ? "visual_client" : field.key.startsWith("visual_provider_") ? "visual_provider" : "";
+      const individualCondition: ConditionDefinition | undefined = prefix
+        ? { fieldKey: `${prefix}_party_type`, operator: "equals", value: "individual" }
+        : undefined;
+
       if (field.key.endsWith("_power_of_attorney_details")) {
-        const prefix = field.key.slice(0, -"_power_of_attorney_details".length);
-        const condition: ConditionDefinition = { fieldKey: `${prefix}_authority_basis`, operator: "equals", value: "power_of_attorney" };
+        const poaPrefix = field.key.slice(0, -"_power_of_attorney_details".length);
+        const condition: ConditionDefinition = { fieldKey: `${poaPrefix}_authority_basis`, operator: "equals", value: "power_of_attorney" };
         return [
-          { key: `${prefix}_power_of_attorney_number`, type: "text", labelAr: "رقم التوكيل", visibleWhen: condition, requiredWhen: condition },
-          { key: `${prefix}_power_of_attorney_year`, type: "number", labelAr: "سنة التوكيل", visibleWhen: condition, requiredWhen: condition },
-          { key: `${prefix}_power_of_attorney_office`, type: "text", labelAr: "مكتب الشهر العقاري", visibleWhen: condition, requiredWhen: condition },
+          { key: `${poaPrefix}_power_of_attorney_number`, type: "text", labelAr: "رقم التوكيل", visibleWhen: condition, requiredWhen: condition },
+          { key: `${poaPrefix}_power_of_attorney_year`, type: "number", labelAr: "سنة التوكيل", visibleWhen: condition, requiredWhen: condition, validation: { min: 1900, max: 2200 } },
+          { key: `${poaPrefix}_power_of_attorney_office`, type: "text", labelAr: "مكتب الشهر العقاري", visibleWhen: condition, requiredWhen: condition },
         ];
       }
+
+      if (prefix && individualCondition && individualSuffixes.some((suffix) => field.key === `${prefix}${suffix}`)) {
+        const optional = field.key.endsWith("_id_issuer") || field.key.endsWith("_id_issue_date") || field.key.endsWith("_email");
+        return [{
+          ...field,
+          required: !optional,
+          visibleWhen: individualCondition,
+          requiredWhen: field.key.endsWith("_email") ? allConditions(individualCondition, reusePartyEmails) : undefined,
+        }];
+      }
+
+      if (field.key === "visual_client_company_email" || field.key === "visual_provider_company_email") {
+        const companyCondition: ConditionDefinition = { fieldKey: field.key.startsWith("visual_client_") ? "visual_client_party_type" : "visual_provider_party_type", operator: "equals", value: "company" };
+        return [{ ...field, required: false, requiredWhen: allConditions(companyCondition, reusePartyEmails) }];
+      }
+
+      if (field.key === "visual_client_company_address" || field.key === "visual_provider_company_address") {
+        const companyPrefix = field.key.startsWith("visual_client_") ? "visual_client" : "visual_provider";
+        const companyCondition: ConditionDefinition = { fieldKey: `${companyPrefix}_party_type`, operator: "equals", value: "company" };
+        return [
+          field,
+          { key: `${companyPrefix}_company_phone`, type: "text", labelAr: "رقم هاتف الشركة / الممثل", visibleWhen: companyCondition, requiredWhen: allConditions(companyCondition, reusePartyPhones) },
+        ];
+      }
+
       return [field];
     }),
   }));
 }
-
 
 function websitePartySteps(): WizardStepDefinition[] {
   const reusePartyEmails = allConditions(
     { fieldKey: "website_email_notices_enabled", operator: "truthy" },
     { fieldKey: "website_notice_use_party_emails", operator: "truthy" },
   );
+  const reusePartyPhones = allConditions(
+    { fieldKey: "website_messaging_apps_enabled", operator: "truthy" },
+    { fieldKey: "website_messaging_use_party_phones", operator: "truthy" },
+  );
+  const individualSuffixes = ["_name", "_nationality", "_identity_document_type", "_national_id", "_id_issuer", "_id_issue_date", "_address", "_phone", "_email"];
   return commonPartySteps("website", "مقدم الخدمة", "مقدم الخدمة", false).map((step) => ({
     ...step,
     fields: step.fields.flatMap((field): WizardFieldDefinition[] => {
-      if (field.key === "website_client_email" || field.key === "website_provider_email") {
-        return [{ ...field, requiredWhen: reusePartyEmails }];
-      }
+      const prefix = field.key.startsWith("website_client_") ? "website_client" : field.key.startsWith("website_provider_") ? "website_provider" : "";
+      const individualCondition: ConditionDefinition | undefined = prefix
+        ? { fieldKey: `${prefix}_party_type`, operator: "equals", value: "individual" }
+        : undefined;
+
       // The Website source has no "بموجب" / POA row for the client-company table;
       // that row exists only for the provider-company table on page 2.
-      if (field.key === "website_client_authority_basis" || field.key === "website_client_power_of_attorney_details") {
-        return [];
-      }
+      if (field.key === "website_client_authority_basis" || field.key === "website_client_power_of_attorney_details") return [];
+
       if (field.key.endsWith("_power_of_attorney_details")) {
-        const prefix = field.key.slice(0, -"_power_of_attorney_details".length);
-        const condition: ConditionDefinition = { fieldKey: `${prefix}_authority_basis`, operator: "equals", value: "power_of_attorney" };
+        const poaPrefix = field.key.slice(0, -"_power_of_attorney_details".length);
+        const condition: ConditionDefinition = { fieldKey: `${poaPrefix}_authority_basis`, operator: "equals", value: "power_of_attorney" };
         return [
-          { key: `${prefix}_power_of_attorney_number`, type: "text", labelAr: "رقم التوكيل", visibleWhen: condition, requiredWhen: condition },
-          { key: `${prefix}_power_of_attorney_year`, type: "number", labelAr: "سنة التوكيل", visibleWhen: condition, requiredWhen: condition, validation: { min: 1900, max: 2200 } },
-          { key: `${prefix}_power_of_attorney_office`, type: "text", labelAr: "مكتب الشهر العقاري", visibleWhen: condition, requiredWhen: condition },
+          { key: `${poaPrefix}_power_of_attorney_number`, type: "text", labelAr: "رقم التوكيل", visibleWhen: condition, requiredWhen: condition },
+          { key: `${poaPrefix}_power_of_attorney_year`, type: "number", labelAr: "سنة التوكيل", visibleWhen: condition, requiredWhen: condition, validation: { min: 1900, max: 2200 } },
+          { key: `${poaPrefix}_power_of_attorney_office`, type: "text", labelAr: "مكتب الشهر العقاري", visibleWhen: condition, requiredWhen: condition },
         ];
       }
+
+      if (prefix && individualCondition && individualSuffixes.some((suffix) => field.key === `${prefix}${suffix}`)) {
+        const isOptionalIdentityMeta = field.key.endsWith("_id_issuer") || field.key.endsWith("_id_issue_date") || field.key.endsWith("_email");
+        const requiredWhen = field.key.endsWith("_email")
+          ? allConditions(individualCondition, reusePartyEmails)
+          : undefined;
+        return [{ ...field, required: !isOptionalIdentityMeta, visibleWhen: individualCondition, requiredWhen }];
+      }
+
+      if (field.key === "website_client_company_email" || field.key === "website_provider_company_email") {
+        const companyCondition: ConditionDefinition = { fieldKey: field.key.startsWith("website_client_") ? "website_client_party_type" : "website_provider_party_type", operator: "equals", value: "company" };
+        return [{ ...field, required: false, requiredWhen: allConditions(companyCondition, reusePartyEmails) }];
+      }
+
+      if (field.key === "website_client_company_address" || field.key === "website_provider_company_address") {
+        const companyPrefix = field.key.startsWith("website_client_") ? "website_client" : "website_provider";
+        const companyCondition: ConditionDefinition = { fieldKey: `${companyPrefix}_party_type`, operator: "equals", value: "company" };
+        return [
+          field,
+          { key: `${companyPrefix}_company_phone`, type: "text", labelAr: "رقم هاتف الشركة / الممثل", visibleWhen: companyCondition, requiredWhen: allConditions(companyCondition, reusePartyPhones) },
+        ];
+      }
+
       return [field];
     }),
   }));
 }
 
 function socialPartySteps(): WizardStepDefinition[] {
-  const reusePartyEmails: ConditionDefinition = { fieldKey: "social_notice_use_party_emails", operator: "truthy" };
+  const reusePartyEmails = allConditions(
+    { fieldKey: "social_email_notices_enabled", operator: "truthy" },
+    { fieldKey: "social_notice_use_party_emails", operator: "truthy" },
+  );
+  const reusePartyPhones = allConditions(
+    { fieldKey: "social_messaging_apps_enabled", operator: "truthy" },
+    { fieldKey: "social_messaging_use_party_phones", operator: "truthy" },
+  );
+  const individualSuffixes = ["_name", "_nationality", "_identity_document_type", "_national_id", "_id_issuer", "_id_issue_date", "_address", "_phone", "_email"];
+
   return commonPartySteps("social", "مقدم الخدمة", "مقدم الخدمة", false).map((step) => ({
     ...step,
     fields: step.fields.flatMap((field): WizardFieldDefinition[] => {
-      if (field.key === "social_client_email" || field.key === "social_provider_email") {
-        return [{ ...field, requiredWhen: reusePartyEmails }];
-      }
+      const prefix = field.key.startsWith("social_client_") ? "social_client" : field.key.startsWith("social_provider_") ? "social_provider" : "";
+      const individualCondition: ConditionDefinition | undefined = prefix
+        ? { fieldKey: `${prefix}_party_type`, operator: "equals", value: "individual" }
+        : undefined;
+
       if (field.key.endsWith("_power_of_attorney_details")) {
-        const prefix = field.key.slice(0, -"_power_of_attorney_details".length);
-        const condition: ConditionDefinition = { fieldKey: `${prefix}_authority_basis`, operator: "equals", value: "power_of_attorney" };
+        const poaPrefix = field.key.slice(0, -"_power_of_attorney_details".length);
+        const condition: ConditionDefinition = { fieldKey: `${poaPrefix}_authority_basis`, operator: "equals", value: "power_of_attorney" };
         return [
-          { key: `${prefix}_power_of_attorney_number`, type: "text", labelAr: "رقم التوكيل", visibleWhen: condition, requiredWhen: condition },
-          { key: `${prefix}_power_of_attorney_year`, type: "number", labelAr: "سنة التوكيل", visibleWhen: condition, requiredWhen: condition, validation: { min: 1900, max: 2200 } },
-          { key: `${prefix}_power_of_attorney_office`, type: "text", labelAr: "مكتب الشهر العقاري", visibleWhen: condition, requiredWhen: condition },
+          { key: `${poaPrefix}_power_of_attorney_number`, type: "text", labelAr: "رقم التوكيل", visibleWhen: condition, requiredWhen: condition },
+          { key: `${poaPrefix}_power_of_attorney_year`, type: "number", labelAr: "سنة التوكيل", visibleWhen: condition, requiredWhen: condition, validation: { min: 1900, max: 2200 } },
+          { key: `${poaPrefix}_power_of_attorney_office`, type: "text", labelAr: "مكتب الشهر العقاري", visibleWhen: condition, requiredWhen: condition },
         ];
       }
+
+      if (prefix && individualCondition && individualSuffixes.some((suffix) => field.key === `${prefix}${suffix}`)) {
+        const optional = field.key.endsWith("_id_issuer") || field.key.endsWith("_id_issue_date") || field.key.endsWith("_email");
+        return [{
+          ...field,
+          required: !optional,
+          visibleWhen: individualCondition,
+          requiredWhen: field.key.endsWith("_email") ? allConditions(individualCondition, reusePartyEmails) : undefined,
+        }];
+      }
+
+      if (field.key === "social_client_company_email" || field.key === "social_provider_company_email") {
+        const companyCondition: ConditionDefinition = { fieldKey: field.key.startsWith("social_client_") ? "social_client_party_type" : "social_provider_party_type", operator: "equals", value: "company" };
+        return [{ ...field, required: false, requiredWhen: allConditions(companyCondition, reusePartyEmails) }];
+      }
+
+      if (field.key === "social_client_company_address" || field.key === "social_provider_company_address") {
+        const companyPrefix = field.key.startsWith("social_client_") ? "social_client" : "social_provider";
+        const companyCondition: ConditionDefinition = { fieldKey: `${companyPrefix}_party_type`, operator: "equals", value: "company" };
+        return [
+          field,
+          { key: `${companyPrefix}_company_phone`, type: "text", labelAr: "رقم هاتف الشركة / الممثل", visibleWhen: companyCondition, requiredWhen: allConditions(companyCondition, reusePartyPhones) },
+        ];
+      }
+
       return [field];
     }),
   }));
@@ -185,178 +282,96 @@ const reviewStep = (key: string): WizardStepDefinition => ({ key, titleAr: "ال
 const visualSteps: WizardStepDefinition[] = [
   { key: "visual_contract_meta", titleAr: "بيانات العقد", articleRange: "صدر العقد وتاريخ تحريره", fields: [contractDateField] },
   ...visualPartySteps(),
-  { key: "visual_project", titleAr: "بيانات مشروع الهوية البصرية", articleRange: "بيانات المشروع والمدة والمقابل", fields: [
+  { key: "visual_project_scope", titleAr: "بيانات المشروع ونطاق خدمات الهوية", articleRange: "المواد 1 إلى 4 — المشروع ونطاق الخدمات", fields: [
     { key: "visual_project_name", type: "text", labelAr: "اسم المشروع / العلامة التجارية / النشاط", required: true },
     { key: "visual_project_brief", type: "textarea", labelAr: "وصف مختصر للمشروع (اختياري)" },
     { key: "visual_project_purpose", type: "textarea", labelAr: "الغرض من تصميم الهوية البصرية", required: true },
-    {
-      key: "visual_execution_duration",
-      type: "text",
-      labelAr: "مدة التنفيذ المتفق عليها",
-      required: true,
-      helpText: "اكتب المدة كما اتفق عليها الطرفان، مثال: 30 يوم عمل.",
-    },
-    {
-      key: "visual_contract_value",
-      type: "money",
-      labelAr: "المقابل المالي المتفق عليه بين العميل والمصمم",
-      required: true,
-      validation: { min: 1 },
-      helpText: "أدخل إجمالي المقابل المالي المتفق عليه مقابل تنفيذ الخدمات.",
-    },
-    {
-      key: "visual_contract_value_words",
-      type: "text",
-      labelAr: "المقابل المالي كتابةً (بدون اسم العملة)",
-      required: true,
-      helpText: "اكتب قيمة المبلغ بالحروف فقط، مثال: خمسة آلاف. سيضيف العقد عبارة جنيه مصري تلقائيًا.",
-    },
+    { key: "visual_main_scope_services", type: "repeater", labelAr: "الخدمات المشمولة في هذا العقد", required: true, minRows: 1, columns: [
+      { key: "service", type: "select", labelAr: "الخدمة", required: true, options: [
+        { value: "logo", labelAr: "تصميم / تطوير الشعار" },
+        { value: "identity", labelAr: "إعداد الهوية البصرية" },
+        { value: "colors_fonts", labelAr: "اختيار الألوان والخطوط" },
+        { value: "visual_elements", labelAr: "تصميم العناصر والأنماط البصرية" },
+        { value: "brand_guidelines", labelAr: "إعداد دليل الهوية البصرية (Brand Guidelines)" },
+        { value: "print_digital", labelAr: "مطبوعات / قوالب / أصول رقمية" },
+        { value: "other", labelAr: "خدمة أخرى" },
+      ] },
+      { key: "details", type: "text", labelAr: "تفاصيل الخدمة", visibleWhen: { fieldKey: "service", operator: "equals", value: "other" }, requiredWhen: { fieldKey: "service", operator: "equals", value: "other" } },
+    ], helpText: "أضف فقط الخدمات المتفق عليها؛ ما لم يدرج هنا لا يعد ضمن نطاق العقد." },
   ] },
-  { key: "visual_communications", titleAr: "الإخطارات والمراسلات", articleRange: "الإخطارات ووسائل التواصل المعتمدة", fields: [
-    {
-      key: "visual_email_notices_enabled",
-      type: "checkbox",
-      labelAr: "اعتماد البريد الإلكتروني للمراسلات المتعلقة بتنفيذ المشروع",
-      printInDocument: false,
-    },
-    {
-      key: "visual_notice_use_party_emails",
-      type: "checkbox",
-      labelAr: "استخدام نفس البريد الإلكتروني المسجل في بيانات الطرفين",
-      visibleWhen: { fieldKey: "visual_email_notices_enabled", operator: "truthy" },
-      printInDocument: false,
-    },
-    {
-      key: "visual_notice_client_email",
-      type: "text",
-      labelAr: "البريد الإلكتروني المعتمد للطرف الأول (العميل)",
-      printInDocument: false,
-      visibleWhen: allConditions(
-        { fieldKey: "visual_email_notices_enabled", operator: "truthy" },
-        { fieldKey: "visual_notice_use_party_emails", operator: "falsy" },
-      ),
-      requiredWhen: allConditions(
-        { fieldKey: "visual_email_notices_enabled", operator: "truthy" },
-        { fieldKey: "visual_notice_use_party_emails", operator: "falsy" },
-      ),
-    },
-    {
-      key: "visual_notice_provider_email",
-      type: "text",
-      labelAr: "البريد الإلكتروني المعتمد للطرف الثاني (المصمم)",
-      printInDocument: false,
-      visibleWhen: allConditions(
-        { fieldKey: "visual_email_notices_enabled", operator: "truthy" },
-        { fieldKey: "visual_notice_use_party_emails", operator: "falsy" },
-      ),
-      requiredWhen: allConditions(
-        { fieldKey: "visual_email_notices_enabled", operator: "truthy" },
-        { fieldKey: "visual_notice_use_party_emails", operator: "falsy" },
-      ),
-    },
-    {
-      key: "visual_messaging_apps_enabled",
-      type: "checkbox",
-      labelAr: "اعتماد تطبيقات المراسلة الإلكترونية للتعليمات والملاحظات والملفات",
-      printInDocument: false,
-    },
-    {
-      key: "visual_messaging_apps",
-      type: "text",
-      labelAr: "تطبيقات المراسلة المعتمدة",
-      printInDocument: false,
-      placeholder: "مثال: WhatsApp",
-      visibleWhen: { fieldKey: "visual_messaging_apps_enabled", operator: "truthy" },
-      requiredWhen: { fieldKey: "visual_messaging_apps_enabled", operator: "truthy" },
-    },
-    {
-      key: "visual_messaging_use_party_phones",
-      type: "checkbox",
-      labelAr: "استخدام نفس أرقام الهاتف المسجلة في بيانات الطرفين",
-      visibleWhen: { fieldKey: "visual_messaging_apps_enabled", operator: "truthy" },
-      printInDocument: false,
-    },
-    {
-      key: "visual_messaging_client_number",
-      type: "text",
-      labelAr: "رقم المراسلة المعتمد للطرف الأول (العميل)",
-      printInDocument: false,
-      visibleWhen: allConditions(
-        { fieldKey: "visual_messaging_apps_enabled", operator: "truthy" },
-        { fieldKey: "visual_messaging_use_party_phones", operator: "falsy" },
-      ),
-      requiredWhen: allConditions(
-        { fieldKey: "visual_messaging_apps_enabled", operator: "truthy" },
-        { fieldKey: "visual_messaging_use_party_phones", operator: "falsy" },
-      ),
-    },
-    {
-      key: "visual_messaging_provider_number",
-      type: "text",
-      labelAr: "رقم المراسلة المعتمد للطرف الثاني (المصمم)",
-      printInDocument: false,
-      visibleWhen: allConditions(
-        { fieldKey: "visual_messaging_apps_enabled", operator: "truthy" },
-        { fieldKey: "visual_messaging_use_party_phones", operator: "falsy" },
-      ),
-      requiredWhen: allConditions(
-        { fieldKey: "visual_messaging_apps_enabled", operator: "truthy" },
-        { fieldKey: "visual_messaging_use_party_phones", operator: "falsy" },
-      ),
-    },
+  { key: "visual_delivery", titleAr: "المخرجات والملفات المصدرية", articleRange: "المادة 5 والمادة 11 — التسليم وحقوق الملفات", fields: [
+    { key: "visual_output_formats", type: "text", labelAr: "صيغ الملفات النهائية المتفق عليها", required: true, placeholder: "مثال: PDF، PNG، SVG" },
+    { key: "visual_source_files_included", type: "radio", labelAr: "هل يشمل الاتفاق تسليم الملفات المصدرية / القابلة للتعديل؟", required: true, options: yesNo },
+    { key: "visual_source_file_types", type: "text", labelAr: "أنواع الملفات المصدرية المتفق على تسليمها", visibleWhen: { fieldKey: "visual_source_files_included", operator: "equals", value: "yes" }, requiredWhen: { fieldKey: "visual_source_files_included", operator: "equals", value: "yes" }, placeholder: "مثال: AI، PSD، FIG" },
+    { key: "visual_source_files_price_mode", type: "radio", labelAr: "المقابل الخاص بالملفات المصدرية", visibleWhen: { fieldKey: "visual_source_files_included", operator: "equals", value: "yes" }, requiredWhen: { fieldKey: "visual_source_files_included", operator: "equals", value: "yes" }, options: [
+      { value: "included", labelAr: "مشمولة في إجمالي المقابل المالي" },
+      { value: "additional", labelAr: "لها مقابل مالي إضافي" },
+    ] },
+    { key: "visual_source_files_additional_fee", type: "money", labelAr: "المقابل الإضافي للملفات المصدرية (جنيه مصري)", visibleWhen: allConditions({ fieldKey: "visual_source_files_included", operator: "equals", value: "yes" }, { fieldKey: "visual_source_files_price_mode", operator: "equals", value: "additional" }), requiredWhen: allConditions({ fieldKey: "visual_source_files_included", operator: "equals", value: "yes" }, { fieldKey: "visual_source_files_price_mode", operator: "equals", value: "additional" }), validation: { min: 1 } },
+  ] },
+  { key: "visual_execution_finance", titleAr: "مدة التنفيذ والمقابل المالي والمراجعات", articleRange: "المواد 4 و6 و9 و10 — المدة والسداد والمراجعات", fields: [
+    { key: "visual_execution_duration_value", type: "number", labelAr: "مدة تنفيذ الخدمات", required: true, validation: { min: 1 } },
+    { key: "visual_execution_duration_unit", type: "select", labelAr: "وحدة مدة التنفيذ", required: true, options: [
+      { value: "يوم عمل", labelAr: "يوم عمل" }, { value: "يوم تقويمي", labelAr: "يوم تقويمي" }, { value: "أسبوع", labelAr: "أسبوع" }, { value: "شهر", labelAr: "شهر" },
+    ] },
+    { key: "visual_execution_start_rule", type: "radio", labelAr: "بداية احتساب مدة التنفيذ", required: true, options: [
+      { value: "source_rule", labelAr: "من التاريخ المتفق عليه أو استيفاء البيانات/الموافقات/الدفعة — أيهما لاحق" },
+      { value: "contract_date", labelAr: "من تاريخ العقد" },
+      { value: "specific_date", labelAr: "من تاريخ محدد" },
+    ] },
+    { key: "visual_execution_start_date", type: "date", labelAr: "تاريخ بدء التنفيذ", visibleWhen: { fieldKey: "visual_execution_start_rule", operator: "equals", value: "specific_date" }, requiredWhen: { fieldKey: "visual_execution_start_rule", operator: "equals", value: "specific_date" } },
+    { key: "visual_contract_value", type: "money", labelAr: "إجمالي المقابل المالي (جنيه مصري)", required: true, validation: { min: 1 } },
+    { key: "visual_contract_value_words", type: "text", labelAr: "إجمالي المقابل المالي كتابةً (بدون اسم العملة)", required: true, helpText: "مثال: خمسون ألفًا. سيضيف العقد عبارة جنيه مصري تلقائيًا." },
+    { key: "visual_payment_mode", type: "radio", labelAr: "نظام السداد", required: true, options: [
+      { value: "single", labelAr: "دفعة واحدة" }, { value: "installments", labelAr: "عدة دفعات / مراحل" },
+    ] },
+    { key: "visual_single_payment_due", type: "text", labelAr: "موعد / واقعة استحقاق الدفعة الواحدة", visibleWhen: { fieldKey: "visual_payment_mode", operator: "equals", value: "single" }, requiredWhen: { fieldKey: "visual_payment_mode", operator: "equals", value: "single" }, placeholder: "مثال: عند توقيع العقد" },
+    { key: "visual_main_payment_schedule", type: "repeater", labelAr: "جدول الدفعات", visibleWhen: { fieldKey: "visual_payment_mode", operator: "equals", value: "installments" }, requiredWhen: { fieldKey: "visual_payment_mode", operator: "equals", value: "installments" }, minRows: 2, columns: [
+      { key: "payment", type: "text", labelAr: "الدفعة / المرحلة", required: true },
+      { key: "amount", type: "money", labelAr: "القيمة", required: true },
+      { key: "due", type: "text", labelAr: "موعد أو سبب الاستحقاق", required: true },
+    ] },
+    { key: "visual_payment_method", type: "text", labelAr: "وسيلة السداد المتفق عليها", required: true, placeholder: "مثال: تحويل بنكي / محفظة إلكترونية" },
+    { key: "visual_revision_rounds", type: "number", labelAr: "عدد جولات المراجعة المتضمنة في المقابل المالي", required: true, validation: { min: 0 } },
+  ] },
+  { key: "visual_ip_portfolio", titleAr: "الملكية الفكرية وPortfolio", articleRange: "المادتان 11 و12 — الحقوق والاستخدام والسرية", fields: [
+    { key: "visual_ip_rights_mode", type: "radio", labelAr: "نطاق الحقوق التي يحصل عليها العميل بعد السداد", required: true, options: [
+      { value: "full_transfer", labelAr: "نقل كامل الحقوق على المخرجات النهائية المعتمدة" },
+      { value: "specific_transfer", labelAr: "نقل حقوق محددة فقط" },
+      { value: "license_only", labelAr: "ترخيص استخدام / استغلال فقط" },
+    ] },
+    { key: "visual_ip_specific_rights", type: "textarea", labelAr: "الحقوق المحددة التي تنتقل للعميل", visibleWhen: { fieldKey: "visual_ip_rights_mode", operator: "equals", value: "specific_transfer" }, requiredWhen: { fieldKey: "visual_ip_rights_mode", operator: "equals", value: "specific_transfer" } },
+    { key: "visual_ip_license_scope", type: "textarea", labelAr: "نطاق ترخيص الاستخدام / الاستغلال", visibleWhen: { fieldKey: "visual_ip_rights_mode", operator: "equals", value: "license_only" }, requiredWhen: { fieldKey: "visual_ip_rights_mode", operator: "equals", value: "license_only" } },
+    { key: "visual_portfolio_permission", type: "radio", labelAr: "السماح للمصمم بعرض الأعمال النهائية ضمن Portfolio؟", required: true, options: yesNo },
+  ] },
+  { key: "visual_termination_terms", titleAr: "مدد الإنهاء والتعليق", articleRange: "المادة 13 — الإنهاء والتعليق وآثاره", fields: [
+    { key: "visual_breach_cure_days", type: "number", labelAr: "مهلة معالجة الإخلال الجوهري — يوم", required: true, validation: { min: 1 } },
+    { key: "visual_nonpayment_termination_days", type: "number", labelAr: "مدة التأخر في السداد التي تجيز الإنهاء — يوم", required: true, validation: { min: 1 } },
+    { key: "visual_client_stoppage_days", type: "number", labelAr: "مدة توقف المشروع بسبب العميل قبل التعليق — يوم", required: true, validation: { min: 1 } },
+    { key: "visual_post_notice_termination_days", type: "number", labelAr: "المهلة بعد إخطار العميل بالتوقف قبل الإنهاء — يوم", required: true, validation: { min: 1 } },
+  ] },
+  { key: "visual_communications", titleAr: "الإخطارات والمراسلات", articleRange: "المادة 16 — وسائل التواصل المعتمدة", fields: [
+    { key: "visual_email_notices_enabled", type: "checkbox", labelAr: "اعتماد البريد الإلكتروني للمراسلات المتعلقة بتنفيذ المشروع", printInDocument: false },
+    { key: "visual_notice_use_party_emails", type: "checkbox", labelAr: "استخدام نفس البريد الإلكتروني المسجل في بيانات الطرفين", visibleWhen: { fieldKey: "visual_email_notices_enabled", operator: "truthy" }, printInDocument: false },
+    { key: "visual_notice_client_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للطرف الأول (العميل)", visibleWhen: allConditions({ fieldKey: "visual_email_notices_enabled", operator: "truthy" }, { fieldKey: "visual_notice_use_party_emails", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "visual_email_notices_enabled", operator: "truthy" }, { fieldKey: "visual_notice_use_party_emails", operator: "falsy" }), printInDocument: false },
+    { key: "visual_notice_provider_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للطرف الثاني (المصمم)", visibleWhen: allConditions({ fieldKey: "visual_email_notices_enabled", operator: "truthy" }, { fieldKey: "visual_notice_use_party_emails", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "visual_email_notices_enabled", operator: "truthy" }, { fieldKey: "visual_notice_use_party_emails", operator: "falsy" }), printInDocument: false },
+    { key: "visual_messaging_apps_enabled", type: "checkbox", labelAr: "اعتماد تطبيقات المراسلة الإلكترونية للتعليمات والملاحظات والملفات", printInDocument: false },
+    { key: "visual_messaging_apps", type: "text", labelAr: "تطبيقات المراسلة المعتمدة", placeholder: "مثال: WhatsApp", visibleWhen: { fieldKey: "visual_messaging_apps_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "visual_messaging_apps_enabled", operator: "truthy" }, printInDocument: false },
+    { key: "visual_messaging_use_party_phones", type: "checkbox", labelAr: "استخدام نفس أرقام الهاتف المسجلة في بيانات الطرفين", visibleWhen: { fieldKey: "visual_messaging_apps_enabled", operator: "truthy" }, printInDocument: false },
+    { key: "visual_messaging_client_number", type: "text", labelAr: "رقم المراسلة المعتمد للطرف الأول (العميل)", visibleWhen: allConditions({ fieldKey: "visual_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "visual_messaging_use_party_phones", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "visual_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "visual_messaging_use_party_phones", operator: "falsy" }), printInDocument: false },
+    { key: "visual_messaging_provider_number", type: "text", labelAr: "رقم المراسلة المعتمد للطرف الثاني (المصمم)", visibleWhen: allConditions({ fieldKey: "visual_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "visual_messaging_use_party_phones", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "visual_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "visual_messaging_use_party_phones", operator: "falsy" }), printInDocument: false },
   ] },
   { key: "visual_witnesses", titleAr: "الشهود (اختياري)", articleRange: "بيانات التوقيع والشهود", fields: [
     { key: "visual_witness_1_enabled", type: "checkbox", labelAr: "إضافة الشاهد الأول", printInDocument: false },
-    {
-      key: "visual_witness_1_name",
-      type: "text",
-      labelAr: "اسم الشاهد الأول",
-      visibleWhen: { fieldKey: "visual_witness_1_enabled", operator: "truthy" },
-      requiredWhen: { fieldKey: "visual_witness_1_enabled", operator: "truthy" },
-      printInDocument: false,
-    },
-    {
-      key: "visual_witness_1_national_id",
-      type: "text",
-      labelAr: "الرقم القومي للشاهد الأول",
-      visibleWhen: { fieldKey: "visual_witness_1_enabled", operator: "truthy" },
-      requiredWhen: { fieldKey: "visual_witness_1_enabled", operator: "truthy" },
-      printInDocument: false,
-    },
+    { key: "visual_witness_1_name", type: "text", labelAr: "اسم الشاهد الأول", visibleWhen: { fieldKey: "visual_witness_1_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "visual_witness_1_enabled", operator: "truthy" }, printInDocument: false },
+    { key: "visual_witness_1_national_id", type: "text", labelAr: "الرقم القومي للشاهد الأول", visibleWhen: { fieldKey: "visual_witness_1_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "visual_witness_1_enabled", operator: "truthy" }, printInDocument: false },
     { key: "visual_witness_2_enabled", type: "checkbox", labelAr: "إضافة الشاهد الثاني", printInDocument: false },
-    {
-      key: "visual_witness_2_name",
-      type: "text",
-      labelAr: "اسم الشاهد الثاني",
-      visibleWhen: { fieldKey: "visual_witness_2_enabled", operator: "truthy" },
-      requiredWhen: { fieldKey: "visual_witness_2_enabled", operator: "truthy" },
-      printInDocument: false,
-    },
-    {
-      key: "visual_witness_2_national_id",
-      type: "text",
-      labelAr: "الرقم القومي للشاهد الثاني",
-      visibleWhen: { fieldKey: "visual_witness_2_enabled", operator: "truthy" },
-      requiredWhen: { fieldKey: "visual_witness_2_enabled", operator: "truthy" },
-      printInDocument: false,
-    },
+    { key: "visual_witness_2_name", type: "text", labelAr: "اسم الشاهد الثاني", visibleWhen: { fieldKey: "visual_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "visual_witness_2_enabled", operator: "truthy" }, printInDocument: false },
+    { key: "visual_witness_2_national_id", type: "text", labelAr: "الرقم القومي للشاهد الثاني", visibleWhen: { fieldKey: "visual_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "visual_witness_2_enabled", operator: "truthy" }, printInDocument: false },
   ] },
-  { key: "visual_jurisdiction", titleAr: "المحكمة المختصة", articleRange: "الاختصاص القضائي وتسوية المنازعات", fields: [
-    {
-      key: "visual_competent_court",
-      type: "select",
-      labelAr: "المحكمة المختصة",
-      required: true,
-      options: freelancerCourtOptions,
-      helpText: "اختر المحكمة المتفق عليها بين الطرفين، مع مراعاة قواعد الاختصاص القضائي الآمرة.",
-    },
-    {
-      key: "visual_competent_court_other",
-      type: "text",
-      labelAr: "اسم المحكمة الأخرى",
-      visibleWhen: { fieldKey: "visual_competent_court", operator: "equals", value: "أخرى" },
-      requiredWhen: { fieldKey: "visual_competent_court", operator: "equals", value: "أخرى" },
-    },
+  { key: "visual_jurisdiction", titleAr: "المحكمة المختصة", articleRange: "المادة 17 — الاختصاص القضائي وتسوية المنازعات", fields: [
+    { key: "visual_competent_court", type: "select", labelAr: "المحكمة المختصة", required: true, options: freelancerCourtOptions, helpText: "اختر المحكمة المتفق عليها بين الطرفين، مع مراعاة قواعد الاختصاص القضائي الآمرة." },
+    { key: "visual_competent_court_other", type: "text", labelAr: "اسم المحكمة الأخرى", visibleWhen: { fieldKey: "visual_competent_court", operator: "equals", value: "أخرى" }, requiredWhen: { fieldKey: "visual_competent_court", operator: "equals", value: "أخرى" } },
   ] },
   reviewStep("visual_review"),
 ];
@@ -364,41 +379,70 @@ const visualSteps: WizardStepDefinition[] = [
 const websiteSteps: WizardStepDefinition[] = [
   { key: "website_contract_meta", titleAr: "بيانات العقد", articleRange: "صدر العقد وتاريخ تحريره", fields: [contractDateField] },
   ...websitePartySteps(),
-  { key: "website_project", titleAr: "بيانات مشروع الموقع الإلكتروني", articleRange: "المواد 1 و10 و11 و14 و16 — المشروع والمدة والمقابل والضمان والسرية", fields: [
+  { key: "website_project", titleAr: "بيانات المشروع ومدة التنفيذ", articleRange: "المواد 1 و7 و8 و9 — المشروع والمدة والاعتماد", fields: [
     { key: "website_project_name", type: "text", labelAr: "اسم المشروع", required: true },
     { key: "website_project_type", type: "select", labelAr: "نوع المشروع", required: true, options: [
-      { value: "corporate", labelAr: "موقع تعريفي" },
-      { value: "ecommerce", labelAr: "متجر إلكتروني" },
-      { value: "platform", labelAr: "منصة إلكترونية" },
-      { value: "web_app", labelAr: "نظام ويب (Web Application)" },
-      { value: "landing_page", labelAr: "صفحة هبوط (Landing Page)" },
-      { value: "other", labelAr: "أخرى" },
+      { value: "corporate", labelAr: "موقع تعريفي" }, { value: "ecommerce", labelAr: "متجر إلكتروني" }, { value: "platform", labelAr: "منصة إلكترونية" },
+      { value: "web_app", labelAr: "نظام ويب (Web Application)" }, { value: "landing_page", labelAr: "صفحة هبوط (Landing Page)" }, { value: "other", labelAr: "أخرى" },
     ] },
     { key: "website_project_type_other", type: "text", labelAr: "نوع المشروع الآخر", visibleWhen: { fieldKey: "website_project_type", operator: "equals", value: "other" }, requiredWhen: { fieldKey: "website_project_type", operator: "equals", value: "other" } },
-    { key: "website_contact_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للتواصل مع المشروع", required: true },
-    { key: "website_project_manager", type: "text", labelAr: "الشخص المسؤول عن المشروع", required: true },
-    { key: "website_approval_person", type: "text", labelAr: "الشخص المسؤول عن الاعتماد", required: true },
-    { key: "website_billing_contact", type: "text", labelAr: "الشخص المسؤول عن الفواتير أو المدفوعات", required: true },
+    { key: "website_contact_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للتواصل التشغيلي مع المشروع" },
+    { key: "website_project_manager", type: "text", labelAr: "الشخص المسؤول عن المشروع" },
+    { key: "website_approval_person", type: "text", labelAr: "الشخص المسؤول عن الاعتماد", helpText: "إذا تُرك فارغًا، يُعد العميل نفسه أو ممثله القانوني صاحب الاعتماد." },
+    { key: "website_billing_contact", type: "text", labelAr: "الشخص المسؤول عن الفواتير أو المدفوعات" },
     { key: "website_execution_duration_value", type: "number", labelAr: "مدة تنفيذ المشروع", required: true, validation: { min: 1 } },
     { key: "website_execution_duration_unit", type: "select", labelAr: "وحدة مدة التنفيذ", required: true, options: [
       { value: "يومًا", labelAr: "يوم" }, { value: "أسبوعًا", labelAr: "أسبوع" }, { value: "شهرًا", labelAr: "شهر" },
     ] },
+    { key: "website_execution_start_rule", type: "radio", labelAr: "بداية احتساب مدة التنفيذ", required: true, options: [
+      { value: "agreed_or_requirements_later", labelAr: "من التاريخ المتفق عليه أو استيفاء متطلبات البدء — أيهما لاحق" },
+      { value: "contract_date", labelAr: "من تاريخ العقد" },
+      { value: "specific_date", labelAr: "من تاريخ محدد" },
+    ] },
+    { key: "website_execution_start_date", type: "date", labelAr: "تاريخ بدء التنفيذ", visibleWhen: { fieldKey: "website_execution_start_rule", operator: "equals", value: "specific_date" }, requiredWhen: { fieldKey: "website_execution_start_rule", operator: "equals", value: "specific_date" } },
     { key: "website_duration_basis", type: "radio", labelAr: "أساس احتساب مدة التنفيذ", required: true, options: [
       { value: "بأيام العمل، ما لم يتفق الطرفان كتابةً على احتسابها بالأيام التقويمية", labelAr: "أيام العمل (الأصل في العقد)" },
       { value: "بالأيام التقويمية بناءً على اتفاق الطرفين", labelAr: "الأيام التقويمية باتفاق الطرفين" },
     ] },
-    { key: "website_total_price", type: "money", labelAr: "إجمالي المقابل المالي بين العميل ومقدم الخدمة (جنيه مصري)", required: true, validation: { min: 1 }, helpText: "أدخل إجمالي المقابل المالي المتفق عليه مقابل تنفيذ المشروع." },
+    { key: "website_response_period_days", type: "number", labelAr: "مهلة رد العميل على الاستفسارات — أيام عمل", required: true, validation: { min: 1 } },
+    { key: "website_review_period_days", type: "number", labelAr: "مدة مراجعة واعتماد المخرجات — أيام عمل", required: true, validation: { min: 1 } },
+  ] },
+  { key: "website_finance_acceptance", titleAr: "المقابل المالي والسداد والتسليم", articleRange: "المواد 10 و12 — المقابل والدفعات والمراجعة", fields: [
+    { key: "website_total_price", type: "money", labelAr: "إجمالي المقابل المالي (جنيه مصري)", required: true, validation: { min: 1 } },
     { key: "website_total_price_words", type: "text", labelAr: "إجمالي المقابل المالي كتابةً (بدون اسم العملة)", required: true, helpText: "مثال: خمسون ألفًا. سيضيف العقد عبارة جنيه مصري تلقائيًا." },
+    { key: "website_payment_mode", type: "radio", labelAr: "طريقة السداد", required: true, options: [
+      { value: "single", labelAr: "دفعة واحدة" }, { value: "installments", labelAr: "دفعات" },
+    ] },
+    { key: "website_single_payment_due", type: "text", labelAr: "موعد / واقعة استحقاق الدفعة الواحدة", visibleWhen: { fieldKey: "website_payment_mode", operator: "equals", value: "single" }, requiredWhen: { fieldKey: "website_payment_mode", operator: "equals", value: "single" }, placeholder: "مثال: عند توقيع العقد" },
+    { key: "website_payment_schedule", type: "repeater", labelAr: "جدول الدفعات", visibleWhen: { fieldKey: "website_payment_mode", operator: "equals", value: "installments" }, requiredWhen: { fieldKey: "website_payment_mode", operator: "equals", value: "installments" }, minRows: 2, columns: [
+      { key: "payment", type: "text", labelAr: "اسم / رقم الدفعة", required: true },
+      { key: "amount", type: "money", labelAr: "قيمة الدفعة", required: true },
+      { key: "due", type: "text", labelAr: "موعد أو واقعة الاستحقاق", required: true },
+    ] },
+    { key: "website_payment_method", type: "text", labelAr: "وسيلة السداد المتفق عليها", required: true, placeholder: "مثال: تحويل بنكي / إنستاباي / نقدًا" },
+    { key: "website_payment_grace_days", type: "number", labelAr: "مهلة السداد قبل تعليق التنفيذ — أيام عمل", required: true, validation: { min: 1 } },
+    { key: "website_restart_threshold_days", type: "number", labelAr: "مدة التعليق التي قد تستلزم إعادة جدولة المشروع — يوم", required: true, validation: { min: 1 } },
+    { key: "website_restart_fee_enabled", type: "checkbox", labelAr: "يوجد اتفاق على رسوم إعادة تشغيل المشروع بعد التعليق", printInDocument: false },
+    { key: "website_restart_fee_amount", type: "money", labelAr: "رسوم إعادة تشغيل المشروع (جنيه مصري)", visibleWhen: { fieldKey: "website_restart_fee_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_restart_fee_enabled", operator: "truthy" }, validation: { min: 0 } },
+    { key: "website_correction_attempts", type: "number", labelAr: "عدد محاولات معالجة الملاحظات الجوهرية", required: true, validation: { min: 1 } },
+  ] },
+  { key: "website_warranty_services", titleAr: "الضمان والسرية والخدمات الخارجية", articleRange: "المواد 13 إلى 16 — الملكية والضمان والخدمات والسرية", fields: [
     { key: "website_warranty_duration_value", type: "number", labelAr: "مدة الضمان", required: true, validation: { min: 1 } },
     { key: "website_warranty_duration_unit", type: "select", labelAr: "وحدة مدة الضمان", required: true, options: [
       { value: "يومًا", labelAr: "يوم" }, { value: "أسبوعًا", labelAr: "أسبوع" }, { value: "شهرًا", labelAr: "شهر" }, { value: "سنة", labelAr: "سنة" },
     ] },
-    { key: "website_confidentiality_years", type: "number", labelAr: "مدة استمرار السرية بعد انتهاء العقد (بالسنوات)", required: true, validation: { min: 1 }, helpText: "حدد المدة التي اتفق عليها الطرفان لاستمرار التزام السرية بعد انتهاء العقد." },
-    { key: "website_legal_fees_enabled", type: "checkbox", labelAr: "يوجد اتفاق خاص على تحمل رسوم الدمغة أو الرسوم القانونية", printInDocument: false },
-    { key: "website_legal_fees_payer", type: "radio", labelAr: "يتحمل الرسوم", visibleWhen: { fieldKey: "website_legal_fees_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_legal_fees_enabled", operator: "truthy" }, options: [
-      { value: "الطرف الأول (العميل)", labelAr: "الطرف الأول (العميل)" }, { value: "الطرف الثاني (مقدم الخدمة)", labelAr: "الطرف الثاني (مقدم الخدمة)" }, { value: "الطرفان مناصفة", labelAr: "الطرفان مناصفة" }, { value: "أخرى", labelAr: "أخرى" },
+    { key: "website_confidentiality_years", type: "number", labelAr: "مدة استمرار السرية بعد انتهاء العقد (بالسنوات)", required: true, validation: { min: 1 } },
+    { key: "website_portfolio_permission", type: "radio", labelAr: "هل يسمح لمقدم الخدمة بعرض المشروع ضمن معرض أعماله (Portfolio)؟", required: true, options: yesNo },
+    { key: "website_external_services_enabled", type: "checkbox", labelAr: "يشمل الاتفاق خدمات خارجية / استضافة / دومين / تراخيص يديرها مقدم الخدمة", printInDocument: false },
+    { key: "website_external_services", type: "repeater", labelAr: "الخدمات الخارجية المتفق عليها", visibleWhen: { fieldKey: "website_external_services_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_external_services_enabled", operator: "truthy" }, minRows: 1, columns: [
+      { key: "service", type: "text", labelAr: "نوع الخدمة", required: true },
+      { key: "provider", type: "text", labelAr: "مزود الخدمة", required: true },
+      { key: "duration", type: "text", labelAr: "مدة الاشتراك", required: true },
+      { key: "amount", type: "money", labelAr: "القيمة", required: true },
+      { key: "payer", type: "select", labelAr: "جهة السداد", required: true, options: [
+        { value: "client", labelAr: "الطرف الأول (العميل)" }, { value: "provider", labelAr: "الطرف الثاني (مقدم الخدمة)" }, { value: "shared", labelAr: "الطرفان مناصفة" },
+      ] },
     ] },
-    { key: "website_legal_fees_other", type: "text", labelAr: "الاتفاق الآخر لتحمل الرسوم", visibleWhen: allConditions({ fieldKey: "website_legal_fees_enabled", operator: "truthy" }, { fieldKey: "website_legal_fees_payer", operator: "equals", value: "أخرى" }), requiredWhen: allConditions({ fieldKey: "website_legal_fees_enabled", operator: "truthy" }, { fieldKey: "website_legal_fees_payer", operator: "equals", value: "أخرى" }) },
   ] },
   { key: "website_communications", titleAr: "الإخطارات ووسائل التواصل", articleRange: "المادة 20 — وسائل التواصل والإخطارات", fields: [
     { key: "website_email_notices_enabled", type: "checkbox", labelAr: "اعتماد البريد الإلكتروني للإخطارات والمراسلات", printInDocument: false },
@@ -413,6 +457,23 @@ const websiteSteps: WizardStepDefinition[] = [
     { key: "website_project_platform_enabled", type: "checkbox", labelAr: "اعتماد منصة إلكترونية لإدارة المشروع", printInDocument: false },
     { key: "website_project_platform_name", type: "text", labelAr: "اسم منصة إدارة المشروع", visibleWhen: { fieldKey: "website_project_platform_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_project_platform_enabled", operator: "truthy" } },
     { key: "website_project_platform_link", type: "text", labelAr: "رابط المشروع أو الحساب على المنصة", visibleWhen: { fieldKey: "website_project_platform_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_project_platform_enabled", operator: "truthy" } },
+    { key: "website_contact_change_notice_days", type: "number", labelAr: "مهلة الإخطار بتغيير بيانات الاتصال — يوم", required: true, validation: { min: 1 } },
+  ] },
+  { key: "website_general_terms", titleAr: "الإنهاء والقوة القاهرة والأحكام العامة", articleRange: "المواد 18 و19 و22 — المهل والآثار والنسخ والرسوم", fields: [
+    { key: "website_breach_cure_days", type: "number", labelAr: "مهلة معالجة الإخلال الجوهري — يوم", required: true, validation: { min: 1 } },
+    { key: "website_nonpayment_termination_days", type: "number", labelAr: "مدة التأخر في السداد التي تجيز الإنهاء — يوم", required: true, validation: { min: 1 } },
+    { key: "website_client_stoppage_days", type: "number", labelAr: "مدة توقف المشروع بسبب تقصير العميل قبل التعليق — يوم", required: true, validation: { min: 1 } },
+    { key: "website_force_majeure_notice_days", type: "number", labelAr: "مهلة الإخطار بالقوة القاهرة — يوم", required: true, validation: { min: 1 } },
+    { key: "website_force_majeure_termination_days", type: "number", labelAr: "مدة استمرار القوة القاهرة التي تجيز الإنهاء — يوم", required: true, validation: { min: 1 } },
+    { key: "website_hardship_duration_days", type: "number", labelAr: "مدة استمرار الظروف الطارئة قبل إعادة التفاوض — يوم", required: true, validation: { min: 1 } },
+    { key: "website_hardship_negotiation_days", type: "number", labelAr: "مدة التفاوض بعد الظروف الطارئة — يوم", required: true, validation: { min: 1 } },
+    { key: "website_contract_copies", type: "number", labelAr: "عدد نسخ العقد الأصلية أو الإلكترونية", required: true, validation: { min: 1 } },
+    { key: "website_non_solicitation_months", type: "number", labelAr: "مدة عدم استقطاب العاملين بعد انتهاء العقد — شهر", required: true, validation: { min: 1 } },
+    { key: "website_legal_fees_enabled", type: "checkbox", labelAr: "يوجد اتفاق خاص على تحمل رسوم الدمغة أو الرسوم القانونية", printInDocument: false },
+    { key: "website_legal_fees_payer", type: "radio", labelAr: "يتحمل الرسوم", visibleWhen: { fieldKey: "website_legal_fees_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_legal_fees_enabled", operator: "truthy" }, options: [
+      { value: "الطرف الأول (العميل)", labelAr: "الطرف الأول (العميل)" }, { value: "الطرف الثاني (مقدم الخدمة)", labelAr: "الطرف الثاني (مقدم الخدمة)" }, { value: "الطرفان مناصفة", labelAr: "الطرفان مناصفة" }, { value: "أخرى", labelAr: "أخرى" },
+    ] },
+    { key: "website_legal_fees_other", type: "text", labelAr: "الاتفاق الآخر لتحمل الرسوم", visibleWhen: allConditions({ fieldKey: "website_legal_fees_enabled", operator: "truthy" }, { fieldKey: "website_legal_fees_payer", operator: "equals", value: "أخرى" }), requiredWhen: allConditions({ fieldKey: "website_legal_fees_enabled", operator: "truthy" }, { fieldKey: "website_legal_fees_payer", operator: "equals", value: "أخرى" }) },
   ] },
   { key: "website_witnesses", titleAr: "الشهود (اختياري)", articleRange: "بيانات التوقيع والشهود", fields: [
     { key: "website_witness_1_enabled", type: "checkbox", labelAr: "إضافة الشاهد الأول", printInDocument: false },
@@ -422,54 +483,177 @@ const websiteSteps: WizardStepDefinition[] = [
     { key: "website_witness_2_name", type: "text", labelAr: "اسم الشاهد الثاني", visibleWhen: { fieldKey: "website_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_witness_2_enabled", operator: "truthy" }, printInDocument: false },
     { key: "website_witness_2_national_id", type: "text", labelAr: "الرقم القومي للشاهد الثاني", visibleWhen: { fieldKey: "website_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "website_witness_2_enabled", operator: "truthy" }, printInDocument: false },
   ] },
-  { key: "website_jurisdiction", titleAr: "المحكمة المختصة", articleRange: "الاختصاص القضائي وتسوية المنازعات", fields: [
+  { key: "website_jurisdiction", titleAr: "المحكمة المختصة", articleRange: "المادة 21 — الاختصاص القضائي وتسوية المنازعات", fields: [
     { key: "website_competent_court", type: "select", labelAr: "المحكمة المختصة", required: true, options: freelancerCourtOptions, helpText: "اختر المحكمة المتفق عليها بين الطرفين، مع مراعاة قواعد الاختصاص القضائي الآمرة." },
     { key: "website_competent_court_other", type: "text", labelAr: "اسم المحكمة الأخرى", visibleWhen: { fieldKey: "website_competent_court", operator: "equals", value: "أخرى" }, requiredWhen: { fieldKey: "website_competent_court", operator: "equals", value: "أخرى" } },
   ] },
   reviewStep("website_review"),
 ];
 
+const socialContentServicesCondition = anyConditions(
+  { fieldKey: "social_service_copywriting", operator: "truthy" },
+  { fieldKey: "social_service_design", operator: "truthy" },
+  { fieldKey: "social_service_content_production", operator: "truthy" },
+  { fieldKey: "social_service_publishing", operator: "truthy" },
+  { fieldKey: "social_service_photography", operator: "truthy" },
+);
+
 const socialSteps: WizardStepDefinition[] = [
   { key: "social_contract_meta", titleAr: "بيانات العقد", articleRange: "صدر العقد وتاريخ تحريره", fields: [contractDateField] },
   ...socialPartySteps(),
-  { key: "social_project", titleAr: "بيانات ونطاق خدمة إدارة الحسابات", articleRange: "بيانات المشروع والنطاق والمدة والمقابل", fields: [
+  { key: "social_activity_accounts", titleAr: "بيانات النشاط والحسابات", articleRange: "المواد 1 و3 و4 و6 — تعريف النشاط والمنصات والحسابات", fields: [
     { key: "social_project_name", type: "text", labelAr: "اسم المشروع أو النشاط التجاري", required: true },
-    { key: "social_brand_name", type: "text", labelAr: "العلامة التجارية - إن وجدت" },
+    { key: "social_brand_name", type: "text", labelAr: "اسم العلامة التجارية — إن وجدت" },
     { key: "social_business_nature", type: "text", labelAr: "طبيعة النشاط", required: true },
     { key: "social_target_market", type: "text", labelAr: "الدولة أو النطاق الجغرافي المستهدف", required: true },
     { key: "social_target_audience", type: "textarea", labelAr: "الفئة المستهدفة", required: true },
-    { key: "social_project_brief", type: "textarea", labelAr: "نبذة مختصرة عن المشروع (اختياري)" },
-    { key: "social_managed_platforms", type: "textarea", labelAr: "المنصات والحسابات المشمولة بالخدمة", required: true, helpText: "حدد المنصات والحسابات التي اتفق الطرفان على إدارتها، مثل Facebook وInstagram وTikTok." },
-    { key: "social_scope_summary", type: "textarea", labelAr: "الخدمات والمخرجات المتفق عليها", required: true, helpText: "حدد بوضوح الخدمات المشمولة مثل كتابة المحتوى، التصميم، النشر، التقارير، إدارة الرسائل أو الحملات. لا تُفترض أي خدمة غير مذكورة." },
-    { key: "social_contact_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للتواصل مع المشروع", required: true },
-    { key: "social_project_manager", type: "text", labelAr: "الشخص المسؤول عن المشروع", required: true },
-    { key: "social_approval_person", type: "text", labelAr: "الشخص المسؤول عن الاعتماد", required: true },
-    { key: "social_billing_contact", type: "text", labelAr: "الشخص المسؤول عن الفواتير أو المدفوعات", required: true },
-    { key: "social_contract_duration", type: "text", labelAr: "مدة العقد / تقديم الخدمات", required: true, helpText: "مثال: 6 أشهر أو 12 شهرًا." },
-    { key: "social_fee_nature", type: "select", labelAr: "طبيعة المقابل المالي", required: true, options: [
-      { value: "إجمالي", labelAr: "إجمالي" },
-      { value: "دوري", labelAr: "دوري" },
+    { key: "social_project_brief", type: "textarea", labelAr: "نبذة مختصرة عن النشاط أو المشروع (اختياري)" },
+    { key: "social_accounts", type: "repeater", labelAr: "الحسابات والمنصات المشمولة بالخدمة", required: true, minRows: 1, columns: [
+      { key: "platform", type: "select", labelAr: "المنصة", required: true, options: [
+        { value: "facebook", labelAr: "Facebook" }, { value: "instagram", labelAr: "Instagram" }, { value: "tiktok", labelAr: "TikTok" },
+        { value: "x", labelAr: "X" }, { value: "linkedin", labelAr: "LinkedIn" }, { value: "youtube", labelAr: "YouTube" },
+        { value: "snapchat", labelAr: "Snapchat" }, { value: "threads", labelAr: "Threads" }, { value: "other", labelAr: "أخرى" },
+      ] },
+      { key: "platform_other", type: "text", labelAr: "اسم المنصة الأخرى", visibleWhen: { fieldKey: "platform", operator: "equals", value: "other" }, requiredWhen: { fieldKey: "platform", operator: "equals", value: "other" } },
+      { key: "account", type: "text", labelAr: "اسم / رابط / Handle الحساب", required: true },
     ] },
-    { key: "social_fee", type: "money", labelAr: "المقابل المالي المتفق عليه (جنيه مصري)", required: true, validation: { min: 1 }, helpText: "أدخل إجمالي المقابل المالي المتفق عليه مقابل تقديم الخدمات." },
-    { key: "social_fee_words", type: "text", labelAr: "المقابل المالي كتابةً (بدون اسم العملة)", required: true, helpText: "مثال: عشرة آلاف. سيضيف العقد عبارة جنيه مصري تلقائيًا." },
-    { key: "social_legal_fees_enabled", type: "checkbox", labelAr: "إدراج حكم الرسوم والضرائب القانونية عند الاتفاق عليه", printInDocument: false },
+    { key: "social_project_manager_custom", type: "checkbox", labelAr: "تعيين مسؤول مشروع مختلف عن العميل / ممثله القانوني", printInDocument: false },
+    { key: "social_project_manager", type: "text", labelAr: "اسم مسؤول المشروع", visibleWhen: { fieldKey: "social_project_manager_custom", operator: "truthy" }, requiredWhen: { fieldKey: "social_project_manager_custom", operator: "truthy" } },
+    { key: "social_approval_person_custom", type: "checkbox", labelAr: "تعيين مسؤول اعتماد مختلف عن العميل / ممثله القانوني", printInDocument: false },
+    { key: "social_approval_person", type: "text", labelAr: "اسم المسؤول عن الاعتماد", visibleWhen: { fieldKey: "social_approval_person_custom", operator: "truthy" }, requiredWhen: { fieldKey: "social_approval_person_custom", operator: "truthy" } },
+    { key: "social_billing_contact_custom", type: "checkbox", labelAr: "تعيين مسؤول فواتير / مدفوعات مختلف عن العميل / ممثله القانوني", printInDocument: false },
+    { key: "social_billing_contact", type: "text", labelAr: "اسم مسؤول الفواتير أو المدفوعات", visibleWhen: { fieldKey: "social_billing_contact_custom", operator: "truthy" }, requiredWhen: { fieldKey: "social_billing_contact_custom", operator: "truthy" } },
   ] },
-  { key: "social_delay_penalty", titleAr: "الجزاء الاتفاقي عن التأخير", articleRange: "بند التأخير والجزاء الاتفاقي", fields: [
+  { key: "social_services", titleAr: "نطاق الخدمات", articleRange: "المادتان 4 و6 — الخدمات المشمولة والمستبعدة", fields: [
+    { key: "social_service_account_management", type: "checkbox", labelAr: "إدارة الحسابات والصفحات" },
+    { key: "social_service_strategy", type: "checkbox", labelAr: "استراتيجية / خطة المحتوى والتقويم التحريري" },
+    { key: "social_service_copywriting", type: "checkbox", labelAr: "كتابة المحتوى" },
+    { key: "social_service_design", type: "checkbox", labelAr: "تصميم المنشورات والمواد البصرية" },
+    { key: "social_service_content_production", type: "checkbox", labelAr: "إنتاج / تنسيق / مراجعة المحتوى الرقمي" },
+    { key: "social_service_publishing", type: "checkbox", labelAr: "جدولة ونشر المحتوى" },
+    { key: "social_service_paid_ads", type: "checkbox", labelAr: "إدارة أو متابعة الحملات الإعلانية" },
+    { key: "social_service_reports", type: "checkbox", labelAr: "التقارير والتحليلات ومتابعة مؤشرات الأداء" },
+    { key: "social_service_community_management", type: "checkbox", labelAr: "الرد على الرسائل والتعليقات وإدارة المجتمع الرقمي" },
+    { key: "social_service_coordination", type: "checkbox", labelAr: "التنسيق مع مقدمي الخدمات أو الجهات ذات الصلة" },
+    { key: "social_service_photography", type: "checkbox", labelAr: "التصوير / إنتاج الفيديو أو التسجيلات" },
+    { key: "social_service_influencers", type: "checkbox", labelAr: "التنسيق أو الإدارة مع المؤثرين" },
+    { key: "social_service_other_enabled", type: "checkbox", labelAr: "خدمة أخرى" },
+    { key: "social_service_other", type: "textarea", labelAr: "وصف الخدمة الأخرى", visibleWhen: { fieldKey: "social_service_other_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "social_service_other_enabled", operator: "truthy" } },
+  ] },
+  { key: "social_content_scope", titleAr: "المحتوى والكميات ووتيرة التنفيذ", articleRange: "المادة 6 — أنواع المحتوى والمخرجات ووتيرة النشر", visibleWhen: socialContentServicesCondition, fields: [
+    { key: "social_content_plan", type: "repeater", labelAr: "أنواع المحتوى والكميات المتفق عليها", required: true, minRows: 1, columns: [
+      { key: "content_type", type: "select", labelAr: "نوع المحتوى", required: true, options: [
+        { value: "posts", labelAr: "منشورات Posts" }, { value: "stories", labelAr: "قصص Stories" }, { value: "reels", labelAr: "Reels" },
+        { value: "videos", labelAr: "فيديوهات" }, { value: "designs", labelAr: "تصميمات" }, { value: "articles", labelAr: "مقالات / نصوص طويلة" }, { value: "other", labelAr: "أخرى" },
+      ] },
+      { key: "content_type_other", type: "text", labelAr: "نوع المحتوى الآخر", visibleWhen: { fieldKey: "content_type", operator: "equals", value: "other" }, requiredWhen: { fieldKey: "content_type", operator: "equals", value: "other" } },
+      { key: "quantity", type: "number", labelAr: "الكمية", required: true },
+      { key: "frequency", type: "select", labelAr: "الدورية / الوتيرة", required: true, options: [
+        { value: "weekly", labelAr: "أسبوعيًا" }, { value: "biweekly", labelAr: "كل أسبوعين" }, { value: "monthly", labelAr: "شهريًا" }, { value: "campaign", labelAr: "لكل حملة" }, { value: "once", labelAr: "مرة واحدة" }, { value: "other", labelAr: "أخرى" },
+      ] },
+      { key: "frequency_other", type: "text", labelAr: "الدورية الأخرى", visibleWhen: { fieldKey: "frequency", operator: "equals", value: "other" }, requiredWhen: { fieldKey: "frequency", operator: "equals", value: "other" } },
+    ] },
+    { key: "social_content_scope_notes", type: "textarea", labelAr: "ملاحظات تنفيذية على خطة المحتوى — إن وجدت" },
+  ] },
+  { key: "social_ads", titleAr: "الحملات الإعلانية والميزانية", articleRange: "المواد 4 و6 و10 — الحملات والميزانية الإعلانية", visibleWhen: { fieldKey: "social_service_paid_ads", operator: "truthy" }, fields: [
+    { key: "social_ad_budget_mode", type: "radio", labelAr: "طريقة تحديد ميزانية الإعلانات", required: true, options: [
+      { value: "fixed", labelAr: "ميزانية محددة في العقد" }, { value: "per_campaign", labelAr: "تحدد لكل حملة باعتماد مستقل" },
+    ] },
+    { key: "social_ad_budget_amount", type: "money", labelAr: "قيمة الميزانية الإعلانية", visibleWhen: { fieldKey: "social_ad_budget_mode", operator: "equals", value: "fixed" }, requiredWhen: { fieldKey: "social_ad_budget_mode", operator: "equals", value: "fixed" }, validation: { min: 1 } },
+    { key: "social_ad_budget_period", type: "select", labelAr: "دورية الميزانية", visibleWhen: { fieldKey: "social_ad_budget_mode", operator: "equals", value: "fixed" }, requiredWhen: { fieldKey: "social_ad_budget_mode", operator: "equals", value: "fixed" }, options: [
+      { value: "monthly", labelAr: "شهريًا" }, { value: "weekly", labelAr: "أسبوعيًا" }, { value: "campaign", labelAr: "لكل حملة" }, { value: "contract", labelAr: "طوال مدة العقد" }, { value: "other", labelAr: "أخرى" },
+    ] },
+    { key: "social_ad_budget_period_other", type: "text", labelAr: "دورية الميزانية الأخرى", visibleWhen: allConditions({ fieldKey: "social_ad_budget_mode", operator: "equals", value: "fixed" }, { fieldKey: "social_ad_budget_period", operator: "equals", value: "other" }), requiredWhen: allConditions({ fieldKey: "social_ad_budget_mode", operator: "equals", value: "fixed" }, { fieldKey: "social_ad_budget_period", operator: "equals", value: "other" }) },
+    { key: "social_ad_budget_payer", type: "select", labelAr: "الطرف الذي يتحمل ميزانية الإعلانات", required: true, options: [
+      { value: "client", labelAr: "الطرف الأول (العميل)" }, { value: "provider", labelAr: "الطرف الثاني (مقدم الخدمة)" }, { value: "shared", labelAr: "الطرفان وفق اتفاق مشترك" },
+    ] },
+    { key: "social_ad_budget_included_in_fee", type: "radio", labelAr: "هل ميزانية الإعلانات داخلة ضمن المقابل المالي للخدمات؟", required: true, options: yesNo },
+    { key: "social_ad_payment_management", type: "select", labelAr: "إدارة وسيلة الدفع الإعلانية", required: true, options: [
+      { value: "client_direct", labelAr: "العميل يسدد مباشرة للمنصة" }, { value: "provider_managed", labelAr: "مقدم الخدمة يدير وسيلة الدفع / الميزانية نيابةً عن العميل" },
+    ] },
+  ] },
+  { key: "social_reports_kpis", titleAr: "التقارير ومؤشرات الأداء", articleRange: "المواد 3 و6 و8 — التقارير وKPIs", fields: [
+    { key: "social_report_frequency", type: "select", labelAr: "وتيرة التقارير الدورية", visibleWhen: { fieldKey: "social_service_reports", operator: "truthy" }, requiredWhen: { fieldKey: "social_service_reports", operator: "truthy" }, options: [
+      { value: "weekly", labelAr: "أسبوعيًا" }, { value: "biweekly", labelAr: "كل أسبوعين" }, { value: "monthly", labelAr: "شهريًا" }, { value: "quarterly", labelAr: "ربع سنوي" }, { value: "other", labelAr: "أخرى" },
+    ] },
+    { key: "social_report_frequency_other", type: "text", labelAr: "وتيرة التقارير الأخرى", visibleWhen: allConditions({ fieldKey: "social_service_reports", operator: "truthy" }, { fieldKey: "social_report_frequency", operator: "equals", value: "other" }), requiredWhen: allConditions({ fieldKey: "social_service_reports", operator: "truthy" }, { fieldKey: "social_report_frequency", operator: "equals", value: "other" }) },
+    { key: "social_kpi_enabled", type: "checkbox", labelAr: "يوجد مؤشرات أداء (KPIs) متفق عليها", printInDocument: false },
+    { key: "social_kpi_effect", type: "radio", labelAr: "الأثر التعاقدي لمؤشرات الأداء", visibleWhen: { fieldKey: "social_kpi_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "social_kpi_enabled", operator: "truthy" }, options: [
+      { value: "guidance", labelAr: "مؤشرات قياس وإرشاد وليست ضمان نتيجة" }, { value: "contractual", labelAr: "التزام تعاقدي بالمستويات المحددة" },
+    ] },
+    { key: "social_kpis", type: "repeater", labelAr: "مؤشرات الأداء المتفق عليها", visibleWhen: { fieldKey: "social_kpi_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "social_kpi_enabled", operator: "truthy" }, minRows: 1, columns: [
+      { key: "indicator", type: "text", labelAr: "المؤشر", required: true }, { key: "target", type: "text", labelAr: "المستهدف / طريقة القياس", required: true },
+    ] },
+  ] },
+  { key: "social_term_finance", titleAr: "مدة العقد والمقابل المالي والسداد", articleRange: "المادتان 9 و10 — المدة والبدء والمقابل وآلية السداد", fields: [
+    { key: "social_service_start_date", type: "date", labelAr: "تاريخ بدء تقديم الخدمات", required: true },
+    { key: "social_contract_duration_value", type: "number", labelAr: "مدة العقد", required: true, validation: { min: 1 } },
+    { key: "social_contract_duration_unit", type: "select", labelAr: "وحدة مدة العقد", required: true, options: [
+      { value: "days", labelAr: "يوم" }, { value: "weeks", labelAr: "أسبوع" }, { value: "months", labelAr: "شهر" }, { value: "years", labelAr: "سنة" },
+    ] },
+    { key: "social_fee_nature", type: "select", labelAr: "طبيعة المقابل المالي", required: true, options: [
+      { value: "total", labelAr: "إجمالي" }, { value: "periodic", labelAr: "دوري" },
+    ] },
+    { key: "social_fee", type: "money", labelAr: "المقابل المالي المتفق عليه (جنيه مصري)", required: true, validation: { min: 1 } },
+    { key: "social_fee_periodicity", type: "select", labelAr: "دورية المقابل المالي", visibleWhen: { fieldKey: "social_fee_nature", operator: "equals", value: "periodic" }, requiredWhen: { fieldKey: "social_fee_nature", operator: "equals", value: "periodic" }, options: [
+      { value: "weekly", labelAr: "أسبوعيًا" }, { value: "monthly", labelAr: "شهريًا" }, { value: "quarterly", labelAr: "كل ثلاثة أشهر" }, { value: "other", labelAr: "أخرى" },
+    ] },
+    { key: "social_fee_periodicity_other", type: "text", labelAr: "الدورية الأخرى", visibleWhen: allConditions({ fieldKey: "social_fee_nature", operator: "equals", value: "periodic" }, { fieldKey: "social_fee_periodicity", operator: "equals", value: "other" }), requiredWhen: allConditions({ fieldKey: "social_fee_nature", operator: "equals", value: "periodic" }, { fieldKey: "social_fee_periodicity", operator: "equals", value: "other" }) },
+    { key: "social_payment_mode", type: "radio", labelAr: "طريقة سداد المقابل الإجمالي", visibleWhen: { fieldKey: "social_fee_nature", operator: "equals", value: "total" }, requiredWhen: { fieldKey: "social_fee_nature", operator: "equals", value: "total" }, options: [
+      { value: "single", labelAr: "دفعة واحدة" }, { value: "installments", labelAr: "عدة دفعات / مراحل" },
+    ] },
+    { key: "social_single_payment_due", type: "text", labelAr: "موعد أو واقعة استحقاق الدفعة الواحدة", visibleWhen: allConditions({ fieldKey: "social_fee_nature", operator: "equals", value: "total" }, { fieldKey: "social_payment_mode", operator: "equals", value: "single" }), requiredWhen: allConditions({ fieldKey: "social_fee_nature", operator: "equals", value: "total" }, { fieldKey: "social_payment_mode", operator: "equals", value: "single" }) },
+    { key: "social_payment_schedule", type: "repeater", labelAr: "جدول الدفعات", visibleWhen: allConditions({ fieldKey: "social_fee_nature", operator: "equals", value: "total" }, { fieldKey: "social_payment_mode", operator: "equals", value: "installments" }), requiredWhen: allConditions({ fieldKey: "social_fee_nature", operator: "equals", value: "total" }, { fieldKey: "social_payment_mode", operator: "equals", value: "installments" }), minRows: 1, columns: [
+      { key: "payment", type: "text", labelAr: "اسم الدفعة / المرحلة", required: true }, { key: "amount", type: "money", labelAr: "القيمة", required: true }, { key: "due", type: "text", labelAr: "موعد / سبب الاستحقاق", required: true },
+    ] },
+    { key: "social_periodic_due", type: "text", labelAr: "موعد استحقاق المقابل الدوري", visibleWhen: { fieldKey: "social_fee_nature", operator: "equals", value: "periodic" }, requiredWhen: { fieldKey: "social_fee_nature", operator: "equals", value: "periodic" }, helpText: "مثال: اليوم الأول من كل شهر." },
+    { key: "social_payment_method", type: "select", labelAr: "وسيلة السداد", required: true, options: [
+      { value: "bank", labelAr: "تحويل بنكي" }, { value: "electronic", labelAr: "دفع إلكتروني / محفظة / Instapay" }, { value: "cash", labelAr: "نقدًا بموجب إيصال" }, { value: "other", labelAr: "أخرى" },
+    ] },
+    { key: "social_payment_method_other", type: "text", labelAr: "وسيلة السداد الأخرى", visibleWhen: { fieldKey: "social_payment_method", operator: "equals", value: "other" }, requiredWhen: { fieldKey: "social_payment_method", operator: "equals", value: "other" } },
+    { key: "social_payment_grace_days", type: "number", labelAr: "مهلة السداد قبل تعليق التنفيذ — أيام عمل", required: true, validation: { min: 1 } },
+    { key: "social_legal_fees_enabled", type: "checkbox", labelAr: "إدراج الحكم الخاص بالرسوم والضرائب القانونية", printInDocument: false },
+  ] },
+  { key: "social_review_ip", titleAr: "المراجعة والملفات والملكية وPortfolio", articleRange: "المواد 12 و13 و16 و18", fields: [
+    { key: "social_content_review_days", type: "number", labelAr: "مدة مراجعة واعتماد المحتوى — أيام عمل", required: true, validation: { min: 1 } },
+    { key: "social_review_rounds", type: "number", labelAr: "عدد جولات المراجعة المشمولة — اختياري", validation: { min: 1 } },
+    { key: "social_source_files_included", type: "radio", labelAr: "هل يشمل العقد تسليم الملفات الأصلية / المفتوحة / القابلة للتعديل؟", required: true, options: yesNo },
+    { key: "social_source_file_types", type: "text", labelAr: "أنواع الملفات الأصلية التي سيتم تسليمها", visibleWhen: { fieldKey: "social_source_files_included", operator: "equals", value: "yes" }, requiredWhen: { fieldKey: "social_source_files_included", operator: "equals", value: "yes" }, helpText: "مثال: PSD، AI، Canva، ملفات المشروع الأصلية." },
+    { key: "social_source_files_price_mode", type: "radio", labelAr: "المقابل المالي للملفات الأصلية", visibleWhen: { fieldKey: "social_source_files_included", operator: "equals", value: "yes" }, requiredWhen: { fieldKey: "social_source_files_included", operator: "equals", value: "yes" }, options: [
+      { value: "included", labelAr: "مشمولة في المقابل المالي للعقد" }, { value: "additional", labelAr: "لها مقابل إضافي" },
+    ] },
+    { key: "social_source_files_additional_fee", type: "money", labelAr: "المقابل الإضافي للملفات الأصلية", visibleWhen: allConditions({ fieldKey: "social_source_files_included", operator: "equals", value: "yes" }, { fieldKey: "social_source_files_price_mode", operator: "equals", value: "additional" }), requiredWhen: allConditions({ fieldKey: "social_source_files_included", operator: "equals", value: "yes" }, { fieldKey: "social_source_files_price_mode", operator: "equals", value: "additional" }), validation: { min: 1 } },
+    { key: "social_portfolio_permission", type: "radio", labelAr: "هل يسمح لمقدم الخدمة بعرض نماذج من الأعمال في Portfolio؟", required: true, options: yesNo },
+    { key: "social_ai_external_data_permission", type: "radio", labelAr: "هل يسمح باستخدام بيانات أو محتوى غير منشور في أدوات ذكاء اصطناعي خارجية لا تضمن عدم التدريب على البيانات؟", required: true, options: yesNo, helpText: "الافتراضي الأكثر حماية هو لا." },
+  ] },
+  { key: "social_delay_termination", titleAr: "الجزاء ومدد الإنهاء والقوة القاهرة والأحكام العامة", articleRange: "المواد 14 و18 و19 و22", fields: [
     { key: "social_delay_penalty_mode", type: "radio", labelAr: "طريقة احتساب الجزاء عن كل يوم تأخير", required: true, options: [
-      { value: "amount", labelAr: "مبلغ ثابت بالجنيه المصري عن كل يوم تأخير" },
-      { value: "percentage", labelAr: "نسبة من قيمة المرحلة عن كل يوم تأخير" },
-    ], helpText: "اختر طريقة واحدة لاحتساب الجزاء: مبلغ ثابت أو نسبة من قيمة المرحلة." },
+      { value: "amount", labelAr: "مبلغ ثابت بالجنيه المصري عن كل يوم تأخير" }, { value: "percentage", labelAr: "نسبة من قيمة المرحلة عن كل يوم تأخير" },
+    ] },
     { key: "social_delay_penalty_amount", type: "money", labelAr: "قيمة الجزاء عن كل يوم تأخير (جنيه مصري)", visibleWhen: { fieldKey: "social_delay_penalty_mode", operator: "equals", value: "amount" }, requiredWhen: { fieldKey: "social_delay_penalty_mode", operator: "equals", value: "amount" }, validation: { min: 1 } },
     { key: "social_delay_penalty_percentage", type: "number", labelAr: "نسبة الجزاء من قيمة المرحلة عن كل يوم تأخير (%)", visibleWhen: { fieldKey: "social_delay_penalty_mode", operator: "equals", value: "percentage" }, requiredWhen: { fieldKey: "social_delay_penalty_mode", operator: "equals", value: "percentage" }, validation: { min: 0.01, max: 100 } },
-    { key: "social_delay_penalty_cap_percentage", type: "number", labelAr: "الحد الأقصى لإجمالي الجزاء من قيمة الخدمة أو المرحلة (%)", required: true, validation: { min: 0.01, max: 100 } },
+    { key: "social_delay_penalty_cap_percentage", type: "number", labelAr: "الحد الأقصى لإجمالي الجزاء (%)", required: true, validation: { min: 0.01, max: 100 } },
+    { key: "social_delay_penalty_cure_days", type: "number", labelAr: "مهلة معالجة التأخير قبل استحقاق الجزاء — أيام عمل", required: true, validation: { min: 1 } },
+    { key: "social_breach_cure_days", type: "number", labelAr: "مهلة معالجة الإخلال الجوهري — يوم", required: true, validation: { min: 1 } },
+    { key: "social_nonpayment_termination_days", type: "number", labelAr: "استمرار عدم السداد قبل حق الإنهاء — أيام عمل", required: true, validation: { min: 1 } },
+    { key: "social_client_stoppage_days", type: "number", labelAr: "توقف المشروع بسبب العميل قبل التعليق — أيام عمل", required: true, validation: { min: 1 } },
+    { key: "social_client_post_notice_termination_days", type: "number", labelAr: "المهلة بعد إخطار العميل قبل حق الإنهاء — أيام عمل", required: true, validation: { min: 1 } },
+    { key: "social_force_majeure_notice_days", type: "number", labelAr: "مهلة إخطار القوة القاهرة / الظروف الطارئة — أيام عمل", required: true, validation: { min: 1 } },
+    { key: "social_contract_copies", type: "number", labelAr: "عدد نسخ العقد الأصلية أو الإلكترونية", required: true, validation: { min: 1 } },
   ] },
-  { key: "social_communications", titleAr: "الإخطارات وبيانات الاتصال المعتمدة", articleRange: "الإخطارات ووسائل الاتصال", fields: [
-    { key: "social_notice_use_party_emails", type: "checkbox", labelAr: "استخدام نفس البريد الإلكتروني المسجل في بيانات الطرفين", printInDocument: false },
-    { key: "social_notice_client_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للطرف الأول (العميل)", visibleWhen: { fieldKey: "social_notice_use_party_emails", operator: "falsy" }, requiredWhen: { fieldKey: "social_notice_use_party_emails", operator: "falsy" } },
-    { key: "social_notice_provider_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للطرف الثاني (مقدم الخدمة)", visibleWhen: { fieldKey: "social_notice_use_party_emails", operator: "falsy" }, requiredWhen: { fieldKey: "social_notice_use_party_emails", operator: "falsy" } },
-    { key: "social_messaging_use_party_phones", type: "checkbox", labelAr: "استخدام نفس أرقام الهاتف المسجلة في بيانات الطرفين للمراسلات الإلكترونية", printInDocument: false },
-    { key: "social_messaging_client_number", type: "text", labelAr: "رقم الاتصال المعتمد للطرف الأول (العميل)", visibleWhen: { fieldKey: "social_messaging_use_party_phones", operator: "falsy" }, requiredWhen: { fieldKey: "social_messaging_use_party_phones", operator: "falsy" } },
-    { key: "social_messaging_provider_number", type: "text", labelAr: "رقم الاتصال المعتمد للطرف الثاني (مقدم الخدمة)", visibleWhen: { fieldKey: "social_messaging_use_party_phones", operator: "falsy" }, requiredWhen: { fieldKey: "social_messaging_use_party_phones", operator: "falsy" } },
+  { key: "social_communications", titleAr: "الإخطارات ووسائل الاتصال المعتمدة", articleRange: "المادة 20 — الإخطارات والمراسلات", fields: [
+    { key: "social_email_notices_enabled", type: "checkbox", labelAr: "اعتماد البريد الإلكتروني للمراسلات والاعتمادات", printInDocument: false },
+    { key: "social_notice_use_party_emails", type: "checkbox", labelAr: "استخدام نفس البريد المسجل في بيانات الطرفين", visibleWhen: { fieldKey: "social_email_notices_enabled", operator: "truthy" }, printInDocument: false },
+    { key: "social_notice_client_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للطرف الأول", visibleWhen: allConditions({ fieldKey: "social_email_notices_enabled", operator: "truthy" }, { fieldKey: "social_notice_use_party_emails", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "social_email_notices_enabled", operator: "truthy" }, { fieldKey: "social_notice_use_party_emails", operator: "falsy" }) },
+    { key: "social_notice_provider_email", type: "text", labelAr: "البريد الإلكتروني المعتمد للطرف الثاني", visibleWhen: allConditions({ fieldKey: "social_email_notices_enabled", operator: "truthy" }, { fieldKey: "social_notice_use_party_emails", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "social_email_notices_enabled", operator: "truthy" }, { fieldKey: "social_notice_use_party_emails", operator: "falsy" }) },
+    { key: "social_messaging_apps_enabled", type: "checkbox", labelAr: "اعتماد WhatsApp / تطبيق مراسلة لتنفيذ المشروع", printInDocument: false },
+    { key: "social_messaging_apps", type: "select", labelAr: "تطبيق المراسلة المعتمد", visibleWhen: { fieldKey: "social_messaging_apps_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "social_messaging_apps_enabled", operator: "truthy" }, options: [
+      { value: "whatsapp", labelAr: "WhatsApp" }, { value: "telegram", labelAr: "Telegram" }, { value: "whatsapp_telegram", labelAr: "WhatsApp وTelegram" }, { value: "other", labelAr: "أخرى" },
+    ] },
+    { key: "social_messaging_apps_other", type: "text", labelAr: "تطبيق المراسلة الآخر", visibleWhen: allConditions({ fieldKey: "social_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "social_messaging_apps", operator: "equals", value: "other" }), requiredWhen: allConditions({ fieldKey: "social_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "social_messaging_apps", operator: "equals", value: "other" }) },
+    { key: "social_messaging_use_party_phones", type: "checkbox", labelAr: "استخدام نفس أرقام الهاتف المسجلة في بيانات الطرفين", visibleWhen: { fieldKey: "social_messaging_apps_enabled", operator: "truthy" }, printInDocument: false },
+    { key: "social_messaging_client_number", type: "text", labelAr: "رقم المراسلة المعتمد للطرف الأول", visibleWhen: allConditions({ fieldKey: "social_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "social_messaging_use_party_phones", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "social_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "social_messaging_use_party_phones", operator: "falsy" }) },
+    { key: "social_messaging_provider_number", type: "text", labelAr: "رقم المراسلة المعتمد للطرف الثاني", visibleWhen: allConditions({ fieldKey: "social_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "social_messaging_use_party_phones", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "social_messaging_apps_enabled", operator: "truthy" }, { fieldKey: "social_messaging_use_party_phones", operator: "falsy" }) },
   ] },
   { key: "social_witnesses", titleAr: "الشهود (اختياري)", articleRange: "بيانات التوقيع والشهود", fields: [
     { key: "social_witness_1_enabled", type: "checkbox", labelAr: "إضافة الشاهد الأول", printInDocument: false },
@@ -479,7 +663,7 @@ const socialSteps: WizardStepDefinition[] = [
     { key: "social_witness_2_name", type: "text", labelAr: "اسم الشاهد الثاني", visibleWhen: { fieldKey: "social_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "social_witness_2_enabled", operator: "truthy" }, printInDocument: false },
     { key: "social_witness_2_national_id", type: "text", labelAr: "الرقم القومي للشاهد الثاني", visibleWhen: { fieldKey: "social_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "social_witness_2_enabled", operator: "truthy" }, printInDocument: false },
   ] },
-  { key: "social_jurisdiction", titleAr: "المحكمة المختصة", articleRange: "الاختصاص القضائي وتسوية المنازعات", fields: [
+  { key: "social_jurisdiction", titleAr: "المحكمة المختصة", articleRange: "المادة 21 — الاختصاص القضائي وتسوية المنازعات", fields: [
     { key: "social_competent_court", type: "select", labelAr: "المحكمة المختصة", required: true, options: freelancerCourtOptions, helpText: "اختر المحكمة المتفق عليها بين الطرفين، مع مراعاة قواعد الاختصاص القضائي الآمرة." },
     { key: "social_competent_court_other", type: "text", labelAr: "اسم المحكمة الأخرى", visibleWhen: { fieldKey: "social_competent_court", operator: "equals", value: "أخرى" }, requiredWhen: { fieldKey: "social_competent_court", operator: "equals", value: "أخرى" } },
   ] },
@@ -1295,11 +1479,7 @@ const variants: ContractVariantDefinition[] = [
     sourceDocumentName: "عقد الهوية البصرية.pdf",
     steps: visualSteps,
     requiredClauseKeys: [
-      ...freelanceSourceClauseKeysByVariant.visual_identity_design.filter((key) => key !== "visual_identity_design_source_preface"),
-      "visual_identity_email_contacts",
-      "visual_identity_email_contacts_custom",
-      "visual_identity_messaging_contacts",
-      "visual_identity_messaging_contacts_custom",
+      ...freelanceSourceClauseKeysByVariant.visual_identity_design,
     ],
     allowedOptionalClauseKeys: ["visual_identity_scope_annex", "visual_identity_financial_annex", "visual_identity_approvals_annex"],
     defaultFieldValues: {
@@ -1307,6 +1487,17 @@ const variants: ContractVariantDefinition[] = [
       visual_provider_party_type: "individual",
       visual_client_nationality: "مصري",
       visual_provider_nationality: "مصري",
+      visual_client_identity_document_type: "national_id",
+      visual_provider_identity_document_type: "national_id",
+      visual_source_files_included: "no",
+      visual_execution_start_rule: "source_rule",
+      visual_payment_mode: "single",
+      visual_revision_rounds: 3,
+      visual_portfolio_permission: "yes",
+      visual_breach_cure_days: 15,
+      visual_nonpayment_termination_days: 10,
+      visual_client_stoppage_days: 7,
+      visual_post_notice_termination_days: 7,
       visual_email_notices_enabled: false,
       visual_notice_use_party_emails: true,
       visual_messaging_apps_enabled: false,
@@ -1331,8 +1522,28 @@ const variants: ContractVariantDefinition[] = [
       website_provider_party_type: "individual",
       website_client_nationality: "مصري",
       website_provider_nationality: "مصري",
+      website_execution_start_rule: "agreed_or_requirements_later",
       website_duration_basis: "بأيام العمل، ما لم يتفق الطرفان كتابةً على احتسابها بالأيام التقويمية",
+      website_response_period_days: 5,
+      website_review_period_days: 5,
+      website_payment_mode: "single",
+      website_payment_grace_days: 5,
+      website_restart_threshold_days: 30,
+      website_restart_fee_enabled: false,
+      website_correction_attempts: 3,
       website_confidentiality_years: 3,
+      website_portfolio_permission: "no",
+      website_external_services_enabled: false,
+      website_contact_change_notice_days: 15,
+      website_breach_cure_days: 15,
+      website_nonpayment_termination_days: 10,
+      website_client_stoppage_days: 7,
+      website_force_majeure_notice_days: 7,
+      website_force_majeure_termination_days: 60,
+      website_hardship_duration_days: 30,
+      website_hardship_negotiation_days: 15,
+      website_contract_copies: 2,
+      website_non_solicitation_months: 6,
       website_email_notices_enabled: false,
       website_notice_use_party_emails: true,
       website_messaging_apps_enabled: false,
@@ -1361,24 +1572,59 @@ const variants: ContractVariantDefinition[] = [
             ]
           : [key],
       ),
-      "social_media_email_contacts",
-      "social_media_email_contacts_custom",
-      "social_media_messaging_contacts",
-      "social_media_messaging_contacts_custom",
       "social_media_legal_fees_clause",
     ],
-    // The main source lists social-media annexes as optional. The PDF set supplied for this review
-    // does not contain their authoritative originals; similarly named attachments belong to the
-    // visual-identity contract. Keep the internal definitions for later source reconciliation,
-    // but do not expose unverified legal annex text to customers in v6.
+    // The main source lists social-media annexes as optional, but the reviewed PDF does not include
+    // authoritative blank annex forms. Keep internal definitions for future source reconciliation,
+    // but do not expose unverified annex text to customers in v14.
     allowedOptionalClauseKeys: [],
     defaultFieldValues: {
       social_client_party_type: "individual",
       social_provider_party_type: "individual",
       social_client_nationality: "مصري",
       social_provider_nationality: "مصري",
-      social_fee_nature: "دوري",
+      social_project_manager_custom: false,
+      social_approval_person_custom: false,
+      social_billing_contact_custom: false,
+      social_service_account_management: true,
+      social_service_strategy: false,
+      social_service_copywriting: false,
+      social_service_design: false,
+      social_service_content_production: false,
+      social_service_publishing: false,
+      social_service_paid_ads: false,
+      social_service_reports: false,
+      social_service_community_management: false,
+      social_service_coordination: false,
+      social_service_photography: false,
+      social_service_influencers: false,
+      social_service_other_enabled: false,
+      social_ad_budget_mode: "per_campaign",
+      social_ad_budget_payer: "client",
+      social_ad_budget_included_in_fee: "no",
+      social_ad_payment_management: "client_direct",
+      social_kpi_enabled: false,
+      social_fee_nature: "periodic",
+      social_fee_periodicity: "monthly",
+      social_payment_mode: "single",
+      social_payment_method: "bank",
+      social_payment_grace_days: 5,
+      social_content_review_days: 5,
+      social_source_files_included: "no",
+      social_portfolio_permission: "no",
+      social_ai_external_data_permission: "no",
+      social_delay_penalty_mode: "amount",
+      social_delay_penalty_cure_days: 5,
+      social_breach_cure_days: 15,
+      social_nonpayment_termination_days: 10,
+      social_client_stoppage_days: 7,
+      social_client_post_notice_termination_days: 15,
+      social_force_majeure_notice_days: 7,
+      social_contract_copies: 2,
+      social_email_notices_enabled: false,
       social_notice_use_party_emails: true,
+      social_messaging_apps_enabled: false,
+      social_messaging_apps: "whatsapp",
       social_messaging_use_party_phones: true,
       social_legal_fees_enabled: false,
       social_witness_1_enabled: false,
@@ -1545,45 +1791,50 @@ function reviewedWebsiteMainClause(clause: LegalClauseDefinition): LegalClauseDe
         ...base,
         titleAr: "بيانات وتمهيد المستند",
         variables: ["contract_date"],
-        bodyAr: "عقد تطوير موقع إلكتروني (Website Development Agreement)\nإنه بتاريخ {{contract_date}}، تم إبرام هذا العقد بين الطرفين المبينة بياناتهما في صدر هذا العقد.",
+        bodyAr: "عقد تطوير موقع إلكتروني (Website Development Agreement)\nإنه بتاريخ {{contract_date}}، تم إبرام هذا العقد بين الطرفين المبينة بياناتهما وتعريفهما القانوني في المادة الأولى.",
       };
     case "website_development_source_section_02":
       return {
         ...base,
         titleAr: "المادة الأولى: أطراف العقد وبيانات المشروع",
-        variables: ["website_contact_email", "website_project_manager", "website_approval_person", "website_billing_contact"],
-        bodyAr: `تثبت بيانات الطرف الأول (العميل) والطرف الثاني (مقدم الخدمة / المطور) وبيانات المشروع في قسم بيانات العقد أعلاه، وتُعد جزءًا لا يتجزأ منه. والبريد الإلكتروني المعتمد للتواصل التشغيلي مع المشروع هو {{website_contact_email}}، والمسؤول عن إدارة المشروع هو {{website_project_manager}}، والمسؤول عن اعتماد الأعمال والمخرجات هو {{website_approval_person}}، والمسؤول عن الفواتير أو المدفوعات هو {{website_billing_contact}}.
-ويشار إلى الطرف الأول في هذا العقد بـ «الطرف الأول» أو «العميل»، وإلى الطرف الثاني بـ «الطرف الثاني» أو «مقدم الخدمة».
-ويقر الطرف الأول بأن الشخص المحدد للاعتماد مخول بإصدار الموافقات المتعلقة بالمشروع، وتعتبر موافقاته نافذة في حدود نطاق المشروع.`,
+        variables: ["website_client_party_definition", "website_provider_party_definition", "website_project_definition"],
+        bodyAr: `أولًا: الطرف الأول (العميل): {{website_client_party_definition}}
+ثانيًا: الطرف الثاني (مقدم الخدمة): {{website_provider_party_definition}}
+ثالثًا: بيانات المشروع والاعتماد: {{website_project_definition}}
+وتُعد البيانات السابقة جزءًا جوهريًا من هذا العقد، ويلتزم كل طرف بإخطار الطرف الآخر بأي تغيير جوهري يطرأ على بياناته أو صفته أو وسائل الاتصال المعتمدة وفقًا للمادة العشرين من هذا العقد.`,
       };
     case "website_development_source_section_03":
       return {
         ...base,
         titleAr: "المادة الثانية: التمهيد والإقرارات العامة",
-        bodyAr: `يرغب الطرف الأول في التعاقد مع الطرف الثاني لتطوير الموقع الإلكتروني المبين في بيانات العقد، ويقر الطرف الثاني بامتلاكه الخبرة والقدرة المهنية اللازمة لتنفيذ الأعمال المتفق عليها.
-يُعد هذا العقد نافذًا ومستقلًا بذاته، ولا يتوقف انعقاده أو نفاذه أو صحة أحكامه على اختيار أي ملحق أو استكماله أو اعتماده.
-جميع الملاحق المتاحة عبر المنصة اختيارية. ولا يُعد أي ملحق جزءًا من هذا العقد إلا إذا اختاره الطرفان، واستكملا بياناته، واعتمداه أو وقّعاه كتابةً. وعندئذ يُقرأ الملحق المعتمد مع العقد كوحدة واحدة في حدود موضوعه.
-ويقر الطرفان بأنهما أبرما العقد بإرادة حرة، وأُتيحت لكل منهما فرصة مراجعته والاستعانة بمن يراه من المستشارين أو المتخصصين قبل التوقيع عليه.`,
+        variables: ["website_project_name", "website_project_type_text"],
+        bodyAr: `حيث إن الطرف الأول يرغب في التعاقد مع الطرف الثاني لتطوير المشروع الإلكتروني «{{website_project_name}}» من نوع {{website_project_type_text}} وفقًا للمتطلبات والمواصفات ونطاق العمل المتفق عليها، وحيث إن الطرف الثاني يقر بامتلاكه الخبرة الفنية والقدرة المهنية اللازمة للتنفيذ، فقد اتفق الطرفان على أحكام هذا العقد.
+يُعد هذا العقد نافذًا ومستقلًا بذاته، ولا يتوقف انعقاده أو نفاذه على اختيار أي ملحق. وتكون الملاحق المتاحة عبر المنصة اختيارية، ولا يصبح أي ملحق جزءًا من العقد إلا بعد اختياره واستكماله واعتماده من الطرفين.
+ويقر كل طرف بصحة البيانات والمستندات التي قدمها، وبأهليته وصفته وسلطته اللازمة لإبرام العقد وتنفيذه، كما يقر الطرف الأول بمشروعية البيانات والمحتوى والمواد والحقوق التي يقدمها لتنفيذ المشروع، ويلتزم الطرفان بالتعاون المتبادل وتقديم البيانات والاعتمادات والقرارات في المواعيد المقررة.
+ويقر الطرفان بأن إبرام العقد تم بإرادة حرة وسليمة، وأنه أتيحت لكل منهما فرصة كافية لمراجعة أحكامه وآثاره والاستعانة بمن يراه من المختصين قبل التوقيع عليه.`,
       };
     case "website_development_source_section_04":
       return {
         ...base,
         titleAr: "المادة الثالثة: التعريفات",
+        variables: ["website_project_name", "website_project_type_text"],
         bodyAr: `لأغراض تطبيق هذا العقد، تكون للمصطلحات الآتية المعاني المبينة قرين كل منها ما لم يقتض السياق غير ذلك:
-العقد: هذا المحرر ببياناته ومواده، وأي تعديل أو ملحق اختياري يستكمله الطرفان ويعتمدانه كتابةً.
-المشروع: الموقع أو النظام أو المنصة الإلكترونية المحددة في بيانات العقد.
+العقد: هذا العقد ببياناته ومواده، وأي تعديل أو ملحق اختياري يستكمله الطرفان ويعتمدانه كتابةً.
+المشروع: المشروع الإلكتروني «{{website_project_name}}» من نوع {{website_project_type_text}} محل التطوير بموجب هذا العقد.
 نطاق العمل: الأعمال والخدمات والمخرجات التي اتفق عليها الطرفان صراحةً في بيانات العقد أو في اتفاق مكتوب أو ملحق اختياري معتمد.
 المخرجات: الأعمال أو الملفات أو الأكواد أو التصاميم أو قواعد البيانات أو المستندات الداخلة صراحةً في نطاق العمل المتفق عليه.
+معايير القبول: المعايير والمواصفات والاختبارات والنتائج المتفق عليها لتقييم الأعمال والمخرجات، وتثبت في نطاق العمل أو المواصفات الفنية أو أي مستند معتمد بين الطرفين؛ ولا يلزم وجود ملحق مستقل لها.
 الاعتماد: قبول الطرف الأول للأعمال أو المخرجات كتابةً أو بإحدى وسائل الاعتماد المقررة في العقد.
 الأعمال الإضافية: كل عمل أو خدمة أو تطوير أو خاصية أو تعديل لا يدخل صراحةً في نطاق العمل المتفق عليه.
+طلب التعديل: أي طلب يترتب عليه إضافة أو حذف أو تعديل في نطاق العمل أو المواصفات أو المدة أو المقابل المالي بعد بدء التنفيذ، ويخضع للمادة الحادية عشرة.
 الملحق الاختياري: نموذج مستقل لا يُضاف إلى العقد تلقائيًا، ولا ينتج أثرًا تعاقديًا إلا بعد اختياره واستكماله واعتماده من الطرفين.`,
       };
     case "website_development_source_section_05":
       return {
         ...base,
         titleAr: "المادة الرابعة: محل العقد",
-        variables: ["website_project_name", "website_project_type"],
-        bodyAr: `يتمثل محل هذا العقد في التزام الطرف الثاني بتطوير المشروع الإلكتروني «{{website_project_name}}» من نوع {{website_project_type}}، وتنفيذ الأعمال والمخرجات التي اتفق عليها الطرفان صراحةً، مقابل التزام الطرف الأول بسداد المقابل المالي والوفاء بالتزاماته المبينة في العقد.
+        variables: ["website_project_name", "website_project_type_text"],
+        bodyAr: `يتمثل محل هذا العقد في التزام الطرف الثاني بتطوير المشروع الإلكتروني «{{website_project_name}}» من نوع {{website_project_type_text}}، وتنفيذ الأعمال والمخرجات التي اتفق عليها الطرفان صراحةً، مقابل التزام الطرف الأول بسداد المقابل المالي والوفاء بالتزاماته المبينة في العقد.
 يُحدد نطاق العمل من بيانات المشروع المثبتة في العقد وما يعتمد كتابةً بين الطرفين. ويجوز للطرفين، دون إلزام، اختيار واستكمال واعتماد ملحق نطاق عمل أو مواصفات فنية أو بيانات مشروع أو محضر تسليم لتفصيل بعض الجوانب الفنية أو التشغيلية.
 لا يمتد التزام الطرف الثاني إلى أعمال أو خدمات أو خصائص أو تكاملات أو تراخيص أو خدمات خارجية لم يتفق عليها الطرفان صراحةً، ولا تُعد الطلبات الإضافية مشمولة بالمقابل المالي أو مدة التنفيذ إلا باتفاق مكتوب.
 هذا العقد عقد مقاولة لتقديم خدمات فنية مستقلة، ولا يُعد عقد عمل أو شراكة أو وكالة أو مشروعًا مشتركًا، ولا يضمن الطرف الثاني تحقيق نتيجة تجارية أو مالية أو تسويقية ما لم يتفق الطرفان كتابةً على خلاف ذلك.`,
@@ -1592,121 +1843,250 @@ function reviewedWebsiteMainClause(clause: LegalClauseDefinition): LegalClauseDe
       return {
         ...base,
         titleAr: "المادة الخامسة: الملاحق الاختيارية",
-        bodyAr: `5-1 جميع ملاحق هذا العقد اختيارية بالكامل، ولا يُضاف أي ملحق تلقائيًا، ولا يلتزم أي من الطرفين باختيار ملحق معين لمجرد إبرام هذا العقد أو بسبب إجابة واردة في بياناته.
+        bodyAr: `5-1 جميع ملاحق هذا العقد اختيارية بالكامل، ولا يُضاف أي ملحق تلقائيًا، ولا يلتزم أي من الطرفين باختيار ملحق معين لمجرد إبرام العقد.
 5-2 يجوز للطرفين اختيار واستكمال واعتماد ملحق أو أكثر عند الحاجة، ومن ذلك ملحق نطاق العمل (SOW)، وملحق المواصفات الفنية (TS)، وملحق بيانات المشروع، ومحضر التسليم والاعتماد النهائي (DAR)، واتفاقية الصيانة والدعم الفني (SLA)، واتفاقية التطويرات المستقبلية والأعمال الإضافية.
 5-3 لا يُعد الملحق جزءًا من العقد ولا ينتج أثرًا إلا بعد استكمال بياناته واعتماده أو توقيعه من الطرفين. ومجرد ظهور قالب الملحق أو طباعته لا يُعد اختيارًا له أو موافقةً على محتواه.
-5-4 أي إشارة في مواد العقد إلى ملحق معين تُفهم على أنها إشارة مشروطة بوجود هذا الملحق واختياره واستكماله واعتماده. وعند عدم اعتماده، تسري بيانات العقد والاتفاقات الكتابية الأخرى بين الطرفين دون أن ينشأ التزام بإعداد الملحق.
+5-4 أي إشارة في مواد العقد إلى ملحق معين تُفهم على أنها إشارة مشروطة بوجود هذا الملحق واعتماده. وعند عدم اعتماده، تسري بيانات العقد والاتفاقات الكتابية الأخرى بين الطرفين دون أن ينشأ التزام بإعداد الملحق.
 5-5 عند تعارض ملحق معتمد مع العقد، تكون الأولوية لأحكام العقد ما لم يتضمن الملحق نصًا صريحًا معتمدًا من الطرفين يعدل حكمًا محددًا، وفي حدود ذلك التعديل فقط، وبما لا يخالف الأحكام الآمرة في القانون.`,
       };
     case "website_development_source_section_07":
       return {
         ...base,
         titleAr: "المادة السادسة: نطاق العمل",
-        bodyAr: `6-1 يلتزم الطرف الثاني بتنفيذ الأعمال والخدمات والمخرجات المتفق عليها صراحةً في بيانات العقد أو في اتفاق كتابي معتمد بين الطرفين.
+        variables: ["website_project_name"],
+        bodyAr: `6-1 يلتزم الطرف الثاني بتنفيذ الأعمال والخدمات والمخرجات المتفق عليها صراحةً للمشروع «{{website_project_name}}» في بيانات العقد أو في اتفاق كتابي معتمد بين الطرفين.
 6-2 إذا اختار الطرفان ملحق نطاق العمل (SOW) أو ملحق المواصفات الفنية (TS) واستكملاه واعتمداه، استُخدم الملحق لتفصيل الأعمال والمخرجات والصفحات والوظائف والتقنيات والتكاملات ومعايير القبول، دون أن يكون اختياره شرطًا لنفاذ العقد.
 6-3 عند عدم اعتماد أي ملحق، يُحدد نطاق العمل من بيانات المشروع المثبتة في العقد، والعروض أو المراسلات أو الموافقات الكتابية الصريحة المعتمدة بين الطرفين.
-6-4 كل عمل أو خدمة أو تطوير أو خاصية أو تكامل لم يرد ضمن نطاق العمل المتفق عليه يُعد عملًا إضافيًا، ولا يلتزم الطرف الثاني بتنفيذه إلا بعد اتفاق كتابي يحدد أثره على المقابل المالي ومدة التنفيذ.
+6-4 كل عمل أو خدمة أو تطوير أو خاصية أو تكامل لم يرد ضمن نطاق العمل المتفق عليه يُعد عملًا إضافيًا، ولا يلتزم الطرف الثاني بتنفيذه إلا بعد اتفاق كتابي يحدد أثره على المقابل المالي ومدة التنفيذ وفقًا للمادة الحادية عشرة.
 6-5 يرتبط بدء كل مرحلة بتسلم الطرف الثاني للبيانات والمحتوى والاعتمادات ووسائل الوصول اللازمة لها، ويترتب على تأخر الطرف الأول في تقديمها امتداد المدة بقدر التأخير وآثاره الفعلية.
 6-6 لا يجوز التوسع في تفسير نطاق العمل على نحو يضيف التزامات لم يتفق عليها الطرفان صراحةً.`,
+      };
+    case "website_development_source_section_08":
+      return {
+        ...base,
+        titleAr: "المادة السابعة: التزامات الطرف الأول (العميل)",
+        variables: ["website_response_period_days", "website_review_period_days", "website_approval_authority_text"],
+        bodyAr: `7-1 تقديم البيانات ومدخلات المشروع: يلتزم الطرف الأول بتزويد الطرف الثاني، قبل بدء التنفيذ وكل مرحلة بحسب الحاجة، بالبيانات والمعلومات والمحتوى والمستندات والملفات وبيانات الوصول والتصاريح والاعتمادات اللازمة، على أن تكون صحيحة وكاملة وحديثة ومشروعة وقابلة للاستخدام.
+7-2 التعاون والرد على الاستفسارات: يلتزم الطرف الأول بالتعاون وتقديم الإيضاحات والقرارات والاعتمادات المطلوبة والرد على الاستفسارات الفنية أو الإدارية خلال مدة لا تجاوز {{website_response_period_days}} أيام عمل من تاريخ الطلب، ما لم يتفق الطرفان على مدة أخرى. وإذا تسبب التأخير في تعطيل التنفيذ، امتدت مدة المشروع بقدر التأخير وآثاره الفعلية.
+7-3 مراجعة واعتماد المخرجات: يلتزم الطرف الأول بمراجعة الأعمال أو المخرجات المسلمة وإرسال قبول صريح أو رفض مسبب ومحدد خلال {{website_review_period_days}} أيام عمل من تاريخ التسليم. ويجب أن يبين الرفض أوجه عدم المطابقة لنطاق العمل أو المواصفات أو معايير القبول. وإذا انقضت المدة دون اعتراض جوهري مسبب، تطبق حالات الاعتماد المنصوص عليها في المادة الثانية عشرة.
+7-4 سداد المقابل المالي: يلتزم الطرف الأول بسداد المبالغ المستحقة في المواعيد ووفق آلية السداد المبينة في المادة العاشرة، ولا يجوز له حسم مبلغ أو إجراء مقاصة من تلقاء نفسه إلا إذا أجاز العقد أو القانون ذلك.
+7-5 ممثل المشروع والاعتماد: {{website_approval_authority_text}}
+7-6 مشروعية المحتوى والمواد: يلتزم الطرف الأول بالحصول على الحقوق والتراخيص والتصاريح اللازمة لأي بيانات أو محتوى أو صور أو شعارات أو علامات أو ملفات أو مواد يسلمها للطرف الثاني، ويتحمل مسؤولية مشروعيتها وعدم اعتدائها على حقوق الغير، ما لم يكن الضرر ناشئًا عن استخدام الطرف الثاني لها بالمخالفة لتعليمات الطرف الأول أو العقد.
+7-7 الأعمال الإضافية: لا يجوز مطالبة الطرف الثاني بعمل أو خاصية أو تكامل أو تعديل خارج نطاق العمل إلا وفق إجراءات المادة الحادية عشرة، ولا ينشأ عن مجرد طلب التعديل التزام بالتنفيذ قبل اعتماده.
+7-8 توفير بيئة التنفيذ: يلتزم الطرف الأول، متى كان ذلك لازمًا، بتوفير أو تمكين الطرف الثاني من الوصول إلى الحسابات أو الخوادم أو الاستضافة أو أسماء النطاق أو واجهات البرمجة أو مفاتيح الوصول أو الأدوات اللازمة للتنفيذ، ولا يكون الطرف الثاني مسؤولًا عن تأخير سببه عدم توفيرها في الوقت المطلوب.
+7-9 آثار الإخلال بالتزامات الطرف الأول: إذا أدى إخلال الطرف الأول بالتزاماته إلى تعطيل المشروع أو زيادة مدته أو تكلفته أو تعذر تنفيذ جزء منه، جاز للطرف الثاني تعليق الأعمال المتأثرة أو طلب تمديد المدة أو تعديل الجدول أو المقابل بالقدر الذي يعكس الأثر الفعلي، مع مراعاة إجراءات التعديل والإنهاء المقررة في العقد.`,
+      };
+    case "website_development_source_section_09":
+      return {
+        ...base,
+        titleAr: "المادة الثامنة: التزامات الطرف الثاني (مقدم الخدمة)",
+        variables: ["website_execution_duration_text", "website_execution_start_text", "website_duration_basis_text", "website_warranty_duration_text"],
+        bodyAr: `8-1 تنفيذ الأعمال: يلتزم الطرف الثاني بتنفيذ الأعمال والخدمات والمخرجات المتفق عليها وفقًا لنطاق العمل والمواصفات ومعايير القبول المعتمدة بين الطرفين، وبذل العناية المهنية المعتادة وبما يتفق مع الأصول الفنية والمهنية المتعارف عليها في مجال تطوير البرمجيات والمواقع الإلكترونية.
+8-2 مدة التنفيذ: يلتزم الطرف الثاني بتنفيذ الأعمال خلال مدة قدرها {{website_execution_duration_text}}، وتبدأ {{website_execution_start_text}}، وتُحتسب {{website_duration_basis_text}}، مع مراعاة حالات الوقف أو التمديد أو تعديل الجدول الزمني المنصوص عليها في هذا العقد.
+8-3 إدارة المشروع والتواصل: يلتزم الطرف الثاني بإدارة التنفيذ والتنسيق مع الطرف الأول من خلال ممثل أو مسؤول اتصال يحدده عند الحاجة، وتُوجه إليه الملاحظات والتعليمات التشغيلية المتعلقة بالمشروع، مع إخطار الطرف الأول بأي تغيير جوهري في جهة الاتصال المعتمدة لدى الطرف الثاني.
+8-4 الإخطار بالمخاطر والمعوقات: يلتزم الطرف الثاني بإخطار الطرف الأول دون تأخير غير مبرر بأي واقعة أو ظرف يعلم به من شأنه التأثير جوهريًا في سير المشروع أو مدة التنفيذ أو جودة المخرجات، مع بيان الأثر المتوقع والإجراء المقترح لمعالجته متى كان ذلك ممكنًا.
+8-5 حماية البيانات والمعلومات: يلتزم الطرف الثاني بالمحافظة على البيانات والمعلومات والمستندات وبيانات الوصول التي يتسلمها من الطرف الأول، وعدم استخدامها إلا بالقدر اللازم لتنفيذ العقد، واتخاذ التدابير الفنية والتنظيمية المعقولة لحمايتها، دون إخلال بأحكام السرية.
+8-6 تسليم المخرجات: يلتزم الطرف الثاني بتسليم المخرجات وفق آلية ومواعيد ومعايير التسليم المتفق عليها. ويكون تسليم الشفرة المصدرية أو ملفات المشروع أو بيانات الوصول النهائية، بالقدر المتفق على تسليمه، مرتبطًا باستيفاء شروط التسليم والسداد المقررة في هذا العقد.
+8-7 إصلاح العيوب البرمجية: يلتزم الطرف الثاني بإصلاح العيوب البرمجية الداخلة في نطاق الضمان لمدة {{website_warranty_duration_text}} وفق أحكام المادة الرابعة عشرة، ولا يمتد هذا الالتزام إلى تطويرات أو تحسينات أو إضافات جديدة خارجة عن النطاق.
+8-8 الاستعانة بالغير: يجوز للطرف الثاني الاستعانة بموظفين أو متعاقدين من الباطن أو مستقلين لتنفيذ بعض الأعمال تحت مسؤوليته، وبما لا يخل بالتزاماته المتعلقة بالسرية وحماية البيانات وجودة التنفيذ.
+8-9 الامتناع عن الأعمال غير المشروعة: لا يلتزم الطرف الثاني بتنفيذ أي عمل يعلم أنه يخالف القانون أو يعتدي على حقوق الغير أو يخالف شروط استخدام خدمة أو برنامج من الغير، ويجوز له الامتناع عنه بعد إخطار الطرف الأول بسبب الامتناع.
+8-10 تعليق التنفيذ: لا يجوز للطرف الثاني تعليق التنفيذ إلا في الحالات المقررة في العقد أو باتفاق مكتوب، أو إذا كان التعليق ناشئًا عن إخلال الطرف الأول بالتزاماته أو عدم السداد أو قوة قاهرة أو ظرف طارئ أو سبب آخر يجيزه العقد أو القانون.`,
       };
     case "website_development_source_section_10":
       return {
         ...base,
         titleAr: "المادة التاسعة: مدة التنفيذ",
-        variables: ["website_execution_duration_value", "website_execution_duration_unit", "website_duration_basis"],
-        bodyAr: `تبدأ مدة تنفيذ المشروع من التاريخ الذي يتفق عليه الطرفان، أو من تاريخ استيفاء متطلبات بدء التنفيذ المنصوص عليها في هذا العقد وأي ملحق اختياري تم اختياره واستكماله واعتماده، أيهما لاحق.
-مدة تنفيذ المشروع هي ({{website_execution_duration_value}} {{website_execution_duration_unit}}).
-تُحسب مدة التنفيذ {{website_duration_basis}}.
-إذا تأخر الطرف الأول في تنفيذ أي من التزاماته، أو في تقديم البيانات أو المحتوى أو الاعتمادات أو بيانات الوصول أو أي متطلبات لازمة لبدء التنفيذ أو استكماله، أو في سداد أي دفعة مستحقة، توقفت مدة التنفيذ أو امتدت تلقائيًا بالقدر الذي يقابل مدة التأخير وآثاره الفعلية، دون أن يُعد ذلك إخلالًا من الطرف الثاني.
-تمتد مدة التنفيذ كذلك إذا طرأت أوامر تعديل أو طلبات تطوير معتمدة، أو تم اعتماد اتفاقية التطويرات المستقبلية والأعمال الإضافية، إن وجدت، أو في حالات القوة القاهرة أو الظروف الطارئة، أو لأي سبب آخر يجيز هذا العقد أو القانون بسببه وقف التنفيذ أو تمديد مدته.
-يلتزم الطرف الثاني بإخطار الطرف الأول، دون تأخير غير مبرر، إذا تبين له وجود أي سبب قد يؤثر في الالتزام بالمدة المتفق عليها، مع بيان أسبابه وآثاره المتوقعة على الجدول الزمني والإجراءات المقترحة للحد من أثره متى كان ذلك ممكنًا.
-ولا يُعد الطرف الثاني متأخرًا في التنفيذ إذا كان التأخير ناشئًا عن سبب يرجع إلى الطرف الأول، أو إلى قوة قاهرة، أو إلى ظرف طارئ، أو إلى أي سبب آخر يجيز هذا العقد أو القانون معه وقف التنفيذ أو تمديد مدته.`,
+        variables: ["website_execution_duration_text", "website_execution_start_text", "website_duration_basis_text"],
+        bodyAr: `تبدأ مدة تنفيذ المشروع {{website_execution_start_text}}.
+مدة تنفيذ المشروع المتفق عليها هي {{website_execution_duration_text}}، وتُحتسب {{website_duration_basis_text}}.
+إذا تأخر الطرف الأول في تقديم البيانات أو المحتوى أو الاعتمادات أو وسائل الوصول أو أي متطلبات لازمة للتنفيذ، أو في سداد دفعة مستحقة يرتبط بها التنفيذ، توقفت مدة التنفيذ أو امتدت بقدر مدة التأخير وآثاره الفعلية دون أن يُعد ذلك إخلالًا من الطرف الثاني.
+وتمتد مدة التنفيذ كذلك بقدر الأثر الفعلي لأي أمر تعديل معتمد أو عمل إضافي أو قوة قاهرة أو ظرف طارئ أو أي سبب آخر يجيز العقد أو القانون بسببه وقف التنفيذ أو تمديده.
+ويلتزم الطرف الثاني بإخطار الطرف الأول دون تأخير غير مبرر إذا تبين له وجود سبب جوهري يؤثر في المدة المتفق عليها، مع بيان أثره المتوقع على الجدول الزمني متى كان ذلك ممكنًا.`,
       };
-    case "website_development_source_section_11": {
-      const rest = base.bodyAr.replace(/^[\s\S]*?(?=10-2\s*جدول الدفعات)/, "");
+    case "website_development_source_section_11":
       return {
         ...base,
         titleAr: "المادة العاشرة: المقابل المالي وآلية السداد",
-        variables: ["website_total_price", "website_total_price_words"],
-        bodyAr: `10-1 قيمة العقد: يلتزم الطرف الأول بسداد مبلغ إجمالي قدره {{website_total_price}} جنيه مصري (فقط {{website_total_price_words}} جنيه مصري لا غير) مقابل تنفيذ الأعمال والخدمات والمخرجات محل هذا العقد، وذلك وفقًا لأحكام هذا العقد، وملحق نطاق العمل (SOW)، وملحق المواصفات الفنية (TS)، وسائر الملحقات المعتمدة وأوامر التعديل، إن وجدت.\n${rest}`,
+        variables: ["website_total_price", "website_total_price_words", "website_payment_schedule_text", "website_payment_method", "website_payment_grace_days", "website_restart_threshold_days", "website_restart_fee_text"],
+        bodyAr: `10-1 قيمة العقد: يلتزم الطرف الأول بسداد مبلغ إجمالي قدره {{website_total_price}} جنيه مصري (فقط {{website_total_price_words}} جنيه مصري لا غير) مقابل تنفيذ الأعمال والخدمات والمخرجات محل هذا العقد.
+10-2 جدول الدفعات واستحقاقها: {{website_payment_schedule_text}}
+10-3 وسائل السداد وإثبات الوفاء: اتفق الطرفان على أن تكون وسيلة السداد {{website_payment_method}}. ويُعد السداد منتجًا لآثاره من تاريخ قيد المبلغ فعليًا في الوسيلة المالية المتفق عليها أو ثبوت استلامه بموجب إيصال أو مخالصة أو فاتورة أو مستند يفيد الاستلام. وتكون رسوم التحويل والعمولات والمصروفات المصرفية على عاتق الطرف الذي تفرضها عليه الجهة المالية ما لم يتفق الطرفان كتابةً على خلاف ذلك.
+10-4 التأخر في السداد وحق تعليق التنفيذ: إذا تأخر الطرف الأول في سداد مبلغ مستحق، جاز للطرف الثاني بعد إخطاره ومنحه مهلة {{website_payment_grace_days}} أيام عمل للوفاء تعليق التنفيذ إلى حين السداد. ولا تدخل مدة التعليق ضمن مدة التنفيذ، وتمتد المدد والجدول الزمني بقدر التعليق وآثاره. وإذا استمر التعليق بسبب عدم السداد مدة تجاوز {{website_restart_threshold_days}} يومًا ثم طلب استئناف المشروع بعد السداد، جاز إعادة جدولة المشروع وفقًا لتوافر الموارد. {{website_restart_fee_text}}
+10-5 الأعمال الإضافية والمقابل المالي: لا يشمل المقابل المالي أي أعمال أو خصائص أو تكاملات أو تعديلات أو خدمات خارج نطاق العمل المتفق عليه. ولا يلتزم الطرف الثاني بتنفيذ عمل إضافي قبل اعتماده وفق المادة الحادية عشرة وتحديد أثره المالي وأثره على مدة التنفيذ وآلية سداده.
+10-6 حبس المخرجات المرتبطة بالسداد: إذا كان تسليم الشفرة المصدرية أو ملفات المشروع أو بيانات الوصول أو مخرج نهائي مرتبطًا بسداد مستحق مالي، فلا يلتزم الطرف الثاني بتسليمه نهائيًا قبل الوفاء بالمستحق المرتبط به. ولا يعد تمكين الطرف الأول من الاختبار أو التشغيل التجريبي أو المراجعة تنازلًا عن هذا الحق.
+10-7 الضرائب والرسوم: ما لم يتفق الطرفان صراحةً على أن المقابل شامل لضريبة أو رسم معين، تُضاف إلى المقابل الضرائب والرسوم التي يوجب القانون إضافتها على المعاملة، ويتحمل كل طرف ما يفرضه القانون عليه بسبب صفته أو نشاطه أو دخله، دون إخلال بأي اتفاق مكتوب جائز قانونًا بين الطرفين بشأن توزيع تكلفة معينة.
+10-8 الفواتير والمطالبات المالية: لا يترتب على إصدار فاتورة أو مطالبة مالية وحده استحقاق مبلغ لم تتحقق واقعة استحقاقه وفق جدول الدفعات أو أمر تعديل معتمد. وتظل قيمة كل دفعة وموعدها مرتبطة بواقعة الاستحقاق المتفق عليها.
+10-9 البيانات المالية اللاحقة: يجوز للطرفين اعتماد تعديل مالي أو أمر تغيير مكتوب يحدد مبلغًا أو دفعة أو وسيلة سداد أو تكلفة إضافية ناشئة بعد إبرام العقد، ويكون نافذًا في حدود ما تم اعتماده وفق المادة الحادية عشرة دون أن يلغي البيانات المالية الأصلية فيما لم يعدله صراحةً.`,
       };
-    }
     case "website_development_source_section_12":
       return {
         ...base,
         titleAr: "المادة الثانية عشرة: التسليم واعتماد الأعمال",
-        bodyAr: `12-1 تسليم الأعمال: يلتزم الطرف الثاني بتسليم الأعمال أو المخرجات محل هذا العقد وفقًا للجدول الزمني ومراحل التنفيذ وآلية التسليم المتفق عليها في هذا العقد، وملحق نطاق العمل (SOW)، وملحق المواصفات الفنية (TS)، ومعايير القبول المحددة فيهما، وملحق محضر التسليم والاعتماد النهائي (DAR)، وذلك بالوسيلة المحددة فيها أو بأي وسيلة أخرى يعتمدها الطرفان كتابةً أو عبر البريد الإلكتروني المعتمد.
-ويجوز أن يتم التسليم على مرحلة واحدة أو على مراحل مستقلة، بحسب ما هو مبين في ملحق نطاق العمل (SOW) أو الجدول الزمني المعتمد.
-12-2 مراجعة الأعمال: يلتزم الطرف الأول بمراجعة الأعمال أو المخرجات المسلمة وإخطار الطرف الثاني كتابةً أو عبر البريد الإلكتروني المعتمد بقبولها أو برفضها، مع بيان جميع الملاحظات الجوهرية بصورة واضحة ومحددة، وذلك خلال المدة المتفق عليها، أو خلال خمسة (5) أيام عمل من تاريخ التسليم إذا لم يتفق الطرفان على مدة أخرى.
-ويجب أن تتضمن الملاحظات بيانًا واضحًا لأوجه عدم المطابقة لملحق نطاق العمل (SOW) أو ملحق المواصفات الفنية (TS) أو معايير القبول والاختبارات المثبتة فيهما أو في محضر التسليم والاعتماد النهائي (DAR)، ولا يُعتد بأي اعتراض أو ملاحظات عامة أو غير محددة أو غير مبررة فنيًا.
-ويلتزم الطرف الأول بإبداء جميع الملاحظات الجوهرية التي وقف عليها خلال مدة المراجعة، ولا يجوز له تجزئتها أو تقديمها على دفعات متتابعة إذا كانت معلومة له وقت الفحص، ويستثنى من ذلك العيوب الخفية التي يتعذر اكتشافها بالفحص المعتاد.
-12-3 معالجة الملاحظات الجوهرية: إذا أبدى الطرف الأول، خلال المدة المقررة، ملاحظات تتعلق بعدم مطابقة الأعمال لملحق نطاق العمل (SOW) أو ملحق المواصفات الفنية (TS) أو معايير القبول والاختبارات المعتمدة، التزم الطرف الثاني بمعالجتها خلال مدة معقولة تتناسب مع طبيعتها، ثم إعادة تسليم الأعمال أو الجزء محل الملاحظات. وتسري على كل إعادة تسليم ذات إجراءات المراجعة والاعتماد المنصوص عليها في هذه المادة وملحق محضر التسليم والاعتماد النهائي (DAR)، ما لم يتفق الطرفان كتابةً على خلاف ذلك.
-ويجوز للطرفين الاتفاق في هذا العقد أو في ملحق محضر التسليم والاعتماد النهائي (DAR) على تحديد عدد محاولات معالجة الملاحظات الجوهرية، على أن يكون عددها ثلاث (3) محاولات. فإذا استنفد الطرف الثاني عدد محاولات المعالجة المتفق عليها واستمرت الملاحظات الجوهرية المتعلقة بذات الأعمال أو المرحلة محل التسليم، جاز للطرف الأول، بعد إخطار الطرف الثاني، ممارسة الحقوق المقررة له بموجب هذا العقد أو القانون، بحسب الأحوال.
-12-4 الملاحظات غير الجوهرية: إذا اقتصرت الملاحظات على عيوب أو ملاحظات طفيفة لا تؤثر في تشغيل المشروع أو استخدام المرحلة محل التسليم للغرض المتفق عليه، ولا تمثل مخالفة جوهرية لنطاق العمل أو المواصفات الفنية أو معايير القبول المعتمدة، فلا يجوز للطرف الأول الامتناع عن اعتماد الأعمال أو تأخير استحقاق الدفعة المالية بسببها. ويلتزم الطرف الثاني بمعالجة تلك الملاحظات خلال مدة معقولة يتفق عليها الطرفان، أو خلال مدة الضمان إذا كانت داخلة في نطاقها، دون أن يؤثر ذلك على اعتماد المرحلة أو استحقاق المقابل المالي المرتبط بها.
-12-5 الأعمال الإضافية: لا تُعد طلبات إضافة خصائص جديدة، أو تحسينات، أو تعديلات على التصميم أو تجربة المستخدم أو الأداء، أو أي تغيير يجاوز ملحق نطاق العمل (SOW) أو ملحق المواصفات الفنية (TS) أو معايير القبول المعتمدة، من قبيل ملاحظات التسليم، وإنما تُعد أعمالًا إضافية تخضع لأحكام المادة الحادية عشرة الخاصة بتعديل نطاق العمل وإجراءات التعديل، واتفاقية التطويرات المستقبلية والأعمال الإضافية إن تم اعتمادها. ولا يجوز للطرف الأول رفض اعتماد الأعمال بسبب طلبات أو ملاحظات لا تدخل ضمن نطاق العمل المتفق عليه.
-12-6 حالات الاعتماد: تُعد الأعمال أو المرحلة محل التسليم معتمدة إذا اعتمدها الطرف الأول صراحةً كتابةً أو عبر البريد الإلكتروني المعتمد، أو أخطر الطرف الثاني بخلوها من ملاحظات جوهرية، أو انقضت مدة المراجعة دون اعتراض جوهري مسبب، أو اقتصر الاعتراض على ملاحظات غير جوهرية أو أعمال إضافية، أو قام الطرف الأول بتشغيل الأعمال أو نشرها في بيئة الإنتاج أو إتاحتها للمستخدمين النهائيين أو استغلالها فعليًا بما يدل على قبولها، ما لم يكن الاستخدام للاختبارات أو التجارب المتفق عليها خلال مدة المراجعة.
-12-7 أثر الاعتماد: يترتب على اعتماد الأعمال أو المرحلة اعتبارها منجزة وفقًا للعقد، واستحقاق الدفعة المرتبطة بها إن وجدت، والانتقال إلى المرحلة التالية متى كان ذلك مقررًا، وبدء مدة الضمان وفقًا لأحكام العقد وما يثبته محضر التسليم والاعتماد النهائي (DAR). ولا يخل الاعتماد بحق الطرف الأول في المطالبة بإصلاح العيوب البرمجية التي تظهر خلال مدة الضمان في حدود أحكام العقد أو اتفاقية الصيانة والدعم الفني ومستويات الخدمة (SLA) إن تم اعتمادها.
-12-8 إثبات التسليم والاعتماد: يتم إثبات واقعة التسليم والاعتماد والملاحظات والإجراءات المتعلقة بها من خلال محضر التسليم والاعتماد النهائي (DAR)، ويجوز استكمال أو توثيق تلك الإجراءات بمحضر مستقل أو عبر البريد الإلكتروني المعتمد أو نظام إدارة المشروع أو أي منصة إلكترونية أو وسيلة تقنية يعتمدها الطرفان متى أمكن التحقق من صدورها ونسبتها إلى الطرف المعني.`,
+        variables: ["website_review_period_days", "website_correction_attempts", "website_warranty_duration_text"],
+        bodyAr: `12-1 تسليم الأعمال: يلتزم الطرف الثاني بتسليم الأعمال أو المخرجات وفقًا للجدول الزمني ومراحل التنفيذ وآلية التسليم المتفق عليها، ويجوز أن يتم التسليم على مرحلة واحدة أو مراحل مستقلة بحسب الاتفاق.
+12-2 مراجعة الأعمال: يلتزم الطرف الأول بمراجعة الأعمال المسلمة وإخطار الطرف الثاني بقبولها أو رفضها مسببًا خلال {{website_review_period_days}} أيام عمل من تاريخ التسليم. ويجب أن تتضمن الملاحظات أوجه عدم المطابقة لنطاق العمل أو المواصفات الفنية أو معايير القبول المتفق عليها، ولا يُعتد بالملاحظات العامة أو غير المحددة.
+12-3 معالجة الملاحظات الجوهرية: يلتزم الطرف الثاني بمعالجة الملاحظات الجوهرية الداخلة في نطاق العمل وإعادة التسليم، ويكون عدد محاولات معالجة الملاحظات الجوهرية المتفق عليه {{website_correction_attempts}} محاولات. وتسري على كل إعادة تسليم ذات مدة وإجراءات المراجعة الواردة في هذه المادة.
+12-4 الملاحظات غير الجوهرية: لا يجوز الامتناع عن اعتماد الأعمال أو تأخير الدفعة بسبب ملاحظة طفيفة لا تؤثر في التشغيل أو الغرض المتفق عليه، ويلتزم الطرف الثاني بمعالجتها خلال مدة معقولة أو خلال الضمان إذا كانت داخلة في نطاقه.
+12-5 الأعمال الإضافية: لا تُعد طلبات الخصائص الجديدة أو التحسينات أو التعديلات الخارجة عن نطاق العمل من ملاحظات التسليم، وإنما تخضع للمادة الحادية عشرة الخاصة بتعديل نطاق العمل.
+12-6 حالات الاعتماد: تُعد الأعمال أو المرحلة معتمدة إذا اعتمدها الطرف الأول صراحةً، أو أخطر الطرف الثاني بخلوها من ملاحظات جوهرية، أو انقضت مدة المراجعة البالغة {{website_review_period_days}} أيام عمل دون اعتراض جوهري مسبب، أو اقتصر الاعتراض على ملاحظات غير جوهرية أو أعمال إضافية، أو استُخدمت الأعمال فعليًا بما يدل على القبول خارج نطاق الاختبارات المتفق عليها.
+12-7 أثر الاعتماد: يترتب على الاعتماد اعتبار المرحلة منجزة واستحقاق الدفعة المرتبطة بها إن وجدت والانتقال للمرحلة التالية متى كان ذلك مقررًا، وتبدأ من تاريخ الاعتماد مدة الضمان البالغة {{website_warranty_duration_text}}. ولا يخل الاعتماد بحق الطرف الأول في المطالبة بإصلاح العيوب الداخلة في الضمان.
+12-8 إثبات التسليم والاعتماد: يجوز إثبات التسليم والاعتماد والملاحظات بمحضر التسليم والاعتماد النهائي (DAR) إذا تم اعتماده، أو بمحضر مستقل، أو بالبريد الإلكتروني أو منصة إدارة المشروع أو أي وسيلة تقنية معتمدة يمكن التحقق من صدورها ونسبتها إلى الطرف المعني.`,
       };
-    case "website_development_source_section_13": {
-      const body = base.bodyAr.replace(
-        /13-7\s*عرض المشروع ضمن الأعمال السابقة:[\s\S]*?(?=13-8)/,
-        "13-7 عرض المشروع ضمن الأعمال السابقة: لا يجوز للطرف الثاني استخدام اسم الطرف الأول أو علامته التجارية أو شعاره أو اسم المشروع أو أي جزء من مخرجاته، أو عرض اسم المشروع أو شعاره أو لقطات منه ضمن معرض الأعمال (Portfolio) أو الأغراض التسويقية، إلا بعد الحصول على موافقة كتابية مسبقة من الطرف الأول، ودون الإفصاح عن أي معلومات سرية أو بيانات غير معلنة تخصه.\n",
-      );
-      return { ...base, titleAr: "المادة الثالثة عشرة: حقوق الملكية الفكرية", bodyAr: body };
-    }
+    case "website_development_source_section_13":
+      return {
+        ...base,
+        titleAr: "المادة الثالثة عشرة: حقوق الملكية الفكرية",
+        variables: ["website_portfolio_permission_text"],
+        bodyAr: `13-1 الملكية الفكرية السابقة للطرف الثاني: تظل الأدوات والأطر والمكتبات والقوالب والمكونات والخوارزميات والأكواد العامة وطرق العمل والحقوق التي كانت مملوكة للطرف الثاني أو مرخصة له قبل المشروع أو طُورت بصورة مستقلة عنه مملوكة له أو لأصحابها. وإذا دُمج أي منها في المشروع، يكون للطرف الأول حق استخدامها بالقدر اللازم لتشغيل المشروع للغرض المتفق عليه ما لم يتفق كتابةً على نطاق أوسع.
+13-2 انتقال حقوق المشروع: بعد سداد كامل المقابل المالي والمستحقات المرتبطة بالمشروع، تنتقل إلى الطرف الأول الحقوق القابلة للانتقال قانونًا في المخرجات التي طُورت خصيصًا له بموجب هذا العقد، بما في ذلك الشفرة المصدرية والتصاميم وقواعد البيانات والملفات الفنية التي تدخل صراحةً في نطاق التسليم، مع استثناء الملكية السابقة للطرف الثاني وحقوق الغير.
+13-3 تسليم الشفرة المصدرية: يلتزم الطرف الثاني بتسليم الشفرة المصدرية والملفات والموارد اللازمة لتشغيل المشروع وتعديله بالقدر الداخل في نطاق العمل، بعد تحقق شروط التسليم وسداد المستحقات المرتبطة بها، ما لم يتفق الطرفان كتابةً على خلاف ذلك.
+13-4 البرمجيات والتراخيص الخاصة بالغير: لا ينقل هذا العقد ملكية أي برنامج أو مكتبة أو إطار أو خدمة أو منصة أو API أو عنصر مملوك للغير أو مفتوح المصدر، وتظل هذه العناصر خاضعة لتراخيصها وشروط مزوديها.
+13-5 المحتوى المقدم من الطرف الأول: تظل حقوق البيانات والنصوص والصور والعلامات والشعارات والمواد التي يقدمها الطرف الأول مملوكة له أو لأصحابها، ولا يكتسب الطرف الثاني حقًا فيها إلا بالقدر اللازم لتنفيذ العقد.
+13-6 إعادة استخدام الخبرات والأدوات: لا يعد إخلالًا بحقوق الطرف الأول إعادة استخدام الطرف الثاني لخبراته أو أفكاره العامة أو أدواته أو مكوناته العامة التي لا تتضمن شفرة المشروع الخاصة أو بياناته أو أسراره أو مخرجاته المملوكة للطرف الأول.
+13-7 عرض المشروع ضمن الأعمال السابقة: {{website_portfolio_permission_text}}
+13-8 القيود على الاستغلال: لا يجوز لأي طرف استغلال حق ملكية فكرية خاص بالطرف الآخر خارج الحدود التي يقررها العقد أو القانون أو موافقة كتابية صريحة من صاحب الحق.
+13-9 أثر انتهاء العقد: إذا انتهى العقد قبل اكتمال المشروع أو قبل سداد كامل المستحقات، فلا تنتقل للطرف الأول حقوق المخرجات غير المسددة إلا في الحدود التي يقابلها السداد أو اتفاق مكتوب. وإذا كان قد سدد كامل المستحقات وانتقلت إليه الحقوق، فلا يؤدي انتهاء العقد لاحقًا إلى زوالها.`,
+      };
     case "website_development_source_section_14":
       return {
         ...base,
         titleAr: "المادة الرابعة عشرة: الضمان والدعم الفني",
-        variables: ["website_warranty_duration_value", "website_warranty_duration_unit"],
-        bodyAr: `14-1 ضمان مطابقة الأعمال: يضمن الطرف الثاني أن الأعمال والمخرجات محل هذا العقد، وقت اعتمادها وتسليمها، مطابقة لنطاق العمل والمواصفات الفنية ومعايير القبول وأحكام هذا العقد وملحقاته، وأنها قد نُفذت وفقًا للأصول الفنية والمهنية المتعارف عليها في مجال تطوير المواقع الإلكترونية. ويقتصر هذا الضمان على إصلاح العيوب البرمجية أو الفنية التي تجعل المخرجات غير مطابقة لما تم الاتفاق عليه، ولا يُعد ضمانًا لتحقيق أي نتائج تجارية أو مالية أو تسويقية أو تشغيلية للطرف الأول.
-14-2 مدة الضمان: تبدأ مدة الضمان من تاريخ اعتماد الأعمال أو المرحلة محل التسليم وفقًا لأحكام هذا العقد، وتكون مدتها ({{website_warranty_duration_value}} {{website_warranty_duration_unit}})، ما لم يتفق الطرفان كتابةً على مدة أخرى. ويجوز الاتفاق على مدد ضمان مختلفة لمراحل المشروع إذا تم النص على ذلك صراحةً في ملحق نطاق العمل (SOW) أو ملحق بيانات المشروع.
-14-3 نطاق الضمان: يلتزم الطرف الثاني، خلال مدة الضمان، بإصلاح أي عيب برمجي أو فني يثبت أنه ناتج عن عدم مطابقة الأعمال لنطاق العمل أو المواصفات الفنية أو معايير القبول المتفق عليها، وذلك دون مقابل إضافي. ويحق للطرف الثاني فحص العيب المبلغ عنه والتحقق من سببه قبل اعتباره مشمولًا بالضمان.
-14-4 الإبلاغ عن العيوب: يلتزم الطرف الأول بإخطار الطرف الثاني بأي عيب يكتشفه خلال مدة الضمان، مع بيان وصف العيب وكيفية ظهوره والبيانات اللازمة لإعادة إنتاجه، وذلك وفقًا لوسائل الإخطار المنصوص عليها في هذا العقد. ويلتزم الطرف الثاني، بعد التحقق من أن العيب مشمول بالضمان، بالبدء في معالجته خلال مدة معقولة تتناسب مع طبيعة العيب ودرجة تأثيره، أو وفقًا لما هو منصوص عليه في اتفاقية الصيانة والدعم الفني ومستويات الخدمة (SLA)، إن وجدت.
-14-5 ما لا يشمله الضمان: لا يشمل الضمان: أ. أي أعمال إضافية أو تطويرات أو تحسينات أو خصائص جديدة أو تعديلات على التصميم أو تجربة المستخدم أو الأداء لم تدخل ضمن نطاق العمل أو المواصفات الفنية. ب. أي أعطال أو أخطاء أو تلف ينشأ عن تعديل أو حذف أو إضافة أو إعادة برمجة أو تدخل في المخرجات من قبل الطرف الأول أو أي شخص أو جهة غير مصرح لها من الطرف الثاني. ج. الأعطال الناتجة عن سوء الاستخدام أو مخالفة تعليمات التشغيل أو استخدام المشروع على نحو يخالف الغرض المتفق عليه. د. الأعطال الناتجة عن بيئة الاستضافة أو الخوادم أو قواعد البيانات أو الشبكات أو خدمات الإنترنت أو أسماء النطاقات أو شهادات الحماية (SSL) أو خدمات البريد الإلكتروني أو الخدمات السحابية أو أي خدمات مقدمة من الغير، ما لم يكن الطرف الثاني مسؤولًا عنها بموجب هذا العقد أو اتفاقية الصيانة والدعم الفني ومستويات الخدمة (SLA)، إن وجدت. هـ. الأعطال الناتجة عن تحديثات أنظمة التشغيل أو المتصفحات أو الأجهزة أو خدمات الطرف الثالث أو واجهات برمجة التطبيقات (APIs) أو خدمات الذكاء الاصطناعي أو أي تغييرات لاحقة لا يملك الطرف الثاني السيطرة عليها. و. الأعطال الناتجة عن بيانات أو محتوى أو ملفات أو برامج أو إضافات أو مكونات أو أدوات قدمها الطرف الأول أو ألزم باستخدامها. ز. الأعطال أو الأضرار الناتجة عن القوة القاهرة أو الظروف الطارئة أو أي سبب أجنبي لا يد للطرف الثاني فيه.
-14-6 الدعم الفني والصيانة: لا يلتزم الطرف الثاني بتقديم أي خدمات دعم فني أو صيانة أو تحديثات أو تطويرات أو مراقبة تشغيلية بعد انتهاء مدة الضمان، إلا إذا اتفق الطرفان على ذلك صراحةً بموجب اتفاقية الصيانة والدعم الفني ومستويات الخدمة (SLA)، إن وجدت، والتي تحدد نطاق الخدمات ومدتها ومستويات الخدمة والمقابل المالي وأي شروط أخرى يتفق عليها الطرفان.
-14-7 أثر أعمال الضمان: لا يترتب على تنفيذ أعمال الضمان أو إصلاح أي عيب تمديد مدة الضمان الأصلية أو تجديدها، ما لم يتفق الطرفان كتابةً على خلاف ذلك. كما لا يُعد تنفيذ أعمال الضمان أو إصلاح أي عيب إقرارًا من الطرف الثاني بمسؤوليته عن أي أعمال أو خدمات أو أضرار لا يشملها نطاق الضمان المنصوص عليه في هذا العقد.`,
+        variables: ["website_warranty_duration_text"],
+        bodyAr: `14-1 ضمان مطابقة الأعمال: يضمن الطرف الثاني أن الأعمال والمخرجات وقت اعتمادها مطابقة لنطاق العمل والمواصفات الفنية ومعايير القبول المتفق عليها، ويقتصر الضمان على إصلاح العيوب التي تجعل المخرجات غير مطابقة لما تم الاتفاق عليه ولا يعد ضمانًا لنتيجة تجارية أو مالية.
+14-2 مدة الضمان: تبدأ مدة الضمان من تاريخ اعتماد الأعمال أو المرحلة محل التسليم وتكون مدتها {{website_warranty_duration_text}}، ما لم يتفق الطرفان كتابةً على خلاف ذلك.
+14-3 نطاق الضمان: يلتزم الطرف الثاني خلال مدة الضمان بإصلاح العيب البرمجي أو الفني الناتج عن عدم المطابقة دون مقابل إضافي، وله فحص العيب والتحقق من سببه قبل اعتباره مشمولًا بالضمان.
+14-4 الإبلاغ عن العيوب: يلتزم الطرف الأول بإخطار الطرف الثاني بالعيب خلال مدة الضمان مع وصفه والبيانات اللازمة لإعادة إنتاجه، ويبدأ الطرف الثاني معالجته خلال مدة معقولة بعد التحقق من دخوله في نطاق الضمان.
+14-5 ما لا يشمله الضمان: لا يشمل الضمان أعمال التطوير أو التحسين أو الخصائص الجديدة، ولا الأعطال الناتجة عن تدخل غير مصرح به أو سوء الاستخدام أو خدمات الغير أو الاستضافة أو التحديثات اللاحقة أو المحتوى المقدم من الطرف الأول أو القوة القاهرة، ما لم يكن الطرف الثاني مسؤولًا عنها بموجب اتفاق صريح.
+14-6 الدعم الفني والصيانة: لا يلتزم الطرف الثاني بخدمات دعم أو صيانة أو تحديثات بعد انتهاء مدة الضمان إلا إذا اعتمد الطرفان اتفاقية صيانة ودعم فني (SLA) تحدد النطاق والمدة والمقابل ومستويات الخدمة.
+14-7 أثر أعمال الضمان: لا يترتب على إصلاح عيب تمديد مدة الضمان الأصلية أو تجديدها ما لم يتفق الطرفان كتابةً على خلاف ذلك.`,
+      };
+    case "website_development_source_section_15":
+      return {
+        ...base,
+        titleAr: "المادة الخامسة عشرة: الاستضافة واسم النطاق والخدمات المقدمة من الغير",
+        variables: ["website_external_services_text"],
+        bodyAr: `15-1 نطاق الخدمات: ما لم يتفق الطرفان صراحةً على خلاف ذلك، لا يشمل المقابل المالي توفير أو شراء أو إدارة أو تجديد الاستضافة أو اسم النطاق أو شهادات SSL أو البريد الاحترافي أو خدمات DNS وCDN أو الخدمات السحابية أو الذكاء الاصطناعي أو واجهات البرمجة أو بوابات الدفع أو أي تراخيص أو اشتراكات من الغير.
+15-2 شراء أو إدارة الخدمات: {{website_external_services_text}}
+15-3 خدمات الغير: تخضع الخدمات المقدمة من الغير لشروط وسياسات وأسعار مزوديها، ولا يضمن الطرف الثاني استمرارها أو ثبات أسعارها أو خصائصها أو شروطها ما لم يكن قد التزم صراحةً بضمان محدد يقع تحت سيطرته.
+15-4 حدود المسؤولية: لا يكون الطرف الثاني مسؤولًا عن توقف أو انخفاض أداء أو فقد بيانات أو ضرر سببه المباشر مزود استضافة أو نطاق أو DNS أو CDN أو SSL أو بريد إلكتروني أو بوابة دفع أو API أو خدمة سحابية أو ذكاء اصطناعي أو أي خدمة من الغير، ما لم يكن الضرر ناشئًا عن خطأ جسيم أو إخلال تعاقدي مباشر من الطرف الثاني.
+15-5 سداد الاشتراكات والتجديد: يلتزم الطرف المحدد بصفته جهة السداد في البند 15-2 بسداد رسوم الاشتراك أو التجديد أو الترخيص في مواعيدها. ولا يتحمل الطرف الثاني آثار عدم السداد إذا كانت جهة السداد المتفق عليها هي الطرف الأول.
+15-6 بيانات الدخول وملكية الحسابات: تكون الحسابات الخاصة بالاستضافة والنطاق والخدمات الخارجية مسجلة باسم الطرف الأول كلما كان ذلك ممكنًا. وإذا سُجلت مؤقتًا باسم الطرف الثاني لأسباب فنية أو تنظيمية، يلتزم بنقلها إلى الطرف الأول عند إمكان ذلك وبعد الوفاء بالمستحقات المرتبطة بها.
+15-7 النسخ الاحتياطية: لا يلتزم الطرف الثاني بإجراء أو حفظ أو استعادة نسخ احتياطية بعد التسليم إلا إذا كان ذلك داخل نطاق العمل أو اتفاقية صيانة ودعم فني معتمدة تحدد دورية النسخ ومدة الاحتفاظ وآلية الاسترجاع.
+15-8 انتهاء العلاقة التعاقدية: عند انتهاء العقد، يتعاون الطرفان في نقل الخدمات والحسابات وبيانات الوصول التي يستحق الطرف الأول استلامها بعد تنفيذ الالتزامات المالية والتعاقدية المستحقة، ولا يلتزم الطرف الثاني باستمرار إدارة أو تجديد خدمة بعد انتهاء العقد إلا باتفاق مكتوب.
+15-9 حجية بيانات الخدمات: تُعد تفاصيل الخدمات الخارجية المثبتة في البند 15-2 أو في اتفاق أو ملحق مكتوب معتمد جزءًا من تنظيم العلاقة بين الطرفين في حدود تلك الخدمة، ويعمل بها في تحديد المزود والمدة والتكلفة وجهة السداد.`,
       };
     case "website_development_source_section_16":
       return {
         ...base,
         titleAr: "المادة السادسة عشرة: السرية وعدم الإفصاح",
-        variables: ["website_confidentiality_years"],
-        bodyAr: base.bodyAr.replace(/\(مدة السرية بعد انتهاء العقد[^)]*\)/g, "({{website_confidentiality_years}} سنوات)"),
+        variables: ["website_confidentiality_duration_text", "website_portfolio_permission_text"],
+        bodyAr: `16-1 الالتزام بالسرية: يلتزم كل طرف بالمحافظة على سرية المعلومات والبيانات والمستندات والملفات والأكواد والتصاميم وقواعد البيانات وبيانات الدخول والمعلومات التجارية والمالية وغيرها مما يطلع عليه بسبب التفاوض على العقد أو تنفيذه متى كانت طبيعته أو ظروف الإفصاح عنه تدل على سريته.
+16-2 نطاق الاستخدام: لا تُستخدم المعلومات السرية إلا بالقدر اللازم لتنفيذ العقد، ولا يجوز نسخها أو تداولها أو الإفصاح عنها أو إتاحتها للغير خارج هذا الغرض إلا بموافقة كتابية أو في الحدود التي يوجبها القانون.
+16-3 حماية المعلومات: يلتزم كل طرف باتخاذ التدابير الفنية والإدارية والتنظيمية المعقولة لحماية المعلومات السرية من الفقد أو التلف أو الوصول أو الاستخدام أو الإفصاح غير المصرح به.
+16-4 الأشخاص المصرح لهم: يجوز الإفصاح للموظفين أو المستشارين أو المتعاقدين أو مقدمي الخدمات الذين تستلزم مهامهم الاطلاع على المعلومات لتنفيذ العقد، بشرط إلزامهم بسرية مناسبة، ويظل الطرف الذي أتاح المعلومات مسؤولًا عن إخلال من أفصح لهم في الحدود القانونية.
+16-5 الاستثناءات: لا تشمل السرية المعلومات التي يثبت أنها كانت معلومة بصورة مشروعة قبل الإفصاح، أو أصبحت عامة دون مخالفة، أو وردت من طرف ثالث يملك حق الإفصاح، أو طُورت بصورة مستقلة، أو وجب الإفصاح عنها بحكم القانون أو قرار جهة مختصة.
+16-6 بيانات الدخول والبيانات الشخصية: يلتزم الطرفان بحماية كلمات المرور ومفاتيح الوصول ورموز المصادقة والبيانات الشخصية وعدم استخدامها أو الاحتفاظ بها إلا بالقدر اللازم لتنفيذ الالتزامات أو وفقًا للقانون.
+16-7 إعادة وتسليم المعلومات: عند انتهاء العقد أو فسخه، يلتزم كل طرف برد أو حذف أو إتلاف المعلومات والملفات السرية الخاصة بالطرف الآخر عند الطلب متى كان ذلك جائزًا، مع جواز الاحتفاظ بما يلزم قانونًا أو لإثبات الحقوق والدفاع عنها.
+16-8 مدة السرية: يبقى الالتزام بالسرية قائمًا طوال مدة العقد ولمدة {{website_confidentiality_duration_text}} من تاريخ انتهائه أو فسخه أو انقضائه، ما لم تستوجب طبيعة المعلومات أو القانون مدة أطول.
+16-9 استخدام اسم المشروع أو العلامة التجارية: {{website_portfolio_permission_text}}
+16-10 الحقوق الأخرى: لا يخل الالتزام بالسرية بحقوق الملكية الفكرية أو التعويض أو اتخاذ الإجراءات القضائية أو التحفظية اللازمة لحماية المعلومات أو البيانات أو الحقوق.`,
       };
-    case "website_development_source_section_20": {
-      let body = base.bodyAr
-        .replace(/بريد الطرف الأول\s*\(العميل\)[^\n]*\n?/g, "")
-        .replace(/بريد الطرف الثاني\s*\(مقدم الخدمة\)[^\n]*\n?/g, "")
-        .replace(/هاتف الطرف الأول\s*\(العميل\)[^\n]*\n?/g, "")
-        .replace(/هاتف الطرف الثاني\s*\(مقدم الخدمة\)[^\n]*\n?/g, "")
-        .replace(/اسم المنصة[^\n]*\n?/g, "")
-        .replace(/رابط المشروع أو الحساب[^\n]*\n?/g, "")
-        .replace(/^\)+\s*\(:?\s*$/gm, "")
-        .replace(/\n{3,}/g, "\n\n");
-      body += "\nوتُثبت بيانات البريد الإلكتروني أو تطبيقات المراسلة أو منصة إدارة المشروع التي يعتمدها الطرفان - إن وجدت - في قسم «الإخطارات ووسائل التواصل» من بيانات هذا العقد.";
-      return { ...base, titleAr: "المادة العشرون: الإخطارات والموطن المختار", bodyAr: body.trim() };
-    }
-    case "website_development_source_section_21": {
-      const replacement = `21-3 الاختصاص القضائي: مع مراعاة قواعد الاختصاص الولائي والنوعي والمكاني المتعلقة بالنظام العام، اتفق الطرفان على أن تختص محكمة {{website_competent_court}} الابتدائية ودوائرها الجزئية بحسب الأحوال بنظر المنازعات الناشئة عن العقد أو المرتبطة به، وذلك في الحدود التي يجيزها القانون. وإذا تعذر انعقاد الاختصاص للمحكمة المختارة قانونًا، ينعقد الاختصاص للمحكمة المصرية المختصة وفقًا للقواعد الآمرة.\n`;
-      const body = base.bodyAr.replace(/21-3\s*الاختصاص القضائي:[\s\S]*?(?=21-4\s*المنازعات الفنية:)/, replacement);
-      return { ...base, titleAr: "المادة الحادية والعشرون: القانون الواجب التطبيق وتسوية المنازعات", variables: [...new Set([...(base.variables ?? []), "website_competent_court"])], bodyAr: body.trim() };
-    }
-    case "website_development_source_section_22": {
-      let body = base.bodyAr.replace(/22-15\s*رسوم الدمغة والرسوم القانونية[\s\S]*$/m, "").trim();
-      body += `\n22-15 رسوم الدمغة والرسوم القانونية: {{website_legal_fees_text}}`;
-      return { ...base, titleAr: "المادة الثانية والعشرون: الأحكام العامة", variables: [...new Set([...(base.variables ?? []), "website_legal_fees_text"])], bodyAr: body };
-    }
-    case "website_development_source_section_23": {
-      const markers = ["الطرف الثاني (مقدم الخدمة / المطور)", "الطرف الثاني ( مقدم الخدمة /المطور)"];
-      let body = base.bodyAr;
-      for (const marker of markers) {
-        const at = body.indexOf(marker);
-        if (at >= 0) body = body.slice(0, at).trim();
-      }
-      return { ...base, titleAr: "المادة الثالثة والعشرون: التوقيعات", bodyAr: body };
-    }
+    case "website_development_source_section_17":
+      return {
+        ...base,
+        titleAr: "المادة السابعة عشرة: المسؤولية وحدودها",
+        bodyAr: `17-1 المسؤولية التعاقدية: يتحمل كل طرف المسؤولية عن الأضرار المباشرة التي تلحق بالطرف الآخر بسبب إخلال ثابت بالتزام جوهري من التزاماته، في حدود الخطأ وعلاقة السببية والقواعد القانونية واجبة التطبيق.
+17-2 حدود مسؤولية الطرف الثاني: لا يكون الطرف الثاني مسؤولًا عن ضرر ناشئ عن استخدام المشروع بالمخالفة للغرض أو النطاق المتفق عليه، أو تدخل غير مصرح به من الطرف الأول أو الغير، أو تعطل خدمة خارجية، أو فقد بيانات بسبب عدم وجود نسخ احتياطية خارجة عن نطاق التزامه، أو محتوى غير مشروع قدمه الطرف الأول، أو هجوم أو انقطاع خارجي لا يرجع إلى خطأ جسيم أو إخلال مباشر من الطرف الثاني، أو تحديثات لاحقة خارج نطاق الضمان والدعم.
+17-3 الأضرار غير المباشرة: مع مراعاة الأحكام الآمرة، لا يتحمل أي طرف الأضرار غير المباشرة أو التبعية أو العرضية أو الخاصة، ومنها خسارة الأرباح أو الفرص أو السمعة أو الاستخدام، إلا إذا كان التعويض عنها واجبًا بنص قانوني آمر.
+17-4 الحد الأقصى للمسؤولية: ما لم يكن الضرر ناشئًا عن غش أو تدليس أو خطأ جسيم أو تعد عمدي أو إخلال بالسرية أو اعتداء على الملكية الفكرية أو حالة لا يجوز قانونًا الحد من المسؤولية عنها، لا تتجاوز المسؤولية المالية الإجمالية للطرف الثاني مجموع المبالغ التي سددها الطرف الأول فعليًا للطرف الثاني بموجب العقد.
+17-5 واجب الحد من الضرر: يلتزم الطرف المتضرر باتخاذ التدابير المعقولة للحد من الضرر، ولا يستحق تعويضًا عن الجزء الذي كان يمكن تجنبه باتخاذ الإجراءات المعتادة.
+17-6 مطالبات الغير: يلتزم الطرف الأول بتعويض الطرف الثاني عن المطالبات والمصروفات التي تنشأ مباشرةً بسبب بيانات أو محتوى أو حقوق قدمها الطرف الأول وثبت عدم مشروعيتها أو اعتداؤها على حقوق الغير، ما لم يكن الضرر ناشئًا عن غش أو خطأ جسيم أو تعد مباشر من الطرف الثاني.
+17-7 حماية الأنظمة وبيانات الدخول: يتحمل الطرف الأول مسؤولية المحافظة على بيانات الدخول والحسابات التي تقع تحت سيطرته بعد تسليمها إليه، ولا يسأل الطرف الثاني عن ضرر ناشئ عن إخلال الطرف الأول بهذا الالتزام.
+17-8 المسؤولية الآمرة: لا يفسر أي حكم في هذه المادة على أنه إعفاء من مسؤولية لا يجوز قانونًا الاتفاق على إعفائها أو الحد منها.`,
+      };
+    case "website_development_source_section_18":
+      return {
+        ...base,
+        titleAr: "المادة الثامنة عشرة: إنهاء العقد وآثاره",
+        variables: ["website_breach_cure_days", "website_nonpayment_termination_days", "website_client_stoppage_days"],
+        bodyAr: `18-1 انتهاء العقد: ينتهي هذا العقد بتنفيذ جميع الالتزامات الناشئة عنه، أو باتفاق الطرفين كتابةً، أو بتحقق سبب من أسباب الإنهاء أو الفسخ أو الانقضاء المقررة فيه أو في القانون.
+18-2 الإنهاء بسبب الإخلال الجوهري: يجوز لأي من الطرفين إنهاء العقد إذا أخل الطرف الآخر بالتزام جوهري ولم يقم بمعالجة الإخلال خلال {{website_breach_cure_days}} يومًا من تاريخ إخطاره كتابةً بطبيعة الإخلال، ما لم يكن الإخلال غير قابل للإصلاح، ففي هذه الحالة يجوز اتخاذ الإجراء الذي يجيزه العقد أو القانون دون انتظار انقضاء المهلة، مع عدم الإخلال بالحقوق أو التعويضات المستحقة.
+18-3 عدم السداد: إذا تأخر الطرف الأول في سداد مبلغ مستحق، جاز للطرف الثاني بعد الإخطار تعليق التنفيذ حتى تمام السداد، ولا تدخل مدة التعليق ضمن مدة التنفيذ وتمتد المدد والجدول الزمني بقدر التعليق وآثاره. فإذا استمر عدم السداد مدة {{website_nonpayment_termination_days}} يومًا من تاريخ الإخطار، جاز للطرف الثاني إنهاء العقد مع الاحتفاظ بالمستحقات المالية والحقوق المقررة له.
+18-4 توقف المشروع بسبب الطرف الأول: إذا توقف التنفيذ بسبب امتناع الطرف الأول عن تقديم البيانات أو المحتوى أو الاعتمادات أو الموافقات أو متطلبات التنفيذ أو بسبب عدم الرد لمدة تجاوز {{website_client_stoppage_days}} أيام، جاز للطرف الثاني تعليق المشروع. وإذا استمر سبب التوقف بعد إخطار الطرف الأول وانقضاء المهلة، جاز إنهاء العقد مع إجراء التسوية النهائية للحسابات.
+18-5 إنهاء العقد من جانب الطرف الأول: يجوز للطرف الأول إنهاء العقد إذا ثبت إخلال الطرف الثاني إخلالًا جوهريًا بتنفيذ الأعمال أو عدم مطابقتها لنطاق العمل أو المواصفات أو معايير القبول، ولم يقم بمعالجة الإخلال خلال مهلة المعالجة المقررة في البند 18-2 بعد إخطاره كتابةً، دون إخلال بحق الطرف الأول في الحقوق أو التعويضات المستحقة وفق العقد أو القانون.
+18-6 آثار الإنهاء والتسوية المالية: يلتزم الطرف الأول بسداد قيمة جميع الأعمال والخدمات والمراحل التي نُفذت حتى تاريخ الإنهاء، وكذلك المصروفات والالتزامات والرسوم والاشتراكات التي تكبدها الطرف الثاني بصورة مشروعة ومباشرة لتنفيذ هذا العقد وكانت مستحقة أو غير قابلة للاسترداد. وإذا سبق للطرف الأول سداد مبالغ عن أعمال لم يبدأ تنفيذها أو لم تصبح مستحقة، فتتم تسويتها ورد ما يستحق رده بعد خصم ما يقابل الأعمال المنفذة والمبالغ المستحقة. ويلتزم كل طرف برد أو حذف أو إتلاف المعلومات والمواد الخاصة بالطرف الآخر بالقدر الذي تقضي به أحكام السرية والقانون، ولا يؤثر الإنهاء على الحقوق والمطالبات التي نشأت قبله.
+18-7 المخرجات وحقوق الملكية: لا يسقط بالإنهاء حق الطرف الأول في استلام المخرجات أو الملفات أو بيانات الوصول التي اكتسب حقًا في استلامها وأوفى بالمستحقات المالية المتعلقة بها. وإذا انتهى العقد قبل اكتمال المشروع، يلتزم الطرف الثاني بتسليم الأعمال والمراحل المكتملة التي أصبحت مستحقة التسليم بعد سداد مستحقاتها، ولا يلتزم بتسليم مراحل غير مكتملة أو غير مسددة إلا باتفاق مكتوب.
+18-8 استمرار بعض الأحكام: تستمر بعد انتهاء العقد الأحكام التي يقتضي نصها أو طبيعتها البقاء، وعلى الأخص السرية وحقوق الملكية الفكرية وحدود المسؤولية والالتزامات المالية وتسوية المنازعات.`,
+      };
+    case "website_development_source_section_19":
+      return {
+        ...base,
+        titleAr: "المادة التاسعة عشرة: القوة القاهرة والظروف الطارئة",
+        variables: ["website_force_majeure_notice_days", "website_force_majeure_termination_days", "website_hardship_duration_days", "website_hardship_negotiation_days"],
+        bodyAr: `19-1 القوة القاهرة: يقصد بها الحادث الاستثنائي العام غير المتوقع عند إبرام العقد والخارج عن إرادة الطرف المتأثر، الذي لا يمكن دفعه بوسائل معقولة ويترتب عليه استحالة تنفيذ الالتزام كليًا أو جزئيًا بصورة مؤقتة أو نهائية، وذلك وفقًا للقانون.
+19-2 الظروف الطارئة: يقصد بها الحادث الاستثنائي العام غير المتوقع الذي يجعل تنفيذ الالتزام ممكنًا ولكنه مرهقًا إرهاقًا جسيمًا يهدد الطرف الملتزم بخسارة فادحة دون أن يبلغ حد الاستحالة، وذلك وفقًا للقانون.
+19-3 أمثلة الوقائع المؤثرة: تشمل بحسب طبيعة الواقعة وأثرها الفعلي الحروب والاضطرابات العامة والكوارث والأوبئة والانقطاعات العامة واسعة النطاق للبنية الرقمية، والتوقف الجوهري لخدمات تقنية يعتمد عليها المشروع، والقرارات السيادية أو التنظيمية، والهجمات الإلكترونية واسعة النطاق، متى كانت خارجة عن السيطرة المعقولة للطرف المتأثر.
+19-4 ما لا يعد قوة قاهرة أو ظرفًا طارئًا: لا يدخل في ذلك سوء الإدارة أو نقص الموارد المعتاد أو الأخطاء الفنية الناتجة عن التقصير أو تأخر الطرف الأول في مدخلاته أو التعثر المالي أو الزيادات المعتادة في الأسعار أو فقد التراخيص بسبب مخالفة الطرف المعني، ما لم تكن الواقعة نفسها جزءًا من حدث عام مستوفٍ للشروط القانونية.
+19-5 التزامات الطرف المتأثر: يلتزم الطرف الذي يتمسك بالقوة القاهرة أو الظروف الطارئة بإخطار الطرف الآخر كتابةً خلال {{website_force_majeure_notice_days}} أيام من تاريخ علمه بالواقعة متى كان ذلك ممكنًا، مع بيان طبيعتها وأثرها ومدتها التقديرية، واتخاذ الإجراءات المعقولة للحد من آثارها واستئناف التنفيذ عند زوال السبب أو إمكان التنفيذ الجزئي.
+19-6 آثار القوة القاهرة: إذا ترتب على القوة القاهرة استحالة مؤقتة، يوقف الالتزام المتأثر وتمتد المدد بقدر التوقف الفعلي دون جزاءات عن هذا التأخير. وإذا استمرت القوة القاهرة مدة تجاوز {{website_force_majeure_termination_days}} يومًا متصلة وكان استمرارها يمنع تحقيق الغرض الأساسي من العقد، جاز لأي من الطرفين إنهاء العقد بإخطار كتابي مع تسوية الأعمال المنفذة والحقوق المالية المستحقة حتى تاريخ الإنهاء، دون تعويض عن الجزء الذي استحال تنفيذه ما لم يقضِ القانون بغير ذلك.
+19-7 آثار الظروف الطارئة: إذا استمرت الظروف الطارئة مدة تجاوز {{website_hardship_duration_days}} يومًا وأخلت إخلالًا جسيمًا بالتوازن الاقتصادي للعقد، جاز لأي من الطرفين دعوة الآخر إلى إعادة التفاوض بحسن نية بشأن المدة أو المقابل أو الالتزامات المتأثرة. وإذا لم يتوصل الطرفان إلى اتفاق خلال {{website_hardship_negotiation_days}} يومًا من بدء التفاوض، جاز لكل منهما مباشرة الحقوق المقررة في العقد أو القانون، ولا يترتب على مجرد طلب التفاوض وقف الالتزامات إلا باتفاق أو نص قانوني.`,
+      };
+    case "website_development_source_section_20":
+      return {
+        ...base,
+        titleAr: "المادة العشرون: الإخطارات والموطن المختار",
+        variables: ["website_email_notices_text", "website_messaging_notices_text", "website_project_platform_text", "website_contact_change_notice_days"],
+        bodyAr: `20-1 وسائل الإخطار: تكون الإخطارات والإنذارات والمراسلات والاعتمادات المتعلقة بهذا العقد صحيحة ومنتجة لآثارها إذا تمت بإحدى الوسائل المعتمدة في هذه المادة وفي الحدود التي يجيزها القانون.
+20-2 الموطن المختار: يُعد عنوان كل طرف المبين في المادة الأولى موطنًا مختارًا له، وتوجه إليه المراسلات الرسمية وفقًا للقواعد القانونية المنظمة.
+20-3 البريد الإلكتروني المعتمد: {{website_email_notices_text}}
+20-4 تطبيقات المراسلة الإلكترونية: {{website_messaging_notices_text}}
+20-5 منصة إدارة المشروع: {{website_project_platform_text}}
+20-6 تغيير بيانات الاتصال: يلتزم كل طرف بإخطار الطرف الآخر كتابةً بأي تغيير في عنوانه أو بريده أو هاتفه أو وسيلة الاتصال أو المنصة المعتمدة خلال {{website_contact_change_notice_days}} يومًا من تاريخ التغيير؛ وإلى حين الإخطار تظل البيانات السابقة منتجة لآثارها القانونية في الحدود التي يجيزها القانون.
+20-7 وسائل الاتصال الأخرى: يجوز للطرفين اعتماد وسيلة اتصال إلكترونية أو تقنية أخرى كتابةً أثناء سريان العقد، وتكون نافذة من تاريخ اعتمادها.
+20-8 حجية وسائل الاتصال الإلكترونية: لا يخل اعتماد الوسائل الإلكترونية بأي متطلبات شكلية يفرضها القانون لإجراء معين، وتكون المراسلات والاعتمادات الإلكترونية حجة متى أمكن التحقق من صدورها ونسبتها وسلامة محتواها وفي الحدود التي يجيزها القانون.`,
+      };
+    case "website_development_source_section_21":
+      return {
+        ...base,
+        titleAr: "المادة الحادية والعشرون: القانون الواجب التطبيق وتسوية المنازعات",
+        variables: ["website_competent_court_text"],
+        bodyAr: `21-1 القانون الواجب التطبيق: يخضع هذا العقد وما ينشأ عنه أو يرتبط به من حقوق والتزامات ومنازعات للقوانين السارية في جمهورية مصر العربية، بما في ذلك القواعد المدنية وقواعد الإثبات والتوقيع الإلكتروني والملكية الفكرية وحماية البيانات متى كانت واجبة التطبيق.
+21-2 التسوية الودية: يجوز للطرفين السعي إلى تسوية أي نزاع وديًا بالتفاوض أو الوساطة أو الاستعانة بخبير فني أو قانوني، ولا تعد هذه الإجراءات شرطًا لازمًا للجوء إلى القضاء ما لم يوجب القانون أو اتفاق مكتوب صحيح خلاف ذلك، ولا توقف المواعيد القانونية بذاتها.
+21-3 الاختصاص القضائي: مع مراعاة قواعد الاختصاص الولائي والنوعي والمكاني المتعلقة بالنظام العام، اتفق الطرفان على أن تختص {{website_competent_court_text}} بنظر المنازعات الناشئة عن العقد أو المرتبطة به، وذلك في الحدود التي يجيزها القانون. وإذا تعذر انعقاد الاختصاص للمحكمة المختارة قانونًا، ينعقد الاختصاص للمحكمة المصرية المختصة وفقًا للقواعد الآمرة.
+21-4 المنازعات الفنية: إذا تعلق النزاع بمسألة فنية، مثل مطابقة الأعمال لنطاق العمل أو المواصفات أو معايير القبول، أو وجود عيب برمجي، أو نسبة الإنجاز، أو اعتبار طلب ما عملًا إضافيًا، جاز الاستعانة بخبير فني، ولا يكون رأيه ملزمًا إلا باتفاق الطرفين كتابةً أو إذا كان خبيرًا منتدبًا وفق الإجراءات القانونية.
+21-5 الإجراءات الوقتية والتحفظية: لا يمنع ما سبق أي طرف من طلب إجراء وقتي أو تحفظي أو مستعجل لحماية حق أو دليل أو معلومات سرية أو ملكية فكرية أو شفرة مصدرية أو بيانات أو وسائل وصول، متى توافرت شروطه القانونية.`,
+      };
+    case "website_development_source_section_22":
+      return {
+        ...base,
+        titleAr: "المادة الثانية والعشرون: الأحكام العامة",
+        variables: ["website_contract_copies_text", "website_non_solicitation_duration_text", "website_legal_fees_text"],
+        bodyAr: `22-1 وحدة العقد: يُعد هذا العقد وبياناته وأي ملاحق أو جداول أو أوامر تعديل أو محاضر تسليم واعتماد تم اعتمادها وفق أحكامه وحدة قانونية متكاملة، وتُفسر بما يحقق القصد المشترك للطرفين.
+22-2 ترتيب الأولوية: عند التعارض تكون الأولوية لأحكام هذا العقد، ثم أوامر التعديل المعتمدة، ثم الملاحق الفنية والمالية المعتمدة، ثم محاضر التسليم والاعتماد، ثم المستندات الأخرى التي اتفق الطرفان صراحةً على اعتبارها جزءًا من العقد، ما لم يتضمن مستند لاحق معتمد نصًا صريحًا يعدل حكمًا محددًا.
+22-3 تعديل العقد أو التنازل عن الحقوق: لا يجوز تعديل حكم جوهري أو إضافة التزام أو التنازل عن حق ناشئ عن العقد إلا باتفاق كتابي أو إلكتروني معتبر قانونًا ومعتمد ممن يملك الصفة، ولا يعد السكوت أو التأخر في استعمال الحق أو قبول تنفيذ جزئي تعديلًا أو تنازلًا ضمنيًا.
+22-4 التنازل عن العقد أو إحالة الحقوق: لا يجوز لأي طرف إحالة العقد أو حقوقه أو التزاماته إلى الغير كليًا أو جزئيًا دون موافقة كتابية مسبقة من الطرف الآخر، إلا في الحالات التي يجيزها أو يقررها القانون.
+22-5 استقلال الأحكام: إذا قضي ببطلان أو عدم نفاذ حكم من أحكام العقد كليًا أو جزئيًا، فلا يؤثر ذلك في باقي الأحكام متى كان العقد صالحًا للاستمرار قانونًا.
+22-6 الاتفاق الكامل: يمثل هذا العقد وما يعتمد وفقه الاتفاق النهائي بين الطرفين بشأن موضوعه، ويلغي ما سبقه من تفاهمات أو مراسلات غير مدمجة فيه، دون المساس بحقوق نشأت أو نُفذت قبل توقيعه.
+22-7 الإقرار بالعلم والرضا: يقر الطرفان بأنهما اطلعا على العقد وفهما مضمونه وآثاره ووقعاه بإرادة حرة وبعد إتاحة فرصة كافية للمراجعة والاستعانة بالمختصين.
+22-8 حساب المدد: تُحسب المدد بالأيام التقويمية ما لم ينص الحكم المعني صراحةً على أيام العمل أو يحدد الطرفان أساسًا آخر جائزًا قانونًا، وإذا صادف آخر يوم عطلة رسمية امتد الميعاد إلى أول يوم عمل تالٍ ما لم يقضِ القانون أو الاتفاق الصحيح بغير ذلك.
+22-9 التوقيع والإثبات الإلكتروني: يجوز استخدام التوقيع الإلكتروني أو تبادل واعتماد النسخ والمستندات الإلكترونية متى استوفت المتطلبات القانونية وأمكن التحقق من نسبتها إلى مصدرها وسلامة محتواها.
+22-10 الوفاة والخلف العام: إذا كان أحد الطرفين شخصًا طبيعيًا، فلا تنقضي الحقوق والالتزامات المالية بمجرد وفاته في الحدود التي يقررها القانون، ومع ذلك يجوز إنهاء الالتزام الذي يقوم بطبيعته على اعتباره الشخصي إذا تعذر تنفيذه مع تسوية الحقوق المستحقة حتى تاريخ الانتهاء.
+22-11 عدد النسخ: حُرر هذا العقد في {{website_contract_copies_text}}، وتكون كل نسخة أصلية أو إلكترونية صحيحة متطابقة في الحجية مع غيرها، وتكون لجميع النسخ ذات الحجية القانونية متى ثبتت صحتها ونسبتها إلى أطرافها، ويجوز توقيعها على نسخ مستقلة ويُعد مجموعها عقدًا واحدًا.
+22-12 اللغة المعتمدة: إذا حُرر العقد بأكثر من لغة، تكون النسخة العربية هي المرجع في التفسير والتنفيذ ما لم يتفق الطرفان كتابةً على خلاف ذلك وفي الحدود التي يجيزها القانون.
+22-13 عدم استقطاب العاملين: يلتزم كل طرف بعدم استقطاب أو التعاقد مباشرة أو بطريق غير مباشر مع الموظفين أو المتعاقدين الرئيسيين لدى الطرف الآخر ممن شاركوا في تنفيذ المشروع طوال مدة العقد ولمدة {{website_non_solicitation_duration_text}} من تاريخ انتهائه أو فسخه، ما لم يحصل على موافقة كتابية مسبقة من الطرف الآخر.
+22-14 استمرار بعض الأحكام: تستمر بعد انتهاء العقد الأحكام التي يقتضي نصها أو طبيعتها البقاء، وعلى الأخص السرية والملكية الفكرية وحدود المسؤولية والالتزامات المالية وتسوية المنازعات.
+22-15 رسوم الدمغة والرسوم القانونية: {{website_legal_fees_text}}`,
+      };
+    case "website_development_source_section_23":
+      return {
+        ...base,
+        titleAr: "المادة الثالثة والعشرون: التوقيعات",
+        bodyAr: `يقر الطرفان بأنهما اطلعا على هذا العقد وبياناته ومواده وأي ملاحق أو أوامر تعديل أو محاضر معتمدة مرتبطة به، وفهما الحقوق والالتزامات والآثار القانونية والفنية المترتبة عليه، وأن توقيعهما تم بإرادتهما الحرة وبعد التحقق من صحة البيانات التي تخص كلًا منهما.
+23-1 حجية التوقيع: يُعد توقيع كل طرف إقرارًا بقبوله والتزامه بأحكام العقد، ويمتد أثره إلى المستندات التي تصبح جزءًا منه متى تم توقيعها أو اعتمادها وفق الإجراءات المقررة.
+23-2 التوقيع والاعتماد الإلكتروني: يكون للتوقيع الإلكتروني أو الاعتماد الإلكتروني أو التوقيع على النسخ الإلكترونية الأثر القانوني المقرر له متى استوفى الشروط والمتطلبات التي يقررها القانون وأمكن التحقق من نسبته إلى صاحبه وسلامة المحتوى.
+23-3 حجية النسخ: تكون النسخ الأصلية أو الإلكترونية الصحيحة والمعتمدة من الطرفين متساوية في الحجية في الحدود التي يجيزها القانون.
+23-4 الشهود: إذا اختار الطرفان إضافة شهود، يقتصر توقيع الشاهد على إثبات واقعة الحضور والتوقيع، ولا يعد كفالة أو ضمانًا أو إقرارًا منه بحق أو التزام ناشئ عن العقد ما لم يوقع بصفة قانونية أخرى صريحة.`,
+      };
     default:
       return base;
   }
@@ -1737,40 +2117,168 @@ function reviewedSocialMainClause(clause: LegalClauseDefinition): LegalClauseDef
   };
   switch (clause.key) {
     case "social_media_management_source_preface":
-      return { ...base, titleAr: "بيانات وتمهيد المستند", variables: ["contract_date"], bodyAr: "عقد تقديم خدمات إدارة حسابات ومنصات التواصل الاجتماعي (Social Media Management Services Agreement)\nإنه بتاريخ {{contract_date}}، تم إبرام هذا العقد بين الطرفين المبينة بياناتهما في صدر هذا العقد." };
+      return {
+        ...base,
+        titleAr: "بيانات وتمهيد المستند",
+        variables: ["contract_date"],
+        bodyAr: "عقد تقديم خدمات إدارة حسابات ومنصات التواصل الاجتماعي (Social Media Management Services Agreement)\nإنه بتاريخ {{contract_date}}، تم إبرام هذا العقد بين الطرفين المبينة بياناتهما وتعريفهما في المادة الأولى.",
+      };
     case "social_media_management_source_section_02":
-      return { ...base, titleAr: "المادة الأولى: أطراف العقد وبيانات الخدمة", variables: ["social_project_name", "social_business_nature", "social_managed_platforms", "social_scope_summary", "social_target_market", "social_target_audience", "social_contact_email", "social_project_manager", "social_approval_person", "social_billing_contact"], bodyAr: `تثبت بيانات الطرف الأول (العميل) والطرف الثاني (مقدم الخدمة) في قسم بيانات العقد أعلاه، وتُعد جزءًا لا يتجزأ منه. ويكون المشروع أو النشاط محل الخدمة هو «{{social_project_name}}»، وطبيعة النشاط: {{social_business_nature}}. والمنصات والحسابات المشمولة بالخدمة هي: {{social_managed_platforms}}. ويقتصر نطاق الخدمات والمخرجات المتفق عليها على: {{social_scope_summary}}. ويكون النطاق الجغرافي أو السوق المستهدف: {{social_target_market}}، والفئة المستهدفة: {{social_target_audience}}. والبريد المعتمد للتواصل التشغيلي مع المشروع هو {{social_contact_email}}، والمسؤول عن إدارة المشروع هو {{social_project_manager}}، والمسؤول عن الاعتماد هو {{social_approval_person}}، والمسؤول عن الفواتير أو المدفوعات هو {{social_billing_contact}}.
-ويشار إلى الطرف الأول في هذا العقد بـ «الطرف الأول» أو «العميل»، وإلى الطرف الثاني بـ «الطرف الثاني» أو «مقدم الخدمة».
-ويُقر كل طرف بأنه يتمتع بالأهلية والصفة القانونية اللازمة لإبرام هذا العقد، وأن جميع البيانات والمستندات المقدمة منه صحيحة وسارية وقت التوقيع، ويلتزم بإخطار الطرف الآخر كتابةً بأي تعديل يطرأ عليها خلال مدة سريان العقد.
-ويقر الطرف الأول بأن الشخص المحدد للاعتماد مخول بإصدار الموافقات المتعلقة بالخدمات محل العقد في حدود صلاحياته.
-وتُحدد طبيعة هذا العقد حصريًا بخدمات إدارة حسابات ومنصات التواصل الاجتماعي؛ ولا تُعتد قائمة أنواع مشروعات الويب الواردة بطريق الخطأ في نموذج المصدر لتحديد موضوع هذا العقد.` };
+      return {
+        ...base,
+        titleAr: "المادة الأولى: أطراف العقد وبيانات الخدمة",
+        variables: ["social_client_party_definition", "social_provider_party_definition", "social_activity_definition", "social_accounts_text", "social_responsible_people_text"],
+        bodyAr: `أولًا: {{social_client_party_definition}}
+ثانيًا: {{social_provider_party_definition}}
+ثالثًا: بيانات النشاط والحسابات: {{social_activity_definition}}
+الحسابات والمنصات المشمولة بالخدمة: {{social_accounts_text}}
+رابعًا: المسؤولون المعتمدون: {{social_responsible_people_text}}
+ويقر كل طرف بأنه يتمتع بالأهلية والصفة القانونية اللازمة لإبرام هذا العقد، وأن جميع البيانات والمستندات المقدمة منه صحيحة وسارية وقت التوقيع، ويلتزم بإخطار الطرف الآخر كتابةً بأي تعديل جوهري يطرأ عليها خلال مدة سريان العقد.`,
+      };
+    case "social_media_management_source_section_05":
+      return {
+        ...base,
+        titleAr: "المادة الرابعة: محل العقد",
+        variables: ["social_activity_definition", "social_accounts_text", "social_scope_services_text", "social_excluded_services_text", "social_ads_terms_text"],
+        bodyAr: `4-1 محل العقد: يتمثل محل هذا العقد في التزام الطرف الثاني بتقديم خدمات إدارة حسابات ومنصات التواصل الاجتماعي الخاصة بالنشاط المحدد في المادة الأولى، وذلك على الحسابات والمنصات المتفق عليها ووفقًا لنطاق الخدمات المحدد صراحةً في هذا العقد.
+4-2 الحسابات محل الإدارة: الحسابات والمنصات المشمولة هي: {{social_accounts_text}}
+4-3 الخدمات المشمولة: اتفق الطرفان على أن نطاق الخدمات الفعلي يشمل حصريًا: {{social_scope_services_text}}. ولا يُعد ورود أي خدمة أخرى في التعريفات أو الأمثلة الواردة بالعقد التزامًا على الطرف الثاني ما لم تُدرج صراحةً ضمن النطاق أو يعتمدها الطرفان بأمر تعديل.
+4-4 الأعمال الإضافية: كل خدمة أو عمل أو نشاط أو مخرج أو تعديل لا يدخل ضمن نطاق الخدمات المبين أعلاه يُعد عملًا إضافيًا، ولا يلتزم الطرف الثاني بتنفيذه إلا بعد اعتماد نطاقه ومقابله ومدته وأثره على الخطة الزمنية كتابةً أو إلكترونيًا وفقًا لوسائل الاعتماد المعتمدة.
+4-5 الخدمات غير المشمولة: {{social_excluded_services_text}}
+4-6 المصروفات والخدمات المقدمة من الغير والحملات الإعلانية: لا يشمل المقابل المالي رسوم المنصات أو الاشتراكات أو التراخيص أو خدمات الغير أو الميزانيات الإعلانية إلا إذا نص العقد صراحةً على خلاف ذلك. {{social_ads_terms_text}}
+4-7 استخدام خدمات الغير: يخضع استخدام منصات التواصل والأدوات والبرامج والخدمات السحابية وأدوات الذكاء الاصطناعي وشروطها وسياساتها لما يصدر عن مزوديها، ولا يضمن الطرف الثاني استمرارها أو ثبات سياساتها أو أسعارها أو خوارزمياتها، ما لم يكن الضرر ناشئًا عن غش أو خطأ جسيم أو إخلال تعاقدي مباشر منه.
+4-8 التزامات التعاون: يلتزم الطرف الأول بتقديم البيانات والمحتوى والموافقات وصلاحيات الوصول اللازمة في المواعيد المناسبة، ويمتد الجدول الزمني بالقدر الذي يتناسب مع أي تأخير راجع إليه.
+4-9 التكييف القانوني: هذا العقد عقد تقديم خدمات مهنية مستقلة، ولا ينشئ علاقة عمل أو شراكة أو وكالة أو مشروعًا مشتركًا بين الطرفين.`,
+      };
+    case "social_media_management_source_section_07":
+      return {
+        ...base,
+        titleAr: "المادة السادسة: نطاق الخدمات",
+        variables: ["social_scope_services_text", "social_accounts_text", "social_content_plan_text", "social_reports_kpi_text", "social_ads_terms_text"],
+        bodyAr: `6-1 نطاق الالتزام: يلتزم الطرف الثاني بتقديم الخدمات المشمولة صراحةً في هذا العقد على الحسابات والمنصات المحددة، وبما يتفق مع الأصول المهنية والممارسات الفنية المتعارف عليها.
+6-2 الخدمات المشمولة: الخدمات المتفق عليها هي: {{social_scope_services_text}}.
+6-3 الحسابات والمنصات: {{social_accounts_text}}
+6-4 المحتوى والمخرجات: {{social_content_plan_text}}
+6-5 الحملات الإعلانية: {{social_ads_terms_text}}
+6-6 حدود نطاق الخدمات والأعمال الإضافية: لا يمتد نطاق الالتزام إلى أي خدمة أو حساب أو منصة أو مخرج أو نوع محتوى أو وتيرة نشر أو حملة لم يعتمدها الطرفان. وكل إضافة أو حذف أو تعديل جوهري بعد بدء التنفيذ يخضع لإجراءات تعديل النطاق ويجوز أن يترتب عليه تعديل المقابل أو المدة.
+6-7 التزامات الطرف الأول اللازمة للتنفيذ: يلتزم الطرف الأول بتوفير البيانات والمحتوى والشعارات والعلامات التجارية وصلاحيات الوصول والتعليمات والموافقات والتراخيص اللازمة، والرد على الاستفسارات ومراجعة الأعمال واعتمادها خلال المدد المحددة بالعقد.
+6-8 التقارير ومؤشرات الأداء: {{social_reports_kpi_text}}
+6-9 تفسير النطاق: عند الغموض تكون الأولوية لأحكام العقد ثم أوامر التعديل ثم الملاحق المعتمدة ثم الاعتمادات الكتابية أو الإلكترونية، ولا يجوز التوسع في إنشاء التزامات لم يتفق عليها الطرفان صراحةً.`,
+      };
     case "social_media_management_source_section_10":
-      return { ...base, titleAr: "المادة التاسعة: مدة العقد وبدء تقديم الخدمات", variables: ["social_contract_duration"], bodyAr: base.bodyAr.replace(/9-2\s*مدة العقد:[\s\S]*?(?=9-3\s*استمرار تقديم الخدمات)/, `9-2 مدة العقد: تكون مدة هذا العقد ({{social_contract_duration}})، تبدأ من تاريخ بدء تقديم الخدمات، ما لم يتفق الطرفان كتابةً على تاريخ آخر، وتظل جميع أحكام هذا العقد نافذة طوال مدة سريانه وحتى انتهاء جميع الالتزامات الناشئة عنه أو تسويتها وفقًا لأحكامه.\n`) };
-    case "social_media_management_source_section_11": {
-      const rest = base.bodyAr.replace(/^[\s\S]*?(?=10-2\s*استحقاق المقابل المالي)/, "");
-      return { ...base, titleAr: "المادة العاشرة: المقابل المالي وآلية السداد", variables: ["social_fee_nature", "social_fee", "social_fee_words"], bodyAr: `10-1 قيمة المقابل المالي: يلتزم الطرف الأول بسداد مقابل مالي {{social_fee_nature}} قدره {{social_fee}} جنيه مصري، فقط ({{social_fee_words}} جنيه مصري لا غير)، نظير تنفيذ الخدمات والمخرجات المحددة في هذا العقد وفي نطاق الخدمات المتفق عليه بين الطرفين. ولا يشمل المقابل أي أعمال أو خدمات إضافية غير متفق عليها إلا بموجب اعتماد كتابي وفقًا لأحكام هذا العقد.\n${rest}` };
+      return {
+        ...base,
+        titleAr: "المادة التاسعة: مدة العقد وبدء تقديم الخدمات",
+        variables: ["social_contract_duration_text", "social_service_start_text"],
+        bodyAr: `9-1 نفاذ العقد: يدخل هذا العقد حيز النفاذ من تاريخ توقيعه أو التاريخ الذي يتفق عليه الطرفان كتابةً.
+9-2 بدء تقديم الخدمات: {{social_service_start_text}}، وتبدأ المدة التعاقدية للخدمات من هذا التاريخ ما لم يتفق الطرفان كتابةً على خلاف ذلك.
+9-3 مدة العقد: تكون مدة هذا العقد {{social_contract_duration_text}} من تاريخ بدء تقديم الخدمات.
+9-4 استمرار تقديم الخدمات: يلتزم الطرف الثاني بتقديم الخدمات طوال مدة العقد في حدود النطاق والخطة والمواعيد المعتمدة، مع مراعاة حالات التعليق والتمديد المقررة بالعقد.
+9-5 التجديد أو التمديد: لا يُفترض تجديد العقد أو تمديده ضمنيًا بمجرد استمرار التعامل، ويستلزم أي تجديد أو تمديد اتفاقًا كتابيًا أو إلكترونيًا صريحًا يحدد مدته وأثره المالي والتنفيذي.
+9-6 تعليق التنفيذ وامتداد المدد: إذا تعذر البدء أو الاستمرار بسبب تأخر الطرف الأول في تقديم البيانات أو المحتوى أو الاعتمادات أو صلاحيات الوصول، أو بسبب قوة قاهرة أو ظرف طارئ أو سبب يجيزه العقد أو القانون، تمتد المواعيد بالقدر الذي يقابل مدة التعذر وآثاره الفعلية.`,
+      };
+    case "social_media_management_source_section_11":
+      return {
+        ...base,
+        titleAr: "المادة العاشرة: المقابل المالي وآلية السداد",
+        variables: ["social_fee_nature_text", "social_fee", "social_fee_words", "social_payment_schedule_text", "social_payment_method_text", "social_payment_grace_days", "social_ads_terms_text", "social_source_files_text"],
+        bodyAr: `10-1 قيمة المقابل المالي: يلتزم الطرف الأول بسداد مقابل مالي {{social_fee_nature_text}} قدره {{social_fee}} جنيه مصري (فقط {{social_fee_words}} جنيه مصري لا غير) نظير الخدمات والمخرجات المشمولة في نطاق هذا العقد.
+10-2 الاستحقاق وجدول السداد: {{social_payment_schedule_text}}
+10-3 وسيلة السداد وإثبات الوفاء: {{social_payment_method_text}}. ويُعد السداد منتجًا لآثاره من تاريخ قيد المبلغ فعليًا في وسيلة السداد المعتمدة أو استلامه بموجب إيصال أو مخالصة صحيحة.
+10-4 التأخر في السداد: إذا تأخر الطرف الأول عن سداد مبلغ مستحق، جاز للطرف الثاني بعد إخطار الطرف الأول ومنحه مهلة {{social_payment_grace_days}} أيام عمل للسداد تعليق تنفيذ الخدمات أو وقف تسليم المخرجات أو الامتناع عن بدء أعمال جديدة، وتمتد المدد الزمنية بالقدر الذي يعادل التأخير وآثاره الفعلية.
+10-5 الأعمال والخدمات الإضافية: لا يشمل المقابل أي خدمات أو تعديلات أو زيادة في الحسابات أو المنصات أو الحملات أو المخرجات خارج النطاق المعتمد، وتستلزم اتفاقًا يحدد نطاقها ومقابلها وأثرها الزمني.
+10-6 الميزانيات الإعلانية والخدمات المقدمة من الغير: {{social_ads_terms_text}}
+10-7 التسوية عند إدارة ميزانية إعلانية: إذا كانت وسيلة الدفع أو الميزانية الإعلانية تحت إدارة الطرف الثاني، يلتزم عند انتهاء العلاقة أو عند طلب الطرف الأول بتقديم بيان بالمبالغ المنفقة والمتبقية وفقًا للسجلات المتاحة من المنصات ومزودي الخدمة، وتسوية أي رصيد مستحق وفقًا للاتفاق.
+10-8 الملفات الأصلية والقابلة للتعديل: {{social_source_files_text}}`,
+      };
+    case "social_media_management_source_section_12":
+      return { ...base, titleAr: "المادة الحادية عشرة: تعديل نطاق الخدمات وإجراءات التعديل" };
+    case "social_media_management_source_section_13":
+      return { ...base, titleAr: "المادة الحادية عشرة: تعديل نطاق الخدمات وإجراءات التعديل (تابع)" };
+    case "social_media_management_source_section_14":
+      return {
+        ...base,
+        titleAr: "المادة الثانية عشرة: تسليم الخدمات واعتماد الأعمال والمحتوى",
+        variables: ["social_content_review_days", "social_review_rounds_text"],
+        bodyAr: `12-1 التسليم والمراجعة: يلتزم الطرف الثاني بإتاحة المحتوى أو التصميم أو الخطة أو التقرير أو أي مخرج للطرف الأول من خلال وسيلة التواصل أو الاعتماد المعتمدة.
+12-2 مدة المراجعة: يلتزم الطرف الأول بمراجعة كل مخرج وإرسال ملاحظاته مجمعة خلال {{social_content_review_days}} أيام عمل من تاريخ تسلمه، ما لم يتفق الطرفان كتابةً على مدة مختلفة لمخرج بعينه. وإذا انقضت المدة دون رد جاز للطرف الثاني الاستناد إلى الأثر المقرر بالعقد أو مواصلة التنفيذ في الحدود التي لا تتطلب اعتمادًا صريحًا بحكم طبيعتها.
+12-3 الاعتماد: يُعد اعتماد الطرف الأول للمخرج موافقة عليه في حدود النطاق الذي تم عرضه واعتماده، ولا يتحمل الطرف الثاني بعد الاعتماد مسؤولية الملاحظات التي كان يمكن اكتشافها بصورة معتادة قبل الاعتماد، ما لم يخالف التنفيذ صراحةً النسخة المعتمدة.
+12-4 جولات المراجعة: {{social_review_rounds_text}}
+12-5 حدود التعديل: لا تشمل المراجعات إعادة بناء الاستراتيجية أو إعادة تصميم الاتجاه المعتمد أو إضافة خدمات أو حسابات أو منصات أو مخرجات جديدة؛ وتخضع هذه الطلبات لإجراءات تعديل نطاق الخدمات والأعمال الإضافية.
+12-6 أثر التأخر في الاعتماد: أي تأخر من الطرف الأول في المراجعة أو الاعتماد يمتد معه الجدول الزمني بالقدر المتأثر دون مسؤولية على الطرف الثاني عن مدة التأخير الراجعة للطرف الأول.`,
+      };
+    case "social_media_management_source_section_15":
+      return {
+        ...base,
+        titleAr: "المادة الثالثة عشرة: حقوق الملكية الفكرية",
+        variables: ["social_source_files_text", "social_portfolio_permission_text"],
+        bodyAr: `13-1 حقوق الطرف الأول السابقة: تظل العلامات التجارية والشعارات والمواد والبيانات والمحتوى والحقوق التي قدمها الطرف الأول أو كان يملكها قبل العقد مملوكة له أو لأصحابها، ولا يكتسب الطرف الثاني عليها حقًا يتجاوز ما يلزم لتنفيذ الخدمات.
+13-2 حقوق الطرف الثاني السابقة: تظل الأدوات والقوالب والمنهجيات والعمليات والأصول العامة والحقوق السابقة للطرف الثاني مملوكة له، ما لم يتفق الطرفان كتابةً على خلاف ذلك.
+13-3 المخرجات النهائية: تنتقل أو تُرخص الحقوق المتعلقة بالمخرجات النهائية المعتمدة والمدفوعة للطرف الأول في الحدود التي يقررها العقد وطبيعة المخرج والاتفاق المكتوب بين الطرفين، مع بقاء حقوق الغير وشروط التراخيص الخارجية نافذة.
+13-4 الملفات الأصلية والقابلة للتعديل: {{social_source_files_text}}
+13-5 محتوى الطرف الأول وحقوق الغير: يتحمل الطرف الأول مسؤولية مشروعية المواد والعلامات والتراخيص التي يقدمها أو يطلب استخدامها، بينما يلتزم الطرف الثاني بعدم تعمد الاعتداء على حقوق الغير في العناصر التي ينتجها بنفسه.
+13-6 استخدام خدمات أو عناصر الغير: تبقى الخطوط والصور والموسيقى والقوالب والبرمجيات وأي عناصر مرخصة من الغير خاضعة لشروط أصحابها ولا تنتقل حقوق تتجاوز نطاق الترخيص.
+13-7 العرض في معرض الأعمال والتسويق: {{social_portfolio_permission_text}}
+13-8 أثر انتهاء العقد: لا يسقط انتهاء العقد الحقوق التي اكتسبها أي طرف قبل انتهائه، ويظل تسليم المخرجات والملفات مرتبطًا بنطاق الاتفاق والوفاء بالمستحقات المالية.`,
+      };
+    case "social_media_management_source_section_18":
+      return {
+        ...base,
+        titleAr: "المادة السادسة عشرة: السرية وعدم الإفصاح",
+        variables: ["social_portfolio_permission_text", "social_ai_permission_text"],
+        bodyAr: `16-1 الالتزام بالسرية: يلتزم كل طرف بالمحافظة على سرية البيانات والمعلومات والمستندات وبيانات الدخول والخطط والمحتوى غير المنشور والمواد التي يطلع عليها بسبب العقد وعدم استخدامها إلا في حدود تنفيذ الالتزامات.
+16-2 الأشخاص المصرح لهم: يجوز الإفصاح للموظفين أو المتعاونين أو مقدمي الخدمات بالقدر اللازم للتنفيذ، بشرط خضوعهم لالتزامات حماية مناسبة، ويظل الطرف الذي استعان بهم مسؤولًا في حدود القانون والعقد.
+16-3 الاستثناءات: لا تشمل السرية ما كان معلومًا بصورة مشروعة قبل الإفصاح، أو أصبح متاحًا للجمهور دون مخالفة، أو حصل عليه الطرف من مصدر مشروع مستقل، أو وجب الإفصاح عنه بحكم القانون أو أمر جهة مختصة.
+16-4 بيانات الدخول والبيانات الشخصية: يلتزم الطرفان باتخاذ التدابير المعقولة لحماية كلمات المرور ورموز التحقق وصلاحيات الوصول والبيانات الشخصية وعدم مشاركتها خارج نطاق التنفيذ.
+16-5 مدة السرية: يستمر الالتزام بالسرية طوال مدة العقد ولمدة ثلاث (3) سنوات بعد انتهائه أو فسخه، أو طوال بقاء المعلومة محتفظة بطبيعتها السرية إذا أوجب القانون أو طبيعتها حماية أطول.
+16-6 Portfolio واستخدام اسم العميل: {{social_portfolio_permission_text}}
+16-7 استخدام أدوات الذكاء الاصطناعي والبيانات غير المنشورة: {{social_ai_permission_text}}
+16-8 إعادة أو حذف المعلومات: عند انتهاء العقد يلتزم كل طرف برد أو حذف ما لدى حيازته من بيانات سرية تخص الطرف الآخر متى كان ذلك ممكنًا، مع جواز الاحتفاظ بما يفرض القانون الاحتفاظ به أو يلزم لإثبات الحقوق والدفاع عنها.`,
+      };
+    case "social_media_management_source_section_20":
+      return {
+        ...base,
+        titleAr: "المادة الثامنة عشرة: انتهاء العقد وآثاره",
+        variables: ["social_breach_cure_days", "social_payment_grace_days", "social_nonpayment_termination_days", "social_client_stoppage_days", "social_client_post_notice_termination_days", "social_source_files_text"],
+        bodyAr: `18-1 انتهاء العقد: ينتهي العقد بانتهاء مدته أو بتنفيذ الالتزامات أو باتفاق الطرفين أو بأي سبب إنهاء أو فسخ يقرره العقد أو القانون.
+18-2 الإخلال الجوهري: يجوز للطرف المتضرر إنهاء العقد إذا لم يعالج الطرف المخل إخلاله الجوهري خلال {{social_breach_cure_days}} يومًا من تاريخ إخطاره كتابةً، ما لم يكن الإخلال غير قابل للإصلاح فيجوز الإنهاء فورًا في الحدود التي يجيزها القانون.
+18-3 عدم السداد: إذا تأخر الطرف الأول عن سداد مبلغ مستحق، يجوز للطرف الثاني بعد منحه مهلة {{social_payment_grace_days}} أيام عمل تعليق الخدمات. وإذا استمر التأخر لمدة {{social_nonpayment_termination_days}} أيام عمل من تاريخ الإخطار، جاز للطرف الثاني إنهاء العقد مع الاحتفاظ بمستحقاته.
+18-4 توقف المشروع بسبب الطرف الأول: إذا توقف التنفيذ بسبب عدم تقديم البيانات أو المحتوى أو الاعتمادات أو صلاحيات الوصول أو عدم الرد لمدة تجاوز {{social_client_stoppage_days}} أيام عمل، جاز للطرف الثاني تعليق الخدمات. وإذا استمر سبب التوقف بعد إخطار الطرف الأول وانقضاء {{social_client_post_notice_termination_days}} أيام عمل من تاريخ الإخطار، جاز للطرف الثاني إنهاء العقد وتسوية الحسابات.
+18-5 إنهاء العقد بسبب إخلال الطرف الثاني: يجوز للطرف الأول إنهاء العقد إذا ثبت إخلال الطرف الثاني إخلالًا جوهريًا بنطاق الخدمات ولم يعالجه خلال مهلة معالجة الإخلال المحددة في البند 18-2.
+18-6 آثار الإنهاء: يلتزم الطرف الأول بسداد قيمة الخدمات والمراحل المنفذة حتى تاريخ الإنهاء والمصروفات والالتزامات المعتمدة، وتسوّى المبالغ المدفوعة عن خدمات غير منفذة، ولا يؤثر الإنهاء على الحقوق أو المطالبات التي نشأت قبل تاريخه.
+18-7 المخرجات والملفات عند الإنهاء: يستحق الطرف الأول المخرجات النهائية التي اكتمل تنفيذها واستحق تسليمها بعد سداد مستحقاتها. وبالنسبة للملفات الأصلية أو المفتوحة: {{social_source_files_text}}
+18-8 استمرار الأحكام: تستمر بعد انتهاء العقد الأحكام التي تقتضي طبيعتها ذلك، وعلى الأخص السرية والملكية الفكرية والالتزامات المالية وتسوية المنازعات وحدود المسؤولية.`,
+      };
+    case "social_media_management_source_section_21": {
+      const body = base.bodyAr.replace(/19-5\s*التزامات الطرف المتمسك بالقوة القاهرة أو الظروف الطارئة:[\s\S]*?(?=19-6\s*آثار القوة القاهرة)/u,
+        `19-5 التزامات الطرف المتمسك بالقوة القاهرة أو الظروف الطارئة: يلتزم الطرف المتأثر بإخطار الطرف الآخر كتابةً خلال {{social_force_majeure_notice_days}} أيام عمل من تاريخ علمه بالواقعة متى كان ذلك ممكنًا، مع بيان طبيعتها وأثرها المتوقع ومدتها التقديرية، واتخاذ التدابير المعقولة للحد من آثارها وتقديم ما يتوافر من مستندات مؤيدة عند الطلب.\n`);
+      return { ...base, titleAr: "المادة التاسعة عشرة: القوة القاهرة والظروف الطارئة", variables: ["social_force_majeure_notice_days"], bodyAr: body };
     }
-    case "social_media_management_source_section_12": return { ...base, titleAr: "المادة الحادية عشرة: تعديل نطاق الخدمات وإجراءات التعديل" };
-    case "social_media_management_source_section_13": return { ...base, titleAr: "المادة الحادية عشرة: تعديل نطاق الخدمات وإجراءات التعديل (تابع)" };
-    case "social_media_management_source_section_15": {
-      const body = base.bodyAr.replace(/13-8\s*عرض الأعمال في معرض الأعمال والتسويق:[\s\S]*?(?=13-9)/, "13-8 عرض الأعمال في معرض الأعمال والتسويق: لا يجوز للطرف الثاني استخدام اسم الطرف الأول أو علامته التجارية أو شعاره أو محتواه أو حملاته أو نتائجه، أو الإشارة إلى العلاقة التعاقدية أو عرض الأعمال أو النماذج أو المواد المنفذة ضمن معرض الأعمال (Portfolio) أو الموقع الإلكتروني أو وسائل التسويق أو العروض التجارية، إلا بعد الحصول على موافقة كتابية مسبقة من الطرف الأول، ودون الإفصاح عن أي معلومات سرية أو بيانات غير معلنة تخصه.\n");
-      return { ...base, titleAr: "المادة الثالثة عشرة: حقوق الملكية الفكرية", bodyAr: body };
-    }
-    case "social_media_management_source_section_18": return { ...base, titleAr: "المادة السادسة عشرة: السرية وعدم الإفصاح" };
     case "social_media_management_source_section_22":
-      return { ...base, titleAr: "المادة العشرون: الإخطارات ووسائل الاتصال والموطن المختار", bodyAr: `20-1 الموطن المختار: يُعد العنوان المبين في صدر هذا العقد موطنًا مختارًا لكل طرف، وتوجه إليه جميع الإخطارات والإنذارات والمراسلات الرسمية المتعلقة بهذا العقد، وتنتج آثارها القانونية وفقًا للقواعد والإجراءات المقررة قانونًا.
-20-2 وسائل الإخطار المعتمدة: يجوز للطرفين تبادل الإخطارات والمراسلات والاعتمادات والمستندات المتعلقة بتنفيذ هذا العقد من خلال الموطن المختار، والبريد الإلكتروني المعتمد، وتطبيقات المراسلة الإلكترونية المعتمدة بين الطرفين، وأي وسيلة اتصال أخرى يتفق عليها الطرفان كتابةً. وتكون المراسلات المتبادلة عبر الوسائل المعتمدة منتجة لآثارها متى أمكن التحقق من صدورها ونسبتها إلى مرسلها وسلامة محتواها.
-20-3 بيانات الاتصال المعتمدة: تثبت بيانات البريد الإلكتروني وأرقام الهاتف المعتمدة للطرفين في قسم «الإخطارات وبيانات الاتصال المعتمدة» من بيانات العقد، ويلتزم كل طرف بإخطار الطرف الآخر بأي تغيير يطرأ عليها وفقًا لأحكام هذا العقد.
-20-4 استخدام المراسلات الإلكترونية: يجوز استخدام البريد الإلكتروني وتطبيقات المراسلة الإلكترونية المتفق عليها بين الطرفين لتبادل التعليمات الفنية والملاحظات والملفات والاعتمادات المتعلقة بتنفيذ الخدمات. ولا يترتب على تلك المراسلات تعديل أي حكم جوهري في هذا العقد أو نطاق الخدمات أو المقابل المالي أو مدة التنفيذ إلا بموافقة صريحة من الطرفين وفقًا لإجراءات التعديل الواردة بالعقد.
-20-5 وقت استلام الإخطار الإلكتروني: يُعد الإخطار أو المراسلة الإلكترونية مستلمة ومنتجة لآثارها من تاريخ إرسالها إلى وسيلة الاتصال المعتمدة، ما لم يثبت تعذر وصولها بسبب عطل فني خارج عن إرادة المرسل إليه. ولا يؤثر عدم فتح الرسالة أو عدم الاطلاع عليها، متى ثبت إرسالها إلى وسيلة الاتصال المعتمدة، على آثارها القانونية، مع مراعاة أي إجراءات خاصة يوجبها القانون لبعض الإخطارات.` };
+      return {
+        ...base,
+        titleAr: "المادة العشرون: الإخطارات ووسائل الاتصال والموطن المختار",
+        variables: ["social_email_notices_text", "social_messaging_notices_text"],
+        bodyAr: `20-1 الموطن المختار: يُعد العنوان المبين في تعريف كل طرف موطنًا مختارًا له، وتوجه إليه الإخطارات الرسمية ما لم يتم إخطار الطرف الآخر كتابةً بتغييره.
+20-2 البريد الإلكتروني: {{social_email_notices_text}}
+20-3 تطبيقات المراسلة: {{social_messaging_notices_text}}
+20-4 حجية المراسلات الإلكترونية: تكون المراسلات والاعتمادات المتبادلة عبر الوسائل المعتمدة وسيلة إثبات متى أمكن التحقق من صدورها ونسبتها إلى مرسلها وسلامة محتواها. ولا يترتب عليها بذاتها تعديل نطاق الخدمات أو المقابل المالي أو المدة إلا بموافقة صريحة وفق إجراءات تعديل العقد.
+20-5 تغيير بيانات الاتصال: يلتزم كل طرف بإخطار الطرف الآخر بأي تغيير في بيانات التواصل، وإلى حين تمام الإخطار تظل البيانات السابقة منتجة لآثارها في الحدود التي يجيزها القانون.`,
+      };
     case "social_media_management_source_section_23":
-      return { ...base, titleAr: "المادة الحادية والعشرون: القانون الواجب التطبيق وتسوية المنازعات", variables: [...new Set([...(base.variables ?? []), "social_competent_court"])], bodyAr: base.bodyAr.replace(/21-3\s*الاختصاص القضائي:[\s\S]*?(?=21-4\s*المنازعات الفنية)/, `21-3 الاختصاص القضائي: مع مراعاة قواعد الاختصاص الولائي والنوعي والمكاني المتعلقة بالنظام العام، اتفق الطرفان على أن تختص محكمة {{social_competent_court}} الابتدائية ودوائرها الجزئية بحسب الأحوال بنظر المنازعات الناشئة عن العقد أو المرتبطة به، وذلك في الحدود التي يجيزها القانون. وإذا تعذر انعقاد الاختصاص للمحكمة المختارة قانونًا، ينعقد الاختصاص للمحكمة المصرية المختصة وفقًا للقواعد الآمرة.\n`) };
+      return {
+        ...base,
+        titleAr: "المادة الحادية والعشرون: القانون الواجب التطبيق وتسوية المنازعات",
+        variables: [...new Set([...(base.variables ?? []), "social_competent_court_text"])],
+        bodyAr: base.bodyAr.replace(/21-3\s*الاختصاص القضائي:[\s\S]*?(?=21-4\s*المنازعات الفنية)/u,
+          `21-3 الاختصاص القضائي: مع مراعاة قواعد الاختصاص المتعلقة بالنظام العام، اتفق الطرفان على اختصاص {{social_competent_court_text}} بنظر المنازعات الناشئة عن هذا العقد أو المرتبطة به، وذلك في الحدود التي يجيزها القانون. وإذا تعذر انعقاد الاختصاص للمحكمة المختارة قانونًا، ينعقد الاختصاص للمحكمة المصرية المختصة وفقًا للقواعد الآمرة.\n`),
+      };
     case "social_media_management_source_section_24": {
-      const body = base.bodyAr
-        .replace(/22-11\s*عدد النسخ:[\s\S]*?(?=22-12\s*اللغة المعتمدة)/u, "22-11 عدد النسخ: يجوز تحرير هذا العقد من نسخ أصلية أو إلكترونية متطابقة، ويحتفظ كل طرف بنسخة للعمل بموجبها، وتكون لجميع النسخ ذات الحجية القانونية متى ثبتت صحتها ونسبتها إلى أطرافها. ويجوز توقيع العقد على نسخ منفصلة أو إلكترونية، ويُعد مجموعها عقدًا واحدًا منتجًا لجميع آثاره القانونية.\n")
+      let body = base.bodyAr
+        .replace(/22-11\s*عدد النسخ:[\s\S]*?(?=22-12\s*اللغة المعتمدة)/u, "22-11 عدد النسخ: حُرر هذا العقد من {{social_contract_copies_text}} أصلية أو إلكترونية متطابقة، ويحتفظ كل طرف بنسخة للعمل بموجبها، وتكون لجميع النسخ ذات الحجية القانونية متى ثبتت صحتها ونسبتها إلى أطرافها. ويجوز توقيع العقد على نسخ منفصلة أو إلكترونية ويُعد مجموعها عقدًا واحدًا منتجًا لجميع آثاره القانونية.\n")
         .replace(/22-16\s*الرسوم والضرائب القانونية[\s\S]*$/u, "")
         .trim();
-      return { ...base, titleAr: "المادة الثانية والعشرون: الأحكام العامة", bodyAr: body };
+      return { ...base, titleAr: "المادة الثانية والعشرون: الأحكام العامة", variables: [...new Set([...(base.variables ?? []), "social_contract_copies_text"])], bodyAr: body };
     }
     case "social_media_management_source_section_25": {
       const markers = ["وتوقيعات الأطراف", "وتوقيعات األطراف", "الطرف الثاني (مقدم الخدمة)", "الطرف الثاني ( مقدم الخدمة )"];
@@ -1778,52 +2286,75 @@ function reviewedSocialMainClause(clause: LegalClauseDefinition): LegalClauseDef
       for (const marker of markers) { const at = body.indexOf(marker); if (at >= 0) body = body.slice(0, at).trim(); }
       return { ...base, titleAr: "المادة الثالثة والعشرون: التوقيعات", bodyAr: body };
     }
-    default: return base;
+    default:
+      return base;
   }
 }
 
 const reviewedIdentityMainClauseOverrides: Record<string, Partial<LegalClauseDefinition>> = {
+  visual_identity_design_source_section_26: {
+    titleAr: "ثالثًا: الاختصاص القضائي — رابعًا: المنازعات الفنية — خامسًا: الإجراءات الوقتية",
+    variables: ["visual_competent_court_text"],
+    bodyAr: `ثالثًا: مع مراعاة قواعد الاختصاص الولائي والنوعي المتعلقة بالنظام العام، اتفق الطرفان على اختصاص {{visual_competent_court_text}} بنظر المنازعات الناشئة عن هذا العقد أو المرتبطة به، وذلك في الحدود التي يجيزها القانون.
+رابعًا: إذا تعلق النزاع بمسألة فنية، بما في ذلك مدى مطابقة الأعمال لنطاق الخدمات أو تقييم المراحل أو تحديد ما إذا كان العمل داخل النطاق أو عملًا إضافيًا، جاز الاستعانة بخبير فني متخصص، ولا يكون رأيه ملزمًا إلا باتفاق مكتوب أو إذا كان منتدبًا من المحكمة المختصة.
+خامسًا: لا يخل ما تقدم بحق أي طرف في اتخاذ الإجراءات الوقتية أو التحفظية أو المستعجلة التي يجيزها القانون لحماية حقوقه أو الأدلة أو منع ضرر يتعذر تداركه.`,
+  },
+  visual_identity_design_source_section_23: {
+    titleAr: "المادة السادسة عشرة: الإخطارات والمراسلات",
+    variables: ["visual_email_notices_text", "visual_messaging_notices_text"],
+    bodyAr: `تكون الإخطارات والمراسلات والاعتمادات المتعلقة بهذا العقد صحيحة ومنتجة لآثارها متى تمت بإحدى الوسائل المعتمدة بين الطرفين وفي الحدود التي يجيزها القانون. ويُعد العنوان المبين في تعريف كل طرف موطنًا مختارًا له إلى أن يخطر الطرف الآخر كتابةً بتغييره.
+{{visual_email_notices_text}}
+{{visual_messaging_notices_text}}
+ولا يترتب على المراسلات الإلكترونية بذاتها تعديل نطاق الخدمات أو المقابل المالي أو مدة التنفيذ أو أي التزام جوهري إلا إذا تضمنت اتفاقًا صريحًا وفق إجراءات تعديل العقد. ويلتزم كل طرف بإخطار الآخر بأي تغيير في بيانات التواصل الخاصة به.`,
+  },
+  visual_identity_design_source_section_09: {
+    titleAr: "المادة التاسعة: المقابل المالي وآلية السداد",
+    variables: ["visual_contract_value", "visual_contract_value_words", "visual_payment_schedule_text", "visual_payment_method", "visual_source_files_text"],
+    bodyAr: `يلتزم الطرف الأول بسداد إجمالي مقابل مالي قدره {{visual_contract_value}} جنيه مصري (فقط {{visual_contract_value_words}} جنيه مصري لا غير) نظير الخدمات والمخرجات المشمولة بهذا العقد.
+{{visual_payment_schedule_text}}
+وتكون وسيلة السداد المتفق عليها: {{visual_payment_method}}. ويُعد إيصال السداد أو إشعار التحويل أو أي وسيلة إثبات مقبولة قانونًا دليلًا على الوفاء بالمبلغ المسدد.
+ولا يلتزم الطرف الثاني بالبدء أو الاستمرار أو تسليم المرحلة التي اشترط العقد سداد دفعتها قبل تمام السداد، ويجوز له تعليق التنفيذ عند التأخر دون أن يُعد ذلك تأخيرًا منسوبًا إليه. ولا يشمل المقابل أعمالًا إضافية خارج نطاق الخدمات إلا باتفاق مكتوب.
+وفيما يتعلق بالملفات المصدرية: {{visual_source_files_text}}`,
+  },
+  visual_identity_design_source_preface: {
+    titleAr: "المادة الأولى: أطراف العقد وبيانات المشروع",
+    variables: ["contract_date", "visual_client_party_definition", "visual_provider_party_definition", "visual_project_definition"],
+    bodyAr: `إنه في تاريخ {{contract_date}}، تم إبرام هذا العقد بين كل من:
+أولًا: {{visual_client_party_definition}}
+ثانيًا: {{visual_provider_party_definition}}
+{{visual_project_definition}}
+وقد اتفق الطرفان، وهما بكامل الأهلية والصفة القانونية، على أن تكون البيانات والتعريفات السابقة أساسًا لتفسير وتنفيذ أحكام هذا العقد.`,
+  },
   visual_identity_design_source_section_03: {
     titleAr: "المادة الثالثة: محل العقد",
-    variables: ["visual_project_name", "visual_project_purpose"],
-    bodyAr: `يتمثل محل هذا العقد في التزام الطرف الثاني بتقديم خدمات تصميم الهوية البصرية الخاصة بالمشروع أو العلامة التجارية أو النشاط «{{visual_project_name}}»، للغرض المتفق عليه وهو: {{visual_project_purpose}}، وذلك وفقًا لأحكام هذا العقد وفي حدود نطاق الخدمات المتفق عليها بين الطرفين.
-تشمل خدمات تصميم الهوية البصرية، بحسب ما يتم الاتفاق عليه بين الطرفين، تصميم أو تطوير الشعار، واختيار الألوان والخطوط، وإعداد العناصر والأنماط البصرية، وتصميم المطبوعات أو القوالب أو الأصول الرقمية، وإعداد دليل الهوية البصرية، وأي خدمات أخرى مرتبطة بالهوية البصرية يتفق الطرفان كتابةً على إدراجها ضمن نطاق هذا العقد.
-يقتصر التزام الطرف الثاني على تنفيذ الخدمات والمخرجات المتفق عليها، ولا يمتد التزامه إلى أي أعمال أو خدمات أو متطلبات إضافية لم يرد النص عليها في هذا العقد أو لم يتم الاتفاق عليها كتابةً بين الطرفين.
-ولا تُعد الطلبات أو التعليمات أو الملاحظات أو المراسلات المتبادلة أثناء تنفيذ المشروع، بذاتها، سببًا في إضافة خدمات جديدة أو تعديل نطاق الخدمات أو ترتيب أي التزامات إضافية، إلا إذا تضمنت اتفاقًا واضحًا ومكتوبًا بين الطرفين يحدد أثرها على نطاق العمل أو المقابل المالي أو مدة التنفيذ.
-ويجوز للطرفين أثناء تنفيذ العقد الاتفاق كتابةً على إضافة أو استبعاد أو تعديل أي من الخدمات محل العقد، على أن يحدد الاتفاق ما يترتب على ذلك — إن وجد — من آثار على المقابل المالي أو مدة التنفيذ أو أي التزامات أخرى.
-وإذا وُجدت أي ملاحق أو نماذج أو جداول أو محاضر محررة تنفيذًا لهذا العقد وموقعة من الطرفين بتاريخ معاصر أو لاحق لتاريخ هذا العقد، فتُعد جزءًا لا يتجزأ منه، وتُستكمل أو تُفسر أو تُفصل الأحكام الواردة في هذه المادة في حدود ما ورد بها، وذلك دون الإخلال بالأحكام الأساسية لهذا العقد.`,
+    variables: ["visual_project_name", "visual_project_purpose", "visual_scope_services_text"],
+    bodyAr: `يتمثل محل هذا العقد في التزام الطرف الثاني بتقديم خدمات تصميم الهوية البصرية الخاصة بـ «{{visual_project_name}}» لتحقيق الغرض الآتي: {{visual_project_purpose}}.
+{{visual_scope_services_text}}
+ويقتصر التزام الطرف الثاني على الخدمات والمخرجات المحددة أعلاه، ولا تمتد التزاماته إلى أعمال أو خدمات إضافية إلا باتفاق مكتوب يحدد أثرها — إن وجد — على المقابل المالي ومدة التنفيذ وسائر الالتزامات.`,
   },
   visual_identity_design_source_section_10: {
     titleAr: "المادة العاشرة: المراجعات والتعديلات",
-    bodyAr: `يحق للطرف الأول طلب إجراء المراجعات أو التعديلات على الأعمال محل هذا العقد في الحدود المتفق عليها بين الطرفين، وذلك خلال مراحل التنفيذ أو خلال المدة المحددة للمراجعة والاعتماد، بحسب طبيعة المشروع وما يتم الاتفاق عليه.
-يلتزم الطرف الأول بتقديم ملاحظاته وطلباته المتعلقة بالمراجعة بصورة واضحة ومجمعة قدر الإمكان لكل مرحلة من مراحل العمل، بما يسمح للطرف الثاني بتنفيذها بصورة منظمة، ولا تُعد الطلبات الجديدة أو الملاحظات التي تختلف جوهريًا عن الملاحظات السابقة ضمن نطاق المراجعة ذاتها.
-تقتصر المراجعات والتعديلات على تحسين أو تعديل الأعمال الداخلة ضمن نطاق الخدمات المتفق عليها، ولا تشمل إعادة تصميم المشروع بالكامل، أو تغيير الاتجاه الأساسي أو الرؤية التصميمية بعد اعتمادها، أو إضافة خدمات أو أعمال جديدة غير مشمولة بالعقد.
-إذا طلب الطرف الأول إجراء تعديلات أو إضافات يترتب عليها زيادة جوهرية في حجم الأعمال، أو تغيير نطاق الخدمات، أو تمديد مدة التنفيذ، أو زيادة التكلفة، فلا يلتزم الطرف الثاني بتنفيذها إلا بعد اتفاق الطرفين كتابةً على نطاقها وما يترتب عليها من آثار على المقابل المالي أو مدة التنفيذ أو أي التزامات أخرى.
-يُعد اعتماد الطرف الأول لأي مرحلة من مراحل العمل أو لأي مخرج من المخرجات المتفق عليها موافقةً على الجزء الذي تم اعتماده في حدود نطاقه، ولا يلتزم الطرف الثاني بإجراء تعديلات جوهرية لاحقة عليه إلا بموجب اتفاق مكتوب بين الطرفين.
-لا يترتب على طلب المراجعات أو تنفيذ التعديلات أي أثر على أحكام الملكية الفكرية أو انتقال الحقوق أو التراخيص المقررة بموجب هذا العقد، وتظل تلك الحقوق خاضعة للأحكام المنظمة لها.
-وإذا وُجدت أي ملاحق أو نماذج أو جداول أو محاضر محررة تنفيذًا لهذا العقد وموقعة من الطرفين بتاريخ معاصر أو لاحق لتاريخ هذا العقد، فتُعد جزءًا لا يتجزأ منه، وتُستكمل أو تُفسر أو تُفصل الأحكام الواردة في هذه المادة في حدود ما ورد بها، وذلك دون الإخلال بالأحكام الأساسية لهذا العقد.`,
+    variables: ["visual_revision_rounds", "visual_scope_services_text"],
+    bodyAr: `يشمل المقابل المالي عدد {{visual_revision_rounds}} جولة/جولات مراجعة على الأعمال الداخلة ضمن نطاق الخدمات المتفق عليه. ويقدم الطرف الأول ملاحظاته بصورة واضحة ومجمعة قدر الإمكان لكل جولة.
+{{visual_scope_services_text}}
+وتقتصر المراجعات على تحسين أو تعديل الأعمال الداخلة ضمن النطاق، ولا تشمل إعادة تصميم المشروع بالكامل أو تغيير الاتجاه الأساسي بعد اعتماده أو إضافة خدمات جديدة. وأي طلب يتجاوز عدد الجولات أو النطاق المتفق عليه ويؤثر في حجم الأعمال أو التكلفة أو المدة يُعد عملًا إضافيًا لا يلتزم الطرف الثاني بتنفيذه إلا بعد اتفاق مكتوب يحدد أثره المالي والزمني. ويُعد اعتماد أي مرحلة موافقة عليها في حدودها.`,
   },
   visual_identity_design_source_section_11: {
     titleAr: "المادة الحادية عشرة: حقوق الملكية الفكرية وحقوق الاستخدام",
-    bodyAr: `تظل حقوق الملكية الفكرية المتعلقة بالأعمال والتصميمات والملفات والمقترحات والمسودات التي يقوم الطرف الثاني بإنتاجها أو إعدادها أثناء تنفيذ هذا العقد مملوكة له، ولا تنتقل أي حقوق عليها إلى الطرف الأول إلا في حدود ما يتم الاتفاق عليه صراحةً بين الطرفين وبعد سداد كامل المقابل المالي المستحق، ما لم يتفق الطرفان كتابةً على خلاف ذلك.
-بعد سداد الطرف الأول كامل المقابل المالي المستحق، تنتقل إليه الحقوق المتعلقة بالمخرجات النهائية المعتمدة والمدفوعة فقط، وذلك في الحدود التي يتفق عليها الطرفان، سواء كان ذلك بنقل بعض أو كل الحقوق أو بمنحه حق استخدام أو استغلال، وفقًا لأحكام هذا العقد.
-لا تشمل الحقوق الممنوحة للطرف الأول أي مسودات أو نماذج أولية أو أفكار أو مقترحات أو أعمال غير معتمدة أو غير مدفوعة، وتظل تلك العناصر مملوكة للطرف الثاني ما لم يتفق الطرفان كتابةً على خلاف ذلك.
-لا يلتزم الطرف الثاني بتسليم الملفات المصدر أو ملفات العمل الأصلية أو الملفات القابلة للتعديل أو الأدوات المستخدمة في إنتاج التصميم، إلا إذا تم الاتفاق كتابةً على ذلك، ويحدد هذا الاتفاق نطاق التسليم وأثره المالي — إن وجد.
-لا يجوز للطرف الأول قبل انتقال الحقوق إليه استخدام أو نشر أو تعديل أو إعادة إنتاج أو التصرف في الأعمال محل العقد إلا في الحدود المسموح بها بموجب هذا العقد أو بموافقة كتابية من الطرف الثاني.
-يضمن الطرف الثاني، في حدود الأعمال والعناصر التي قام بإنتاجها بنفسه، عدم تعمد استخدام أو نسخ أعمال الغير على نحو يشكل اعتداءً على حقوق الملكية الفكرية الخاصة بهم، ولا تمتد هذه المسؤولية إلى أي مواد أو ملفات أو عناصر أو محتوى يقدمه الطرف الأول أو يطلب استخدامه.
-إذا تطلب تنفيذ المشروع استخدام أي خطوط أو صور أو عناصر تصميمية أو تراخيص أو خدمات مقدمة من الغير، فتظل هذه العناصر خاضعة لشروط وأحكام الجهات المالكة أو المرخصة لها، ولا تنتقل إلى الطرف الأول أي حقوق تتجاوز نطاق تلك التراخيص، ويتحمل كل طرف مسؤولياته وفقًا لما يتم الاتفاق عليه بينهما.
-يجوز للطرف الثاني عرض الأعمال النهائية المعتمدة ضمن معرض أعماله أو ملفه المهني أو لأغراضه التسويقية، ما لم يتفق الطرفان كتابةً على خلاف ذلك أو تتطلب طبيعة المشروع أو التزامات السرية عدم عرضها.
-وإذا وُجدت أي ملاحق أو نماذج أو جداول أو محاضر محررة تنفيذًا لهذا العقد وموقعة من الطرفين بتاريخ معاصر أو لاحق لتاريخ هذا العقد، فتُعد جزءًا لا يتجزأ منه، وتُستكمل أو تُفسر أو تُفصل الأحكام الواردة في هذه المادة في حدود ما ورد بها، وذلك دون الإخلال بالأحكام الأساسية لهذا العقد.`,
+    variables: ["visual_ip_rights_text", "visual_source_files_text", "visual_portfolio_permission_text"],
+    bodyAr: `تظل المسودات والنماذج الأولية والأفكار والمقترحات والأعمال غير المعتمدة أو غير المدفوعة مملوكة للطرف الثاني، ما لم يتفق الطرفان كتابةً على خلاف ذلك.
+{{visual_ip_rights_text}}
+{{visual_source_files_text}}
+ولا تشمل الحقوق الممنوحة للطرف الأول عناصر مملوكة للغير أو خاضعة لتراخيص مستقلة، مثل الخطوط أو الصور أو الأدوات، إلا في حدود تراخيصها. ويضمن الطرف الثاني في حدود ما أنشأه بنفسه عدم تعمد الاعتداء على حقوق الغير، بينما يتحمل الطرف الأول مسؤولية المواد التي يزوده بها أو يطلب استخدامها.
+{{visual_portfolio_permission_text}}`,
   },
   visual_identity_design_source_section_12: {
     titleAr: "المادة الثانية عشرة: السرية وعدم الإفصاح",
-    bodyAr: `يلتزم كل طرف بالحفاظ على سرية جميع المعلومات والبيانات والمستندات والملفات والرسومات والتصميمات والمراسلات وأي معلومات أخرى ذات طبيعة سرية يطلع عليها أو يحصل عليها بمناسبة تنفيذ هذا العقد، وعدم استخدامها أو الإفصاح عنها أو تمكين الغير من الاطلاع عليها إلا بالقدر اللازم لتنفيذ هذا العقد، أو بموافقة كتابية مسبقة من الطرف الآخر، أو تنفيذًا لالتزام قانوني أو أمر صادر من جهة قضائية أو إدارية مختصة.
-تشمل المعلومات السرية — على سبيل المثال لا الحصر — المعلومات المتعلقة بالمشروع أو العلامة التجارية أو النشاط التجاري أو الخطط أو البيانات الفنية أو الملفات أو المواد غير المعلنة التي يتم تبادلها بين الطرفين أثناء تنفيذ العقد.
-لا تسري أحكام السرية على المعلومات التي أصبحت متاحة للكافة بطريقة مشروعة دون مخالفة لالتزام بالسرية، أو كان الطرف المتلقي يعلمها قبل حصوله عليها من الطرف الآخر، أو حصل عليها من مصدر مشروع مستقل لا يخضع لالتزام بالسرية، أو وافق الطرف الآخر كتابةً على الإفصاح عنها. ويتحمل الطرف الذي يتمسك بأي من هذه الاستثناءات مسؤولية إثبات تحققها.
-يلتزم الطرفان باتخاذ التدابير المعقولة للمحافظة على سرية المعلومات محل هذا العقد، كما يلتزمان بضمان التزام العاملين أو المتعاونين أو الأشخاص الذين يستعينان بهم في تنفيذ العقد بهذه الالتزامات في حدود مسؤولية كل طرف.
-يظل الالتزام بالسرية قائمًا طوال مدة تنفيذ هذا العقد وبعد انتهائه أو فسخه أو انقضائه لمدة (سنة)، أو طالما ظلت المعلومات محتفظة بطبيعتها السرية، أيهما أطول، ما لم يتفق الطرفان كتابةً على خلاف ذلك.
-لا يُعد عرض الطرف الثاني للأعمال النهائية المعتمدة ضمن معرض أعماله أو ملفه المهني أو لأغراضه التسويقية إفشاءً للمعلومات السرية، وذلك في الحدود التي لا تكشف عن معلومات غير معلنة تخص الطرف الأول، وما لم يتفق الطرفان كتابةً على خلاف ذلك.
-وإذا وُجدت أي ملاحق أو نماذج أو جداول أو محاضر محررة تنفيذًا لهذا العقد وموقعة من الطرفين بتاريخ معاصر أو لاحق لتاريخ هذا العقد، فتُعد جزءًا لا يتجزأ منه، وتُستكمل أو تُفسر أو تُفصل الأحكام الواردة في هذه المادة في حدود ما ورد بها، وذلك دون الإخلال بالأحكام الأساسية لهذا العقد.`,
+    variables: ["visual_portfolio_permission_text"],
+    bodyAr: `يلتزم كل طرف بالحفاظ على سرية المعلومات والبيانات والمستندات والملفات والرسومات والتصميمات والمراسلات ذات الطبيعة السرية التي يطلع عليها بمناسبة تنفيذ هذا العقد، وعدم استخدامها أو الإفصاح عنها إلا بالقدر اللازم للتنفيذ أو بموافقة كتابية أو تنفيذًا لالتزام قانوني.
+ولا تشمل السرية المعلومات المتاحة للكافة بصورة مشروعة، أو المعلومة سابقًا للطرف المتلقي، أو المتلقاة من مصدر مستقل مشروع، أو التي أذن صاحبها كتابةً بالإفصاح عنها. ويلتزم كل طرف باتخاذ التدابير المعقولة للمحافظة عليها وضمان التزام من يستعين بهم في حدود مسؤوليته.
+ويظل الالتزام بالسرية قائمًا طوال مدة العقد ولمدة سنة واحدة بعد انتهائه أو فسخه أو انقضائه، أو طالما ظلت المعلومات محتفظة بطبيعتها السرية، أيهما أطول، ما لم يتفق الطرفان كتابةً على خلاف ذلك.
+وفيما يتعلق بعرض الأعمال: {{visual_portfolio_permission_text}}`,
   },
   visual_identity_design_source_section_25: {
     titleAr: "ثانيًا: التسوية الودية",
@@ -1833,11 +2364,9 @@ const reviewedIdentityMainClauseOverrides: Record<string, Partial<LegalClauseDef
   },
   visual_identity_design_source_section_02: {
     titleAr: "المادة الثانية: التمهيد",
-    bodyAr: `يُعد التمهيد السابق جزءًا لا يتجزأ من هذا العقد ومكمّلًا ومفسرًا لأحكامه، وتُقرأ نصوص العقد وتُفسر في ضوء ما ورد به.
-وحيث إن الطرف الأول يرغب في التعاقد مع الطرف الثاني لتنفيذ خدمات تصميم الهوية البصرية الخاصة بمشروعه أو علامته أو نشاطه، وحيث إن الطرف الثاني لديه الخبرة والقدرة الفنية اللازمة لتقديم تلك الخدمات وفقًا لأحكام هذا العقد، فقد اتفقت إرادة الطرفين، بعد إقرارهما بأهليتهما القانونية للتعاقد والتصرف، على إبرام هذا العقد لتنظيم العلاقة بينهما وتحديد حقوق والتزامات كل طرف.
-ويلتزم الطرفان بتنفيذ هذا العقد وفقًا لمبدأ حسن النية والتعاون المتبادل، وفي حدود الالتزامات والحقوق المنصوص عليها فيه، وبما يحقق الغرض الذي أُبرم من أجله.
-ويقر الطرفان بأن هذا العقد يمثل الإطار القانوني المنظم للعلاقة بينهما فيما يتعلق بالخدمات محل العقد، وأن أي تفسير أو تطبيق لأحكامه يكون في حدود هذا الغرض وما تضمنه من التزامات متبادلة.
-ويُعد هذا العقد، وما قد يُحرر تنفيذًا له من ملاحق أو نماذج أو جداول أو محاضر موقعة من الطرفين، كامل الاتفاق بينهما بشأن موضوعه، ويلغي ويحل محل أي تفاهمات أو مراسلات أو اتفاقات سابقة تتعلق بذات الموضوع، سواء كانت شفهية أو مكتوبة، ما لم يتفق الطرفان كتابةً على خلاف ذلك.`,
+    variables: ["visual_project_name", "visual_project_purpose"],
+    bodyAr: `يُعد التمهيد السابق جزءًا لا يتجزأ من هذا العقد ومكمّلًا ومفسرًا لأحكامه. وحيث إن الطرف الأول يرغب في التعاقد مع الطرف الثاني لتنفيذ خدمات تصميم الهوية البصرية الخاصة بـ «{{visual_project_name}}» لتحقيق الغرض الآتي: {{visual_project_purpose}}، وحيث إن الطرف الثاني لديه الخبرة والقدرة الفنية اللازمة لتقديم تلك الخدمات، فقد اتفقت إرادة الطرفين على تنظيم العلاقة بينهما وفقًا لأحكام هذا العقد.
+ويلتزم الطرفان بتنفيذ العقد بحسن نية وفي حدود نطاق الخدمات والحقوق والالتزامات المحددة فيه، ويُعد العقد وما يعتمد تنفيذًا له كتابةً كامل الاتفاق بينهما بشأن موضوعه.`,
   },
   visual_identity_design_source_section_07: {
     titleAr: "المادة السابعة: التزامات الطرف الثاني (المصمم)",
@@ -1872,34 +2401,25 @@ const reviewedIdentityMainClauseOverrides: Record<string, Partial<LegalClauseDef
   },
   visual_identity_design_source_section_04: {
     titleAr: "المادة الرابعة: نطاق الخدمات",
-    bodyAr: `يلتزم الطرف الثاني بتنفيذ خدمات تصميم الهوية البصرية المتفق عليها بين الطرفين، وذلك وفقًا للأصول المهنية المتعارف عليها وفي حدود أحكام هذا العقد ونطاق العمل المحدد به.
-تشمل خدمات تصميم الهوية البصرية، بحسب ما يتم تحديده والاتفاق عليه بين الطرفين، أيًا من الأعمال الآتية: تصميم أو تطوير الشعار (Logo)، وإعداد الهوية البصرية للعلامة التجارية، واختيار الألوان والخطوط المعتمدة، وتصميم العناصر والأنماط البصرية (Visual Elements)، وإعداد دليل الهوية البصرية (Brand Guidelines)، وتصميم المطبوعات أو القوالب أو الملفات أو الأصول الرقمية المرتبطة بالهوية البصرية، وأي خدمات أخرى يتفق الطرفان على إضافتها كتابةً.
-يقتصر نطاق التزام الطرف الثاني على الأعمال والخدمات التي تم الاتفاق عليها بين الطرفين، ولا يمتد إلى أي أعمال أو خدمات أو متطلبات أخرى لم يتم إدراجها ضمن نطاق العقد أو الاتفاق عليها كتابةً.
-ولا تُعد المقترحات أو الأفكار الأولية أو المناقشات أو النماذج التجريبية أو المراسلات المتبادلة بين الطرفين، بذاتها، جزءًا من الخدمات النهائية أو من نطاق الالتزام التعاقدي، ما لم يتفق الطرفان كتابةً على اعتمادها أو إدراجها ضمن نطاق الخدمات.
-ويجوز للطرفين أثناء تنفيذ العقد الاتفاق كتابةً على تعديل أو إضافة أو استبعاد أي من الخدمات، وفقًا لما يتم الاتفاق عليه بشأن آثار ذلك على المقابل المالي أو مدة التنفيذ أو أي التزامات أخرى.
-ويلتزم الطرف الأول بإرسال قائمة الملاحظات المجمعة الخاصة بكل جولة مراجعة خلال مدة لا تجاوز ثلاثة (3) أيام عمل من تاريخ تسلمه المرحلة محل المراجعة، وذلك عبر وسيلة التواصل المعتمدة وفقًا للعقد. فإذا انقضت هذه المدة دون إرسال الملاحظات أو الاعتراض، عُدت المرحلة معتمدة من الطرف الأول، ويجوز للطرف الثاني الانتقال إلى المرحلة التالية أو اعتبار الأعمال مقبولة في حدود تلك المرحلة، ما لم يتفق الطرفان كتابةً على خلاف ذلك.
-وإذا وُجدت أي ملاحق أو نماذج أو جداول أو محاضر محررة تنفيذًا لهذا العقد وموقعة من الطرفين بتاريخ معاصر أو لاحق لتاريخ هذا العقد، فتُعد جزءًا لا يتجزأ منه، وتُستكمل أو تُفسر أو تُفصل الأحكام الواردة في هذه المادة في حدود ما ورد بها، وذلك دون الإخلال بالأحكام الأساسية لهذا العقد.`,
+    variables: ["visual_scope_services_text"],
+    bodyAr: `يلتزم الطرف الثاني بتنفيذ خدمات تصميم الهوية البصرية المتفق عليها وفقًا للأصول المهنية وفي حدود هذا العقد.
+{{visual_scope_services_text}}
+ولا تُعد المقترحات أو الأفكار الأولية أو المناقشات أو النماذج التجريبية جزءًا من المخرجات النهائية ما لم يعتمدها الطرفان كتابةً. ويجوز تعديل نطاق الخدمات باتفاق مكتوب يحدد أثر التعديل على المقابل المالي أو المدة أو غيرهما.
+ويلتزم الطرف الأول بإرسال قائمة ملاحظاته المجمعة الخاصة بكل جولة مراجعة خلال مدة لا تجاوز ثلاثة (3) أيام عمل من تاريخ تسلمه المرحلة محل المراجعة؛ فإذا انقضت المدة دون ملاحظات أو اعتراض، عُدت المرحلة معتمدة في حدودها، ما لم يتفق الطرفان كتابةً على خلاف ذلك.`,
   },
   visual_identity_design_source_section_05: {
     titleAr: "المادة الخامسة: المخرجات النهائية والتسليم",
-    bodyAr: `يلتزم الطرف الثاني بتسليم المخرجات النهائية المتفق عليها للطرف الأول، وفقًا لنطاق الخدمات المحدد في هذا العقد، وبالمواصفات والصيغ ووسائل التسليم التي يتم الاتفاق عليها بين الطرفين.
-تشمل المخرجات النهائية، بحسب ما يحدده الطرفان، ملفات التصميم النهائية أو الأدلة أو النماذج أو القوالب أو أي أعمال أخرى تدخل ضمن نطاق الخدمات محل العقد، وذلك بالصيغة أو الصيغ المتفق عليها، ولا تشمل أي مسودات أو أفكار أولية أو نماذج غير معتمدة ما لم يتفق الطرفان على خلاف ذلك.
-لا يلتزم الطرف الثاني بتسليم الملفات المصدر أو ملفات العمل الأصلية أو الملفات القابلة للتعديل أو أي أدوات أو عناصر أو مواد استخدمت في إعداد التصميم، إلا إذا تم الاتفاق كتابةً على تسليمها وتحديد أثر ذلك على المقابل المالي أو نطاق الخدمات.
-يجوز للطرفين الاتفاق على تنفيذ وتسليم الأعمال على مرحلة واحدة أو عدة مراحل وفقًا لطبيعة المشروع، ويُعد كل تسليم مرحلي منتجًا لآثاره في حدود الأعمال التي يشملها.
-يتم تسليم الأعمال من خلال الوسيلة المتفق عليها بين الطرفين، ويُعتد بالتسليم الإلكتروني متى تم عبر الوسيلة المعتمدة بينهما وأمكن إثبات إرسال الملفات أو إتاحتها للطرف الأول.
-يلتزم الطرف الأول بمراجعة الأعمال المسلمة وإبداء ملاحظاته أو طلب تعديلها أو اعتمادها وفقًا لأحكام هذا العقد، ولا يُعد مجرد استلام الأعمال أو الملفات قبولًا نهائيًا لها أو انتقالًا لأي حق من حقوق الملكية الفكرية أو منح أي ترخيص باستخدامها إلا وفقًا للأحكام المنظمة لذلك في هذا العقد.
-إذا لم يبدِ الطرف الأول أي ملاحظات أو اعتراضات على الأعمال المسلمة خلال المدة المتفق عليها بين الطرفين، أو خلال مدة معقولة تتناسب مع طبيعة المشروع، فيُعمل بالأثر الذي يتفق عليه الطرفان أو يقرره العقد بشأن ذلك، دون الإخلال بحقوق أي منهما المقررة قانونًا.
-وإذا وُجدت أي ملاحق أو نماذج أو جداول أو محاضر محررة تنفيذًا لهذا العقد وموقعة من الطرفين بتاريخ معاصر أو لاحق لتاريخ هذا العقد، فتُعد جزءًا لا يتجزأ منه، وتُستكمل أو تُفسر أو تُفصل الأحكام الواردة في هذه المادة في حدود ما ورد بها، وذلك دون الإخلال بالأحكام الأساسية لهذا العقد.`,
+    variables: ["visual_scope_services_text", "visual_source_files_text"],
+    bodyAr: `يلتزم الطرف الثاني بتسليم المخرجات النهائية التي تدخل ضمن نطاق الخدمات المتفق عليه، ولا تشمل المسودات أو الأفكار الأولية أو الأعمال غير المعتمدة ما لم يتفق الطرفان كتابةً على خلاف ذلك.
+{{visual_scope_services_text}}
+{{visual_source_files_text}}
+ويجوز التسليم دفعة واحدة أو على مراحل بحسب طبيعة المشروع، ويُعتد بالتسليم الإلكتروني متى تم عبر وسيلة معتمدة وأمكن إثبات إرسال الملفات أو إتاحتها للطرف الأول. ولا يُعد مجرد استلام الملفات قبولًا نهائيًا أو انتقالًا للحقوق إلا وفقًا لأحكام المراجعات والملكية الفكرية بهذا العقد.`,
   },
   visual_identity_design_source_section_06: {
     titleAr: "المادة السادسة: مدة التنفيذ",
-    variables: ["visual_execution_duration"],
-    bodyAr: `يلتزم الطرف الثاني بالبدء في تنفيذ الخدمات محل هذا العقد اعتبارًا من التاريخ المتفق عليه بين الطرفين، أو من تاريخ استيفاء الطرف الأول للبيانات أو المواد أو المستندات أو الموافقات اللازمة لبدء التنفيذ، أو سداد الدفعة المتفق عليها — إن وجدت — أيهما لاحق، ما لم يتفق الطرفان كتابةً على خلاف ذلك.
-تكون مدة تنفيذ الخدمات محل هذا العقد ({{visual_execution_duration}})، ويجوز للطرفين الاتفاق كتابةً على تعديلها أو تمديدها كلما اقتضت طبيعة المشروع أو نطاق الخدمات أو ظروف التنفيذ ذلك.
-تُحتسب مدة التنفيذ على أساس التزام كل طرف بتنفيذ التزاماته في المواعيد المتفق عليها، ويترتب على أي تأخير أو امتناع أو تأخر في تقديم البيانات أو المواد أو الملاحظات أو الاعتمادات المطلوبة من أحد الطرفين امتداد مدة التنفيذ بالقدر اللازم لتدارك أثر هذا التأخير، دون أن يُعد ذلك إخلالًا من الطرف الآخر بالتزاماته.
-إذا طرأ أثناء تنفيذ العقد أي تعديل على نطاق الخدمات، أو طلب الطرف الأول تنفيذ أعمال إضافية، أو إجراء تعديلات جوهرية تؤثر في حجم الأعمال أو مراحل التنفيذ، جاز تعديل مدة التنفيذ بما يتناسب مع تلك الأعمال أو التعديلات، وذلك وفقًا لما يتفق عليه الطرفان كتابةً.
-لا يُسأل الطرف الثاني عن أي تأخير يكون سببه عدم قيام الطرف الأول بتقديم البيانات أو المواد أو الردود أو الاعتمادات اللازمة في الوقت المناسب، أو أي سبب خارج عن إرادة الطرف الثاني، وذلك دون الإخلال بالأحكام الخاصة بالقوة القاهرة والظروف الاستثنائية الواردة في هذا العقد.
-وإذا وُجدت أي ملاحق أو نماذج أو جداول أو محاضر محررة تنفيذًا لهذا العقد وموقعة من الطرفين بتاريخ معاصر أو لاحق لتاريخ هذا العقد، فتُعد جزءًا لا يتجزأ منه، وتُستكمل أو تُفسر أو تُفصل الأحكام الواردة في هذه المادة في حدود ما ورد بها، وذلك دون الإخلال بالأحكام الأساسية لهذا العقد.`,
+    variables: ["visual_execution_duration_text", "visual_execution_start_text"],
+    bodyAr: `تكون مدة تنفيذ الخدمات محل هذا العقد {{visual_execution_duration_text}}، وتبدأ {{visual_execution_start_text}}.
+وتُحتسب المدة على أساس التزام كل طرف بتنفيذ التزاماته في المواعيد المتفق عليها، ويترتب على تأخر الطرف الأول في تقديم البيانات أو المواد أو الملاحظات أو الاعتمادات أو الدفعات اللازمة امتداد مدة التنفيذ بالقدر اللازم لتدارك أثر التأخير. كما يجوز تعديل المدة إذا تم اعتماد تغيير في نطاق الخدمات أو أعمال إضافية، وذلك بموجب اتفاق مكتوب. ولا يُسأل الطرف الثاني عن التأخير الناشئ عن سبب خارج عن إرادته وفقًا لأحكام هذا العقد.`,
   },
   visual_identity_design_source_section_13: {
     titleAr: "المادة الثالثة عشرة: إنهاء العقد وآثاره",
@@ -1907,16 +2427,19 @@ const reviewedIdentityMainClauseOverrides: Record<string, Partial<LegalClauseDef
   },
   visual_identity_design_source_section_14: {
     titleAr: "ثانيًا: الإنهاء بسبب الإخلال الجوهري",
-    bodyAr: `يجوز لأي من الطرفين إنهاء هذا العقد إذا أخل الطرف الآخر بأي التزام جوهري من التزاماته الناشئة عنه، ولم يقم بإزالة هذا الإخلال أو تداركه خلال خمسة عشر (15) يومًا من تاريخ إخطاره كتابةً بذلك. أما إذا كان الإخلال بطبيعته غير قابل للإصلاح، فيجوز للطرف المتضرر إنهاء العقد فورًا دون حاجة إلى إعذار أو إنذار أو اتخاذ أي إجراء آخر، وذلك دون إخلال بما قد يقرره القانون، ومع احتفاظه بحقه في المطالبة بالتعويض أو مباشرة أي حق آخر يقرره هذا العقد أو القانون.`,
+    variables: ["visual_breach_cure_days"],
+    bodyAr: `يجوز لأي من الطرفين إنهاء هذا العقد إذا أخل الطرف الآخر بالتزام جوهري ولم يقم بإزالة الإخلال أو تداركه خلال {{visual_breach_cure_days}} يومًا من تاريخ إخطاره كتابةً بذلك. أما إذا كان الإخلال بطبيعته غير قابل للإصلاح، فيجوز للطرف المتضرر إنهاء العقد فورًا دون حاجة إلى إعذار أو إنذار، مع احتفاظه بالحقوق التي يقررها العقد والقانون.`,
   },
   visual_identity_design_source_section_15: {
     titleAr: "ثالثًا: تعليق التنفيذ بسبب عدم السداد",
-    bodyAr: `إذا تأخر الطرف الأول عن سداد أي مبلغ مستحق بموجب هذا العقد، جاز للطرف الثاني، بعد إخطاره كتابةً، تعليق تنفيذ الخدمات أو الأعمال كليًا أو جزئيًا حتى تمام السداد، ولا تُحتسب مدة التعليق ضمن مدة التنفيذ، وتمتد المدد التعاقدية والجدول الزمني للمشروع بما يعادل مدة التعليق. وإذا استمر التأخير في السداد لمدة عشرة (10) أيام من تاريخ الإخطار، جاز للطرف الثاني إنهاء هذا العقد، مع احتفاظه بحقه في المطالبة بجميع مستحقاته المالية والتعويضات المستحقة — إن وجدت — وفقًا لأحكام هذا العقد والقانون.`,
+    variables: ["visual_nonpayment_termination_days"],
+    bodyAr: `إذا تأخر الطرف الأول عن سداد أي مبلغ مستحق، جاز للطرف الثاني بعد إخطاره كتابةً تعليق تنفيذ الخدمات كليًا أو جزئيًا حتى تمام السداد، ولا تُحتسب مدة التعليق ضمن مدة التنفيذ. وإذا استمر التأخير لمدة {{visual_nonpayment_termination_days}} يومًا من تاريخ الإخطار، جاز للطرف الثاني إنهاء العقد مع احتفاظه بمستحقاته وحقوقه وفقًا للعقد والقانون.`,
   },
   visual_identity_design_source_section_16: {
     titleAr: "رابعًا: تعليق المشروع بسبب الطرف الأول — خامسًا: إنهاء العقد من جانب الطرف الأول",
-    bodyAr: `رابعًا: تعليق المشروع بسبب الطرف الأول: إذا توقف تنفيذ المشروع بسبب امتناع الطرف الأول عن تقديم البيانات أو المحتوى أو المواد أو الاعتمادات أو الموافقات أو أي متطلبات لازمة للتنفيذ، أو بسبب عدم الرد على المراسلات أو الطلبات أو الملاحظات الفنية، لمدة تجاوز سبعة (7) أيام من تاريخ طلبها، جاز للطرف الثاني تعليق تنفيذ المشروع. فإذا استمر سبب التوقف بعد إخطار الطرف الأول كتابةً وانقضاء مدة سبعة (7) أيام من تاريخ الإخطار، جاز للطرف الثاني إنهاء هذا العقد، مع تسوية الحقوق والالتزامات المالية بين الطرفين وفقًا لأحكام هذا العقد.
-خامسًا: إنهاء العقد من جانب الطرف الأول: يجوز للطرف الأول إنهاء هذا العقد إذا ثبت إخلال الطرف الثاني إخلالًا جوهريًا بتنفيذ الخدمات أو عدم مطابقتها لنطاق العمل أو المواصفات أو معايير القبول المتفق عليها، ولم يقم بمعالجة هذا الإخلال خلال خمسة عشر (15) يومًا من تاريخ إخطاره كتابةً بذلك، وذلك دون إخلال بحق الطرف الأول في المطالبة بالتعويض أو بأي حقوق أخرى يقررها هذا العقد أو القانون.`,
+    variables: ["visual_client_stoppage_days", "visual_post_notice_termination_days", "visual_breach_cure_days"],
+    bodyAr: `رابعًا: إذا توقف تنفيذ المشروع بسبب امتناع الطرف الأول عن تقديم البيانات أو المواد أو الاعتمادات أو الموافقات أو الردود اللازمة لمدة تجاوز {{visual_client_stoppage_days}} يومًا من تاريخ طلبها، جاز للطرف الثاني تعليق التنفيذ. فإذا استمر سبب التوقف بعد إخطار الطرف الأول كتابةً وانقضاء {{visual_post_notice_termination_days}} يومًا من تاريخ الإخطار، جاز للطرف الثاني إنهاء العقد مع إجراء التسوية المالية وفقًا لأحكامه.
+خامسًا: يجوز للطرف الأول إنهاء العقد إذا ثبت إخلال الطرف الثاني إخلالًا جوهريًا بتنفيذ الخدمات أو عدم مطابقتها للنطاق المتفق عليه ولم يقم بمعالجة الإخلال خلال {{visual_breach_cure_days}} يومًا من تاريخ إخطاره كتابةً، دون إخلال بحقوق الطرف الأول الأخرى.`,
   },
   visual_identity_design_source_section_17: {
     titleAr: "سادسًا: آثار الإنهاء",
@@ -1928,7 +2451,10 @@ const reviewedIdentityMainClauseOverrides: Record<string, Partial<LegalClauseDef
   },
   visual_identity_design_source_section_18: {
     titleAr: "سابعًا: المخرجات وحقوق الملكية الفكرية عند الإنهاء",
-    bodyAr: `لا يترتب على انتهاء أو إنهاء هذا العقد سقوط حق الطرف الأول في استلام المخرجات النهائية أو الملفات أو أي حقوق أخرى يكون قد اكتسبها بموجب هذا العقد، متى كان قد أوفى بجميع التزاماته المالية والتعاقدية. وإذا انتهى أو أُنهي العقد قبل اكتمال تنفيذ المشروع، يلتزم الطرف الثاني بتسليم جميع الأعمال والمخرجات والمراحل التي اكتمل تنفيذها واستحق تسليمها وفقًا لأحكام هذا العقد، وذلك بعد سداد المستحقات المالية المتعلقة بها. ولا يلتزم الطرف الثاني بتسليم أي أعمال أو مخرجات أو ملفات مصدر أو ملفات عمل أصلية أو أي عناصر أخرى لم يتفق على تسليمها أو لم تستحق التسليم أو لم يتم الوفاء بالمستحقات المالية الخاصة بها، وذلك دون إخلال بحق الطرفين في تسوية الحقوق والالتزامات المالية أو الاتفاق كتابةً على خلاف ذلك.`,
+    variables: ["visual_source_files_text", "visual_ip_rights_text"],
+    bodyAr: `لا يترتب على انتهاء أو إنهاء العقد سقوط أي حق اكتسبه الطرف الأول فعلًا وفقًا لأحكام الملكية الفكرية والسداد. وإذا انتهى العقد قبل اكتمال المشروع، يلتزم الطرف الثاني بتسليم الأعمال والمخرجات المكتملة التي استحق تسليمها بعد سداد مستحقاتها.
+وتظل طبيعة الحقوق التي يحصل عليها الطرف الأول محكومة بالاتفاق الآتي: {{visual_ip_rights_text}}
+كما يظل تسليم الملفات المصدرية محكومًا بالاتفاق الآتي: {{visual_source_files_text}}`,
   },
   visual_identity_design_source_section_19: {
     titleAr: "ثامنًا: استمرار بعض الأحكام",
@@ -2262,7 +2788,7 @@ const socialArticle14TailClause: LegalClauseDefinition = {
   enabled: true,
 };
 
-const socialDelayPenaltyCommonTail = `ولا يستحق هذا الجزاء إلا بعد قيام الطرف الأول بإخطار الطرف الثاني كتابةً بواقعة التأخير ومنحه مهلة لا تقل عن خمسة (5) أيام عمل لمعالجة التأخير أو اتخاذ الإجراءات اللازمة للتنفيذ.
+const socialDelayPenaltyCommonTail = `ولا يستحق هذا الجزاء إلا بعد قيام الطرف الأول بإخطار الطرف الثاني كتابةً بواقعة التأخير ومنحه مهلة لا تقل عن {{social_delay_penalty_cure_days}} أيام عمل لمعالجة التأخير أو اتخاذ الإجراءات اللازمة للتنفيذ.
 ويكون الحد الأقصى لإجمالي الجزاء الاتفاقي المستحق عن أي واقعة تأخير مبلغًا لا يتجاوز {{social_delay_penalty_cap_percentage}}% من قيمة المقابل المالي للخدمة أو المرحلة محل التأخير، ولا يجوز أن يترتب على هذا الجزاء تجاوز إجمالي الالتزامات المالية للطرف الثاني الحدود المقررة بموجب هذا العقد.
 ولا يطبق الجزاء الاتفاقي في أي من الحالات الآتية:
 أ. إذا كان التأخير ناتجًا عن تأخر الطرف الأول في تقديم البيانات أو المواد أو المحتوى أو الموافقات أو الاعتمادات أو صلاحيات الوصول اللازمة للتنفيذ.
@@ -2276,7 +2802,7 @@ const socialDelayPenaltyAmountClause: LegalClauseDefinition = {
   titleAr: "14-3 الجزاء الاتفاقي عن التأخير في التنفيذ",
   bodyAr: `إذا تأخر الطرف الثاني، دون سبب مشروع أو عذر مقبول، عن تنفيذ الالتزامات التي يحدد هذا العقد أو ملحقاته المعتمدة أن لها موعدًا نهائيًا ملزمًا، وكان التأخير ناشئًا عن تقصيره وحده رغم قيام الطرف الأول بتنفيذ جميع التزاماته؛ يلتزم الطرف الثاني بأداء جزاء اتفاقي قدره {{social_delay_penalty_amount}} جنيه مصري عن كل يوم تأخير.
 ${socialDelayPenaltyCommonTail}`,
-  variables: ["social_delay_penalty_amount", "social_delay_penalty_cap_percentage"],
+  variables: ["social_delay_penalty_mode", "social_delay_penalty_amount", "social_delay_penalty_cap_percentage", "social_delay_penalty_cure_days"],
   visibleWhen: { fieldKey: "social_delay_penalty_mode", operator: "equals", value: "amount" },
   sourceDocumentName: "عقد تقديم خدمات إدارة حسابات ومنصات التواصل الاجتماعي.pdf",
   sourcePageStart: 15,
@@ -2289,7 +2815,7 @@ const socialDelayPenaltyPercentageClause: LegalClauseDefinition = {
   titleAr: "14-3 الجزاء الاتفاقي عن التأخير في التنفيذ",
   bodyAr: `إذا تأخر الطرف الثاني، دون سبب مشروع أو عذر مقبول، عن تنفيذ الالتزامات التي يحدد هذا العقد أو ملحقاته المعتمدة أن لها موعدًا نهائيًا ملزمًا، وكان التأخير ناشئًا عن تقصيره وحده رغم قيام الطرف الأول بتنفيذ جميع التزاماته؛ يلتزم الطرف الثاني بأداء جزاء اتفاقي يعادل {{social_delay_penalty_percentage}}% من قيمة المرحلة عن كل يوم تأخير.
 ${socialDelayPenaltyCommonTail}`,
-  variables: ["social_delay_penalty_percentage", "social_delay_penalty_cap_percentage"],
+  variables: ["social_delay_penalty_mode", "social_delay_penalty_percentage", "social_delay_penalty_cap_percentage", "social_delay_penalty_cure_days"],
   visibleWhen: { fieldKey: "social_delay_penalty_mode", operator: "equals", value: "percentage" },
   sourceDocumentName: "عقد تقديم خدمات إدارة حسابات ومنصات التواصل الاجتماعي.pdf",
   sourcePageStart: 15,
@@ -2399,7 +2925,8 @@ const freelancerLegalClauses: LegalClauseDefinition[] = [
   {
     key: "social_media_legal_fees_clause",
     titleAr: "المادة 22-16: الرسوم والضرائب القانونية",
-    bodyAr: "ما لم يتفق الطرفان كتابةً على خلاف ذلك، يتحمل كل طرف الرسوم والضرائب والمصروفات القانونية التي تفرض عليه بحكم صفته أو التزاماته أو التصرفات الصادرة عنه وفقًا للقوانين واللوائح السارية. ولا يشمل المقابل المالي المتفق عليه أي ضرائب أو رسوم تستحق قانونًا على الطرف الثاني بصفته مقدم الخدمة، بما في ذلك ضريبة القيمة المضافة متى كانت واجبة التطبيق، وتضاف إلى المقابل المالي وفقًا لأحكام القانون.",
+    bodyAr: "{{social_legal_fees_text}}",
+    variables: ["social_legal_fees_text"],
     visibleWhen: { fieldKey: "social_legal_fees_enabled", operator: "truthy" },
     sourceDocumentName: "عقد تقديم خدمات إدارة حسابات ومنصات التواصل الاجتماعي.pdf", sourcePageStart: 25, sourcePageEnd: 25, enabled: true,
   },
@@ -2463,7 +2990,7 @@ const freelancerLegalClauses: LegalClauseDefinition[] = [
 
 export const freelancerTemplateDefinition: ContractTemplateDefinition = {
   slug: "freelancer",
-  version: 11,
+  version: 14,
   nameAr: "عقود الخدمات والعمل الحر",
   description: "عقود الهوية البصرية وتطوير المواقع وإدارة منصات التواصل مع ملاحق اختيارية مستقلة وفارغة قابلة للطباعة والتعبئة اليدوية.",
   priceEgp: 0,

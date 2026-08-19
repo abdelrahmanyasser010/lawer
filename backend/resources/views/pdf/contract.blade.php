@@ -5,7 +5,7 @@
 <style>
 @page {
   size: A4;
-  margin: 16mm 15mm 16mm 15mm;
+  margin: 14mm 13mm 14mm 13mm;
   @top-center {
     content: string(docTitle) " — " string(docSerial);
     font-family: "Noto Sans Arabic", "DejaVu Sans", sans-serif;
@@ -28,7 +28,7 @@
   }
 }
 @page:first {
-  margin-top: 13mm;
+  margin-top: 12mm;
   @top-center { content: none; border: 0; padding: 0; }
 }
 * { box-sizing: border-box; }
@@ -184,7 +184,9 @@ body {
 <div class="masthead">
   <div>
     <div class="office">{{ $officeName }}</div>
-    <div class="document-kind">{{ $manualStandaloneAnnex ? 'ملحق تعاقدي — قالب فارغ للتعبئة اليدوية' : ($documentKind === 'annex' ? 'ملحق تعاقدي' : 'محرر تعاقدي') }}</div>
+    @if($manualStandaloneAnnex || $documentKind === 'annex')
+    <div class="document-kind">{{ $manualStandaloneAnnex ? 'ملحق تعاقدي — قالب فارغ للتعبئة اليدوية' : 'ملحق تعاقدي' }}</div>
+    @endif
   </div>
   @if($logoPath)<img src="{{ $logoPath }}" class="logo" alt="Z draft">@endif
 </div>
@@ -325,7 +327,7 @@ body {
 @endif
 
 <div class="final-note">
-  {{ $manualStandaloneAnnex ? 'هذا الملحق قالب فارغ؛ لم تُدرج فيه بيانات المستخدم تلقائيًا، ويجب استكماله يدويًا قبل اعتماده.' : 'النسخة الإلكترونية المرجعية لهذا المحرر محفوظة في سجل العقد برقم المستند المبين أعلاه.' }}
+  {{ $manualStandaloneAnnex ? 'هذا الملحق قالب فارغ؛ لم تُدرج فيه بيانات المستخدم تلقائيًا، ويجب استكماله يدويًا قبل اعتماده.' : ($documentKind === 'annex' ? 'النسخة الإلكترونية المرجعية لهذا الملحق محفوظة في سجل العقد برقم المستند المبين أعلاه.' : 'النسخة الإلكترونية المرجعية لهذا العقد محفوظة في سجل العقد برقم المستند المبين أعلاه.') }}
 </div>
 
 @foreach(($annexes ?? []) as $annex)
