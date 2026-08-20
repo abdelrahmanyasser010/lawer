@@ -863,9 +863,18 @@ export default function LegalDocumentSheet({
   const billingContact = fieldValues.website_billing_contact || fieldValues.visual_billing_contact || fieldValues.social_billing_contact || "";
 
   // Jurisdiction Court
+  const propertyCourt = city && governorate
+    ? `محكمة ${city} الابتدائية (${governorate})`
+    : city
+    ? `محكمة ${city} الابتدائية`
+    : governorate
+    ? `محكمة ${governorate} الابتدائية`
+    : "";
+
   const jurisdictionCourt =
     fieldValues.rental_jurisdiction_court ||
     fieldValues.sale_jurisdiction_court ||
+    (isRental || isSale ? propertyCourt : "") ||
     (fieldValues.visual_competent_court === "أخرى" ? fieldValues.visual_competent_court_other : fieldValues.visual_competent_court) ||
     (fieldValues.website_competent_court === "أخرى" ? fieldValues.website_competent_court_other : fieldValues.website_competent_court) ||
     (fieldValues.social_competent_court === "أخرى" ? fieldValues.social_competent_court_other : fieldValues.social_competent_court) ||
@@ -1031,15 +1040,6 @@ export default function LegalDocumentSheet({
       {/* Contract Body */}
       <div className="zd-doc-body relative z-10 text-justify text-slate-800">
 
-        {resolvedDefinition ? (
-          <DocumentDataSections
-            steps={resolvedDefinition.steps}
-            fieldValues={fieldValues}
-            activeFieldKey={activeFieldKey}
-            activeFieldLabel={activeFieldLabel}
-          />
-        ) : (
-        <>
 
         {/* Parties Block */}
         <div className="space-y-2 border-b border-slate-200 pb-3 pt-0.5">
@@ -1308,8 +1308,6 @@ export default function LegalDocumentSheet({
           </div>
         )}
 
-        </>
-        )}
 
         {/* ─── FULL OFFICIAL LEGAL CLAUSES (المواد القانونية الرسمية الكاملة) ─── */}
         <div className="zd-doc-clauses">
