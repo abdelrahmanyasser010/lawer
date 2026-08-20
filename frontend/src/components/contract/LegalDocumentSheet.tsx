@@ -642,19 +642,25 @@ function AnnexPreviewSheet({
       {isDraft && <DraftWatermark serialNumber={serialNumber} />}
       <div className="relative z-10">
         <div className="zd-doc-masthead">
-          <div className="flex flex-col justify-center gap-0.5">
-            <div className="zd-doc-office">Z draft</div>
-            <div className="zd-doc-kind">ملحق تعاقدي — قالب فارغ للتعبئة اليدوية</div>
-            <div className="zd-doc-title-inline">{annex.documentTitleAr ?? annex.nameAr}</div>
-            <div className="zd-doc-meta-inline">
-              رقم الملحق: <span dir="ltr">................................</span>
-              <span className="mx-2">|</span>
-              تابع للعقد رقم: <span dir="ltr">................................</span>
-              <span className="mx-2">|</span>
-              تاريخ العقد: <span dir="ltr">.... / .... / ........</span>
+          <div className="zd-doc-masthead-top">
+            <div className="w-1/4 flex justify-start">
+              <img src="/logo.png" alt="Z draft" className="zd-doc-logo" />
+            </div>
+            <div className="w-2/4 text-center">
+              <h2 className="zd-doc-title-inline">{annex.documentTitleAr ?? annex.nameAr}</h2>
+              <div className="zd-doc-kind">ملحق تعاقدي — قالب فارغ للتعبئة اليدوية</div>
+            </div>
+            <div className="w-1/4 text-left">
+              <span className="zd-doc-office">Z draft</span>
             </div>
           </div>
-          <img src="/logo.png" alt="Z draft" className="zd-doc-logo" />
+          <div className="zd-doc-meta-inline">
+            رقم الملحق: <span dir="ltr">................................</span>
+            <span className="mx-2 text-slate-400">|</span>
+            تابع للعقد رقم: <span dir="ltr">................................</span>
+            <span className="mx-2 text-slate-400">|</span>
+            تاريخ العقد: <span dir="ltr">.... / .... / ........</span>
+          </div>
         </div>
 
         <div className="zd-doc-annex-ref">
@@ -1032,16 +1038,22 @@ export default function LegalDocumentSheet({
       >
         {activePreamble && <LiveFieldMarker label={activeFieldLabel} />}
         <div className="zd-doc-masthead">
-          <div className="flex flex-col justify-center gap-0.5">
-            <div className="zd-doc-office">Z draft</div>
-            <div className="zd-doc-title-inline">{docTitle}</div>
-            <div className="zd-doc-meta-inline">
-              رقم المستند: <span dir="ltr" className="font-bold">{serialNumber}</span>
-              <span className="mx-2">|</span>
-              تاريخ العقد: <span dir="ltr">{formattedContractDate}</span>
+          <div className="zd-doc-masthead-top">
+            <div className="w-1/4 flex justify-start">
+              <img src="/logo.png" alt="Z draft" className="zd-doc-logo" />
+            </div>
+            <div className="w-2/4 text-center">
+              <h1 className="zd-doc-title-inline">{docTitle}</h1>
+            </div>
+            <div className="w-1/4 text-left">
+              <span className="zd-doc-office">Z draft</span>
             </div>
           </div>
-          <img src="/logo.png" alt="Z draft" className="zd-doc-logo" />
+          <div className="zd-doc-meta-inline">
+            رقم المستند: <span dir="ltr" className="font-bold">{serialNumber}</span>
+            <span className="mx-2 text-slate-400">|</span>
+            تاريخ العقد: <span dir="ltr">{formattedContractDate}</span>
+          </div>
         </div>
       </div>
 
