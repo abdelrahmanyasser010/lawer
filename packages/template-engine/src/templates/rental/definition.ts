@@ -1118,7 +1118,7 @@ const conditionalClauses: LegalClauseDefinition[] = [
 
 export const rentalTemplateDefinition: ContractTemplateDefinition = {
   slug: "rental",
-  version: 16,
+  version: 17,
   nameAr: "عقود إيجار الوحدات",
   description: "ثلاثة عقود إيجار مستقلة مطابقة للنماذج السكنية والتجارية والإدارية، مع محضر استلام وجرد اختياري وفارغ قابل للطباعة والتعبئة اليدوية.",
   priceEgp: 0,

@@ -2990,7 +2990,7 @@ const freelancerLegalClauses: LegalClauseDefinition[] = [
 
 export const freelancerTemplateDefinition: ContractTemplateDefinition = {
   slug: "freelancer",
-  version: 16,
+  version: 17,
   nameAr: "عقود الخدمات والعمل الحر",
   description: "عقود الهوية البصرية وتطوير المواقع وإدارة منصات التواصل مع ملاحق اختيارية مستقلة وفارغة قابلة للطباعة والتعبئة اليدوية.",
   priceEgp: 0,
