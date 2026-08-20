@@ -1048,6 +1048,73 @@ export default function LegalDocumentSheet({
       {/* Contract Body */}
       <div className="zd-doc-body relative z-10 text-justify text-slate-800">
 
+        {/* Parties Block */}
+        <div className="space-y-2 border-b border-slate-200 pb-3 pt-0.5 mb-3">
+          {/* Party 1 */}
+          <div
+            id="doc-party-1"
+            data-active-preview={activePartyOne ? "exact" : undefined}
+            className={`space-y-1 scroll-mt-28 ${activePartyOne ? activeBlockClass : ""}`}
+          >
+            {activePartyOne && <LiveFieldMarker label={activeFieldLabel} />}
+            <strong className="zd-doc-party-title block">
+              أولاً: {isPartyOneCompany ? "السادة / " : "السيد / "}{isRental ? "المؤجر" : isSale ? "البائع" : "العميل"} (الطرف الأول):
+            </strong>
+            {isPartyOneCompany ? (
+              <p className="zd-doc-party-line">
+                <b>الشركة:</b> {p1Name} {p1LegalForm ? `(${p1LegalForm})` : ""}
+                {p1CommercialRegister && <> — <b>سجل تجاري:</b> <span dir="ltr" className="font-mono font-bold">{p1CommercialRegister}</span></>}
+                {p1TaxCard && <> — <b>بطاقة ضريبية:</b> <span dir="ltr" className="font-mono font-bold">{p1TaxCard}</span></>}
+                {p1Rep && <> — <b>يمثلها قانونًا:</b> {p1Rep} {p1RepCapacity ? `(بصفته ${p1RepCapacity})` : ""}</>}
+                {p1Address && <> — <b>المقر الرئيسي:</b> {p1Address}</>}
+                {p1Phone && <> — <b>الهاتف:</b> <span dir="ltr" className="font-mono">{p1Phone}</span></>}
+                {p1Email && <> — <b>البريد:</b> <span dir="ltr">{p1Email}</span></>}.
+              </p>
+            ) : (
+              <p className="zd-doc-party-line">
+                <b>الاسم:</b> {p1Name} — <b>الجنسية:</b> {p1Nationality}
+                {p1NationalId && <> — <b>{isP1NonEgyptian ? "رقم جواز السفر" : "الرقم القومي"}:</b> <span dir="ltr" className="font-mono font-bold">{p1NationalId}</span></>}
+                {p1IdIssuer && <> (صادر من: {p1IdIssuer}{p1IdIssueDate ? ` بتاريخ ${p1IdIssueDate}` : ""})</>}
+                {p1Address && <> — <b>المحل المختار / الإقامة:</b> {p1Address}</>}
+                {p1Phone && <> — <b>الهاتف:</b> <span dir="ltr" className="font-mono">{p1Phone}</span></>}
+                {p1Email && <> — <b>البريد:</b> <span dir="ltr">{p1Email}</span></>}.
+              </p>
+            )}
+          </div>
+
+          {/* Party 2 */}
+          <div
+            id="doc-party-2"
+            data-active-preview={activePartyTwo ? "exact" : undefined}
+            className={`space-y-1 scroll-mt-28 pt-1 ${activePartyTwo ? activeBlockClass : ""}`}
+          >
+            {activePartyTwo && <LiveFieldMarker label={activeFieldLabel} />}
+            <strong className="zd-doc-party-title block">
+              ثانياً: {isPartyTwoCompany ? "السادة / " : "السيد / "}{isRental ? "المستأجر" : isSale ? "المشتري" : freelancerPartyTwoRole} (الطرف الثاني):
+            </strong>
+            {isPartyTwoCompany ? (
+              <p className="zd-doc-party-line">
+                <b>الشركة:</b> {p2Name} {p2LegalForm ? `(${p2LegalForm})` : ""}
+                {p2CommercialRegister && <> — <b>سجل تجاري:</b> <span dir="ltr" className="font-mono font-bold">{p2CommercialRegister}</span></>}
+                {p2TaxCard && <> — <b>بطاقة ضريبية:</b> <span dir="ltr" className="font-mono font-bold">{p2TaxCard}</span></>}
+                {p2Rep && <> — <b>يمثلها قانونًا:</b> {p2Rep} {p2RepCapacity ? `(بصفته ${p2RepCapacity})` : ""}</>}
+                {p2Address && <> — <b>المقر الرئيسي:</b> {p2Address}</>}
+                {p2Phone && <> — <b>الهاتف:</b> <span dir="ltr" className="font-mono">{p2Phone}</span></>}
+                {p2Email && <> — <b>البريد:</b> <span dir="ltr">{p2Email}</span></>}.
+              </p>
+            ) : (
+              <p className="zd-doc-party-line">
+                <b>الاسم:</b> {p2Name} — <b>الجنسية:</b> {p2Nationality}
+                {p2NationalId && <> — <b>{isP2NonEgyptian ? "رقم جواز السفر" : "الرقم القومي"}:</b> <span dir="ltr" className="font-mono font-bold">{p2NationalId}</span></>}
+                {p2IdIssuer && <> (صادر من: {p2IdIssuer}{p2IdIssueDate ? ` بتاريخ ${p2IdIssueDate}` : ""})</>}
+                {p2Address && <> — <b>المحل المختار / الإقامة:</b> {p2Address}</>}
+                {p2Phone && <> — <b>الهاتف:</b> <span dir="ltr" className="font-mono">{p2Phone}</span></>}
+                {p2Email && <> — <b>البريد:</b> <span dir="ltr">{p2Email}</span></>}.
+              </p>
+            )}
+          </div>
+        </div>
+
         {/* ─── FULL OFFICIAL LEGAL CLAUSES (المواد القانونية الرسمية الكاملة) ─── */}
         <div className="zd-doc-clauses">
           {mainRenderedClauses.length > 0 ? (
