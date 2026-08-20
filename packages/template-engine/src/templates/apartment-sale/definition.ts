@@ -12,7 +12,7 @@ import {
   saleSourceClauseKeysByVariant,
   saleSourceLegalClauses,
 } from "../../legal-content/sourceClauses";
-import { contractDateField } from "../common";
+import { contractDateField, courtOptionsWithOther } from "../common";
 
 const partyTypeOptions = [
   { value: "individual", labelAr: "فرد" },
@@ -402,6 +402,24 @@ function noticesStep(): WizardStepDefinition {
   };
 }
 
+function saleJurisdictionStep(): WizardStepDefinition {
+  return {
+    key: "sale_jurisdiction", titleAr: "المحكمة المختصة", articleRange: "الاختصاص القضائي",
+    fields: [
+      {
+        key: "sale_competent_court", type: "select", labelAr: "المحكمة المختصة", required: true,
+        options: courtOptionsWithOther,
+        helpText: "اختر المحكمة المتفق عليها بين الطرفين لنظر أي نزاع، مع مراعاة قواعد الاختصاص القضائي الآمرة.",
+      },
+      {
+        key: "sale_competent_court_other", type: "text", labelAr: "اسم المحكمة الأخرى",
+        visibleWhen: { fieldKey: "sale_competent_court", operator: "equals", value: "أخرى" },
+        requiredWhen: { fieldKey: "sale_competent_court", operator: "equals", value: "أخرى" },
+      },
+    ],
+  };
+}
+
 function witnessesStep(): WizardStepDefinition {
   return {
     key: "sale_witnesses", titleAr: "الشهود", articleRange: "التوقيعات",
@@ -488,6 +506,7 @@ const sharedDefaults: Record<string, string | number | boolean | null> = {
   sale_notice_use_party_phones: true,
   sale_witness_1_enabled: false,
   sale_witness_2_enabled: false,
+  sale_competent_court: "القاهرة الجديدة",
   sale_unit_is_occupied: false,
   sale_electricity_meter_exists: "no",
   sale_water_meter_exists: "no",
@@ -519,6 +538,7 @@ function createVariant(input: {
       ...(input.postTaxSteps ?? []),
       legalTimingStep(input.taxVariant),
       noticesStep(),
+      saleJurisdictionStep(),
       attachmentStep(input.taxVariant),
       witnessesStep(),
       saleReviewStep,

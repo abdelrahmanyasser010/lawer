@@ -247,7 +247,11 @@ export const legalLabelDictionary: Record<string, string> = {
   deposit_amount_words: "مبلغ التأمين كتابةً",
   holdover_daily_compensation: "تعويض التأخير اليومي",
   rental_jurisdiction_court: "المحكمة المختصة",
+  rental_competent_court: "المحكمة المختصة",
+  rental_competent_court_other: "اسم المحكمة الأخرى",
   sale_jurisdiction_court: "المحكمة المختصة",
+  sale_competent_court: "المحكمة المختصة",
+  sale_competent_court_other: "اسم المحكمة الأخرى",
   sale_total_price: "الثمن الإجمالي المتفق عليه",
   sale_payment_plan: "آلية سداد الثمن",
   sale_deposit_amount: "مقدم التعاقد",
@@ -872,14 +876,18 @@ export default function LegalDocumentSheet({
     : "";
 
   const jurisdictionCourt =
-    fieldValues.rental_jurisdiction_court ||
-    fieldValues.sale_jurisdiction_court ||
-    (isRental || isSale ? propertyCourt : "") ||
+    (fieldValues.rental_competent_court === "أخرى" ? fieldValues.rental_competent_court_other : fieldValues.rental_competent_court) ||
+    (fieldValues.sale_competent_court === "أخرى" ? fieldValues.sale_competent_court_other : fieldValues.sale_competent_court) ||
     (fieldValues.visual_competent_court === "أخرى" ? fieldValues.visual_competent_court_other : fieldValues.visual_competent_court) ||
     (fieldValues.website_competent_court === "أخرى" ? fieldValues.website_competent_court_other : fieldValues.website_competent_court) ||
     (fieldValues.social_competent_court === "أخرى" ? fieldValues.social_competent_court_other : fieldValues.social_competent_court) ||
+    fieldValues.rental_jurisdiction_court ||
+    fieldValues.sale_jurisdiction_court ||
+    (isRental || isSale ? propertyCourt : "") ||
     "";
   const isCustomJurisdictionCourt = [
+    fieldValues.rental_competent_court,
+    fieldValues.sale_competent_court,
     fieldValues.visual_competent_court,
     fieldValues.website_competent_court,
     fieldValues.social_competent_court,

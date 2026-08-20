@@ -280,19 +280,31 @@ test("social media main contract has explicit scope and source-backed commercial
   assert.equal(Boolean(fields.social_project_type), false, "web-project copy/paste field must not exist in social contract");
 });
 
-test("all freelancer variants require an explicit competent court before review", () => {
-  const courtKeyByVariant = {
-    visual_identity_design: "visual_competent_court",
-    website_development: "website_competent_court",
-    social_media_management: "social_competent_court",
-  };
-  for (const variant of freelancerTemplateDefinition.variants) {
-    const courtStep = variant.steps.at(-2);
-    assert.equal(courtStep?.titleAr, "المحكمة المختصة", `${variant.key}: court step order`);
-    const courtField = courtStep.fields.find((field) => field.key === courtKeyByVariant[variant.key]);
-    assert.equal(courtField?.required, true, `${variant.key}: court is required`);
-    assert.ok(courtField?.options.some((option) => option.value === "القاهرة"), `${variant.key}: Cairo option`);
-    assert.ok(courtField?.options.some((option) => option.value === "المنيا"), `${variant.key}: Minya option`);
+test("all nine contract variants require an explicit competent court in wizard steps", () => {
+  const definitions = [
+    { def: rentalTemplateDefinition, courtKey: "rental_competent_court" },
+    { def: apartmentSaleTemplateDefinition, courtKey: "sale_competent_court" },
+    {
+      def: freelancerTemplateDefinition,
+      courtKeyByVariant: {
+        visual_identity_design: "visual_competent_court",
+        website_development: "website_competent_court",
+        social_media_management: "social_competent_court",
+      },
+    },
+  ];
+  for (const { def, courtKey, courtKeyByVariant } of definitions) {
+    for (const variant of def.variants) {
+      const targetKey = courtKey ?? (courtKeyByVariant ? courtKeyByVariant[variant.key] : "");
+      const courtStep = variant.steps.find((step) => step.key.includes("jurisdiction"));
+      assert.ok(courtStep, `${variant.key}: jurisdiction step exists`);
+      assert.equal(courtStep.titleAr, "المحكمة المختصة", `${variant.key}: court step title`);
+      const courtField = courtStep.fields.find((field) => field.key === targetKey);
+      assert.equal(courtField?.required, true, `${variant.key}: court is required`);
+      assert.ok(courtField?.options.some((option) => option.value === "القاهرة"), `${variant.key}: Cairo option`);
+      assert.ok(courtField?.options.some((option) => option.value === "المنيا"), `${variant.key}: Minya option`);
+      assert.ok(courtField?.options.some((option) => option.value === "أخرى"), `${variant.key}: Other option`);
+    }
   }
 });
 
@@ -347,7 +359,7 @@ test("full nine-contract publication files stay version-aligned", () => {
   assert.match(migration, /'slug' => 'rental'[\s\S]*'version' => 16/);
 });
 
-test("rental v15 exposes three source-specific lease variants with derived legal values and no court dropdown", () => {
+test("rental v15 exposes three source-specific lease variants with explicit competent court step", () => {
   assert.equal(rentalTemplateDefinition.version, 16);
   assert.deepEqual(
     rentalTemplateDefinition.variants.map((variant) => variant.key),
@@ -365,6 +377,7 @@ test("rental v15 exposes three source-specific lease variants with derived legal
     assert.equal(variant.requiredClauseKeys.includes("rental_property_jurisdiction_clause"), false, `${variant.key}:no duplicate court clause`);
     assert.equal(fields.find((field) => field.key === "property_governorate")?.required, true);
     assert.equal(fields.find((field) => field.key === "property_city")?.required, true);
+    assert.equal(fields.find((field) => field.key === "rental_competent_court")?.required, true);
   }
 });
 
@@ -505,7 +518,7 @@ test("rental annual increase is an explicit editable branch in all three lease v
   }
 });
 
-test("rental jurisdiction is derived from the property location inside the source court article", () => {
+test("rental jurisdiction uses the selected court inside the source court article", () => {
   const articleByVariant = {
     residential_lease: "residential_lease_source_article_18",
     commercial_lease: "commercial_lease_source_article_19",
@@ -513,13 +526,12 @@ test("rental jurisdiction is derived from the property location inside the sourc
   };
   for (const variant of rentalTemplateDefinition.variants) {
     const fields = Object.fromEntries(variant.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
-    assert.equal(Boolean(fields.rental_jurisdiction_court), false, variant.key);
+    assert.equal(Boolean(fields.rental_competent_court), true, variant.key);
     const clause = rentalTemplateDefinition.legalClauses.find((item) => item.key === articleByVariant[variant.key]);
     assert.ok(clause.variables.includes("rental_property_jurisdiction_text"), variant.key);
-    const values = { ...createSampleFieldValues(rentalTemplateDefinition, variant.key, []), property_city: "طنطا", property_governorate: "الغربية" };
+    const values = { ...createSampleFieldValues(rentalTemplateDefinition, variant.key, []), rental_competent_court: "طنطا" };
     const text = renderLegalClauses(rentalTemplateDefinition, variant.key, [], values).find((item) => item.key === articleByVariant[variant.key]).bodyAr;
     assert.match(text, /طنطا/);
-    assert.match(text, /الغربية/);
   }
 });
 
@@ -645,6 +657,7 @@ test("sale v14 exposes three source-specific variants with fail-closed property 
     assert.equal(byKey.sale_contract_city.required, true);
     assert.equal(byKey.sale_unit_governorate.required, true);
     assert.equal(byKey.sale_unit_city.required, true);
+    assert.equal(byKey.sale_competent_court.required, true);
   }
   const inherited = apartmentSaleTemplateDefinition.variants.find((item) => item.key === "inherited_sale");
   const inheritedFields = Object.fromEntries(inherited.steps.flatMap((step) => step.fields).map((field) => [field.key, field]));
@@ -894,6 +907,7 @@ test("execution, warranty, financial, delivery and court values are rendered ins
       property_delivery_date: "2027-02-11",
       property_city: "المنصورة",
       property_governorate: "الدقهلية",
+      rental_competent_court: "المنصورة",
       deposit_amount: 27111,
       rent_amount: 27891,
       rent_due_day: 23,
@@ -901,7 +915,7 @@ test("execution, warranty, financial, delivery and court values are rendered ins
       late_payment_daily_compensation: 619,
     };
     const text = renderLegalClauses(rentalTemplateDefinition, variantKey, [], values).map((c) => c.bodyAr).join("\n");
-    for (const sentinel of ["٢٧ شهرًا", "03/02/2027", "03/05/2029", "11/02/2027", "سبعة وعشرون ألف", "المنصورة", "الدقهلية"]) assert.match(text, new RegExp(sentinel), `${variantKey}:${sentinel}`);
+    for (const sentinel of ["٢٧ شهرًا", "03/02/2027", "03/05/2029", "11/02/2027", "سبعة وعشرون ألف", "المنصورة"]) assert.match(text, new RegExp(sentinel), `${variantKey}:${sentinel}`);
   }
 
   for (const variantKey of ["preliminary_sale", "registrable_sale", "inherited_sale"]) {
@@ -918,6 +932,7 @@ test("execution, warranty, financial, delivery and court values are rendered ins
       sale_delivery_delay_threshold_days: 29,
       sale_unit_city: "طنطا",
       sale_unit_governorate: "الغربية",
+      sale_competent_court: "طنطا",
     };
     if (variantKey === "preliminary_sale") values.preliminary_hidden_defect_warranty_years = 7;
     const text = renderLegalClauses(apartmentSaleTemplateDefinition, variantKey, [], values).map((c) => c.bodyAr).join("\n");

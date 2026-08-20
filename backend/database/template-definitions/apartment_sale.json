@@ -1618,6 +1618,165 @@
           ]
         },
         {
+          "key": "sale_jurisdiction",
+          "titleAr": "المحكمة المختصة",
+          "articleRange": "الاختصاص القضائي",
+          "fields": [
+            {
+              "key": "sale_competent_court",
+              "type": "select",
+              "labelAr": "المحكمة المختصة",
+              "required": true,
+              "options": [
+                {
+                  "value": "القاهرة",
+                  "labelAr": "القاهرة"
+                },
+                {
+                  "value": "شمال القاهرة",
+                  "labelAr": "شمال القاهرة"
+                },
+                {
+                  "value": "جنوب القاهرة",
+                  "labelAr": "جنوب القاهرة"
+                },
+                {
+                  "value": "القاهرة الجديدة",
+                  "labelAr": "القاهرة الجديدة"
+                },
+                {
+                  "value": "شمال الجيزة",
+                  "labelAr": "شمال الجيزة"
+                },
+                {
+                  "value": "جنوب الجيزة",
+                  "labelAr": "جنوب الجيزة"
+                },
+                {
+                  "value": "الإسكندرية",
+                  "labelAr": "الإسكندرية"
+                },
+                {
+                  "value": "طنطا",
+                  "labelAr": "طنطا"
+                },
+                {
+                  "value": "دمنهور",
+                  "labelAr": "دمنهور"
+                },
+                {
+                  "value": "كفر الشيخ",
+                  "labelAr": "كفر الشيخ"
+                },
+                {
+                  "value": "المنصورة",
+                  "labelAr": "المنصورة"
+                },
+                {
+                  "value": "الزقازيق",
+                  "labelAr": "الزقازيق"
+                },
+                {
+                  "value": "بنها",
+                  "labelAr": "بنها"
+                },
+                {
+                  "value": "شبين الكوم",
+                  "labelAr": "شبين الكوم"
+                },
+                {
+                  "value": "بورسعيد",
+                  "labelAr": "بورسعيد"
+                },
+                {
+                  "value": "الإسماعيلية",
+                  "labelAr": "الإسماعيلية"
+                },
+                {
+                  "value": "السويس",
+                  "labelAr": "السويس"
+                },
+                {
+                  "value": "دمياط",
+                  "labelAr": "دمياط"
+                },
+                {
+                  "value": "المنيا",
+                  "labelAr": "المنيا"
+                },
+                {
+                  "value": "بني سويف",
+                  "labelAr": "بني سويف"
+                },
+                {
+                  "value": "الفيوم",
+                  "labelAr": "الفيوم"
+                },
+                {
+                  "value": "أسيوط",
+                  "labelAr": "أسيوط"
+                },
+                {
+                  "value": "سوهاج",
+                  "labelAr": "سوهاج"
+                },
+                {
+                  "value": "قنا",
+                  "labelAr": "قنا"
+                },
+                {
+                  "value": "الأقصر",
+                  "labelAr": "الأقصر"
+                },
+                {
+                  "value": "أسوان",
+                  "labelAr": "أسوان"
+                },
+                {
+                  "value": "البحر الأحمر",
+                  "labelAr": "البحر الأحمر"
+                },
+                {
+                  "value": "الوادي الجديد",
+                  "labelAr": "الوادي الجديد"
+                },
+                {
+                  "value": "شمال سيناء",
+                  "labelAr": "شمال سيناء"
+                },
+                {
+                  "value": "جنوب سيناء",
+                  "labelAr": "جنوب سيناء"
+                },
+                {
+                  "value": "مرسى مطروح",
+                  "labelAr": "مرسى مطروح"
+                },
+                {
+                  "value": "أخرى",
+                  "labelAr": "محكمة أخرى"
+                }
+              ],
+              "helpText": "اختر المحكمة المتفق عليها بين الطرفين لنظر أي نزاع، مع مراعاة قواعد الاختصاص القضائي الآمرة."
+            },
+            {
+              "key": "sale_competent_court_other",
+              "type": "text",
+              "labelAr": "اسم المحكمة الأخرى",
+              "visibleWhen": {
+                "fieldKey": "sale_competent_court",
+                "operator": "equals",
+                "value": "أخرى"
+              },
+              "requiredWhen": {
+                "fieldKey": "sale_competent_court",
+                "operator": "equals",
+                "value": "أخرى"
+              }
+            }
+          ]
+        },
+        {
           "key": "sale_preliminary_attachments",
           "titleAr": "المرفقات",
           "articleRange": "المرفقات",
@@ -1780,6 +1939,7 @@
         "sale_notice_use_party_phones": true,
         "sale_witness_1_enabled": false,
         "sale_witness_2_enabled": false,
+        "sale_competent_court": "القاهرة الجديدة",
         "sale_unit_is_occupied": false,
         "sale_electricity_meter_exists": "no",
         "sale_water_meter_exists": "no",
@@ -3311,6 +3471,165 @@
           ]
         },
         {
+          "key": "sale_jurisdiction",
+          "titleAr": "المحكمة المختصة",
+          "articleRange": "الاختصاص القضائي",
+          "fields": [
+            {
+              "key": "sale_competent_court",
+              "type": "select",
+              "labelAr": "المحكمة المختصة",
+              "required": true,
+              "options": [
+                {
+                  "value": "القاهرة",
+                  "labelAr": "القاهرة"
+                },
+                {
+                  "value": "شمال القاهرة",
+                  "labelAr": "شمال القاهرة"
+                },
+                {
+                  "value": "جنوب القاهرة",
+                  "labelAr": "جنوب القاهرة"
+                },
+                {
+                  "value": "القاهرة الجديدة",
+                  "labelAr": "القاهرة الجديدة"
+                },
+                {
+                  "value": "شمال الجيزة",
+                  "labelAr": "شمال الجيزة"
+                },
+                {
+                  "value": "جنوب الجيزة",
+                  "labelAr": "جنوب الجيزة"
+                },
+                {
+                  "value": "الإسكندرية",
+                  "labelAr": "الإسكندرية"
+                },
+                {
+                  "value": "طنطا",
+                  "labelAr": "طنطا"
+                },
+                {
+                  "value": "دمنهور",
+                  "labelAr": "دمنهور"
+                },
+                {
+                  "value": "كفر الشيخ",
+                  "labelAr": "كفر الشيخ"
+                },
+                {
+                  "value": "المنصورة",
+                  "labelAr": "المنصورة"
+                },
+                {
+                  "value": "الزقازيق",
+                  "labelAr": "الزقازيق"
+                },
+                {
+                  "value": "بنها",
+                  "labelAr": "بنها"
+                },
+                {
+                  "value": "شبين الكوم",
+                  "labelAr": "شبين الكوم"
+                },
+                {
+                  "value": "بورسعيد",
+                  "labelAr": "بورسعيد"
+                },
+                {
+                  "value": "الإسماعيلية",
+                  "labelAr": "الإسماعيلية"
+                },
+                {
+                  "value": "السويس",
+                  "labelAr": "السويس"
+                },
+                {
+                  "value": "دمياط",
+                  "labelAr": "دمياط"
+                },
+                {
+                  "value": "المنيا",
+                  "labelAr": "المنيا"
+                },
+                {
+                  "value": "بني سويف",
+                  "labelAr": "بني سويف"
+                },
+                {
+                  "value": "الفيوم",
+                  "labelAr": "الفيوم"
+                },
+                {
+                  "value": "أسيوط",
+                  "labelAr": "أسيوط"
+                },
+                {
+                  "value": "سوهاج",
+                  "labelAr": "سوهاج"
+                },
+                {
+                  "value": "قنا",
+                  "labelAr": "قنا"
+                },
+                {
+                  "value": "الأقصر",
+                  "labelAr": "الأقصر"
+                },
+                {
+                  "value": "أسوان",
+                  "labelAr": "أسوان"
+                },
+                {
+                  "value": "البحر الأحمر",
+                  "labelAr": "البحر الأحمر"
+                },
+                {
+                  "value": "الوادي الجديد",
+                  "labelAr": "الوادي الجديد"
+                },
+                {
+                  "value": "شمال سيناء",
+                  "labelAr": "شمال سيناء"
+                },
+                {
+                  "value": "جنوب سيناء",
+                  "labelAr": "جنوب سيناء"
+                },
+                {
+                  "value": "مرسى مطروح",
+                  "labelAr": "مرسى مطروح"
+                },
+                {
+                  "value": "أخرى",
+                  "labelAr": "محكمة أخرى"
+                }
+              ],
+              "helpText": "اختر المحكمة المتفق عليها بين الطرفين لنظر أي نزاع، مع مراعاة قواعد الاختصاص القضائي الآمرة."
+            },
+            {
+              "key": "sale_competent_court_other",
+              "type": "text",
+              "labelAr": "اسم المحكمة الأخرى",
+              "visibleWhen": {
+                "fieldKey": "sale_competent_court",
+                "operator": "equals",
+                "value": "أخرى"
+              },
+              "requiredWhen": {
+                "fieldKey": "sale_competent_court",
+                "operator": "equals",
+                "value": "أخرى"
+              }
+            }
+          ]
+        },
+        {
           "key": "sale_registrable_attachments",
           "titleAr": "المرفقات",
           "articleRange": "المرفقات",
@@ -3474,6 +3793,7 @@
         "sale_notice_use_party_phones": true,
         "sale_witness_1_enabled": false,
         "sale_witness_2_enabled": false,
+        "sale_competent_court": "القاهرة الجديدة",
         "sale_unit_is_occupied": false,
         "sale_electricity_meter_exists": "no",
         "sale_water_meter_exists": "no",
@@ -4643,6 +4963,165 @@
           ]
         },
         {
+          "key": "sale_jurisdiction",
+          "titleAr": "المحكمة المختصة",
+          "articleRange": "الاختصاص القضائي",
+          "fields": [
+            {
+              "key": "sale_competent_court",
+              "type": "select",
+              "labelAr": "المحكمة المختصة",
+              "required": true,
+              "options": [
+                {
+                  "value": "القاهرة",
+                  "labelAr": "القاهرة"
+                },
+                {
+                  "value": "شمال القاهرة",
+                  "labelAr": "شمال القاهرة"
+                },
+                {
+                  "value": "جنوب القاهرة",
+                  "labelAr": "جنوب القاهرة"
+                },
+                {
+                  "value": "القاهرة الجديدة",
+                  "labelAr": "القاهرة الجديدة"
+                },
+                {
+                  "value": "شمال الجيزة",
+                  "labelAr": "شمال الجيزة"
+                },
+                {
+                  "value": "جنوب الجيزة",
+                  "labelAr": "جنوب الجيزة"
+                },
+                {
+                  "value": "الإسكندرية",
+                  "labelAr": "الإسكندرية"
+                },
+                {
+                  "value": "طنطا",
+                  "labelAr": "طنطا"
+                },
+                {
+                  "value": "دمنهور",
+                  "labelAr": "دمنهور"
+                },
+                {
+                  "value": "كفر الشيخ",
+                  "labelAr": "كفر الشيخ"
+                },
+                {
+                  "value": "المنصورة",
+                  "labelAr": "المنصورة"
+                },
+                {
+                  "value": "الزقازيق",
+                  "labelAr": "الزقازيق"
+                },
+                {
+                  "value": "بنها",
+                  "labelAr": "بنها"
+                },
+                {
+                  "value": "شبين الكوم",
+                  "labelAr": "شبين الكوم"
+                },
+                {
+                  "value": "بورسعيد",
+                  "labelAr": "بورسعيد"
+                },
+                {
+                  "value": "الإسماعيلية",
+                  "labelAr": "الإسماعيلية"
+                },
+                {
+                  "value": "السويس",
+                  "labelAr": "السويس"
+                },
+                {
+                  "value": "دمياط",
+                  "labelAr": "دمياط"
+                },
+                {
+                  "value": "المنيا",
+                  "labelAr": "المنيا"
+                },
+                {
+                  "value": "بني سويف",
+                  "labelAr": "بني سويف"
+                },
+                {
+                  "value": "الفيوم",
+                  "labelAr": "الفيوم"
+                },
+                {
+                  "value": "أسيوط",
+                  "labelAr": "أسيوط"
+                },
+                {
+                  "value": "سوهاج",
+                  "labelAr": "سوهاج"
+                },
+                {
+                  "value": "قنا",
+                  "labelAr": "قنا"
+                },
+                {
+                  "value": "الأقصر",
+                  "labelAr": "الأقصر"
+                },
+                {
+                  "value": "أسوان",
+                  "labelAr": "أسوان"
+                },
+                {
+                  "value": "البحر الأحمر",
+                  "labelAr": "البحر الأحمر"
+                },
+                {
+                  "value": "الوادي الجديد",
+                  "labelAr": "الوادي الجديد"
+                },
+                {
+                  "value": "شمال سيناء",
+                  "labelAr": "شمال سيناء"
+                },
+                {
+                  "value": "جنوب سيناء",
+                  "labelAr": "جنوب سيناء"
+                },
+                {
+                  "value": "مرسى مطروح",
+                  "labelAr": "مرسى مطروح"
+                },
+                {
+                  "value": "أخرى",
+                  "labelAr": "محكمة أخرى"
+                }
+              ],
+              "helpText": "اختر المحكمة المتفق عليها بين الطرفين لنظر أي نزاع، مع مراعاة قواعد الاختصاص القضائي الآمرة."
+            },
+            {
+              "key": "sale_competent_court_other",
+              "type": "text",
+              "labelAr": "اسم المحكمة الأخرى",
+              "visibleWhen": {
+                "fieldKey": "sale_competent_court",
+                "operator": "equals",
+                "value": "أخرى"
+              },
+              "requiredWhen": {
+                "fieldKey": "sale_competent_court",
+                "operator": "equals",
+                "value": "أخرى"
+              }
+            }
+          ]
+        },
+        {
           "key": "sale_inherited_attachments",
           "titleAr": "المرفقات",
           "articleRange": "المرفقات",
@@ -4819,6 +5298,7 @@
         "sale_notice_use_party_phones": true,
         "sale_witness_1_enabled": false,
         "sale_witness_2_enabled": false,
+        "sale_competent_court": "القاهرة الجديدة",
         "sale_unit_is_occupied": false,
         "sale_electricity_meter_exists": "no",
         "sale_water_meter_exists": "no",

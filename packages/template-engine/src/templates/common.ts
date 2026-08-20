@@ -34,6 +34,11 @@ export const competentCourtOptions: FieldOptionDefinition[] = [
   { value: "مرسى مطروح", labelAr: "مرسى مطروح" },
 ];
 
+export const courtOptionsWithOther: FieldOptionDefinition[] = [
+  ...competentCourtOptions,
+  { value: "أخرى", labelAr: "محكمة أخرى" },
+];
+
 export const contractDateField: WizardFieldDefinition = {
   key: "contract_date",
   type: "date",
@@ -46,6 +51,6 @@ export const competentCourtField = (key: string): WizardFieldDefinition => ({
   type: "select",
   labelAr: "المحكمة المختصة",
   required: true,
-  options: competentCourtOptions,
+  options: courtOptionsWithOther,
   helpText: "اختر المحكمة المتفق عليها بين الطرفين، مع مراعاة قواعد الاختصاص القضائي الآمرة.",
 });

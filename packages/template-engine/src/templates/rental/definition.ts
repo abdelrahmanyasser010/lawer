@@ -9,7 +9,7 @@ import type {
 } from "../../types";
 import { normalizeLegalClauseDefinition } from "../legalText";
 import { rentalSourceClauseKeysByVariant, rentalSourceLegalClauses } from "../../legal-content/sourceClauses";
-import { contractDateField } from "../common";
+import { contractDateField, courtOptionsWithOther } from "../common";
 
 const yesNo = [
   { value: "yes", labelAr: "نعم" },
@@ -177,6 +177,28 @@ const rentalCommonSteps: WizardStepDefinition[] = [
       { key: "rental_messaging_use_party_phones", type: "checkbox", labelAr: "استخدام أرقام الهاتف المسجلة للطرفين", printInDocument: false, visibleWhen: { fieldKey: "rental_messaging_enabled", operator: "truthy" } },
       { key: "rental_messaging_landlord_phone", type: "text", labelAr: "رقم المؤجر المعتمد للمراسلة", visibleWhen: allConditions({ fieldKey: "rental_messaging_enabled", operator: "truthy" }, { fieldKey: "rental_messaging_use_party_phones", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "rental_messaging_enabled", operator: "truthy" }, { fieldKey: "rental_messaging_use_party_phones", operator: "falsy" }) },
       { key: "rental_messaging_tenant_phone", type: "text", labelAr: "رقم المستأجر المعتمد للمراسلة", visibleWhen: allConditions({ fieldKey: "rental_messaging_enabled", operator: "truthy" }, { fieldKey: "rental_messaging_use_party_phones", operator: "falsy" }), requiredWhen: allConditions({ fieldKey: "rental_messaging_enabled", operator: "truthy" }, { fieldKey: "rental_messaging_use_party_phones", operator: "falsy" }) },
+    ],
+  },
+  {
+    key: "rental_jurisdiction",
+    titleAr: "المحكمة المختصة",
+    articleRange: "الاختصاص القضائي",
+    fields: [
+      {
+        key: "rental_competent_court",
+        type: "select",
+        labelAr: "المحكمة المختصة",
+        required: true,
+        options: courtOptionsWithOther,
+        helpText: "اختر المحكمة المتفق عليها بين الطرفين لنظر المنازعات، مع مراعاة قواعد الاختصاص القضائي الآمرة.",
+      },
+      {
+        key: "rental_competent_court_other",
+        type: "text",
+        labelAr: "اسم المحكمة الأخرى",
+        visibleWhen: { fieldKey: "rental_competent_court", operator: "equals", value: "أخرى" },
+        requiredWhen: { fieldKey: "rental_competent_court", operator: "equals", value: "أخرى" },
+      },
     ],
   },
   {
@@ -369,6 +391,7 @@ const commonRentalDefaults = {
   rental_messaging_use_party_phones: true,
   rental_witness_1_enabled: false,
   rental_witness_2_enabled: false,
+  rental_competent_court: "القاهرة الجديدة",
 };
 
 const residentialCustomKeys = [

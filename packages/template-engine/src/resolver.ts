@@ -356,7 +356,7 @@ export const derivedClauseVariableDependencies: Record<string, readonly string[]
   rent_amount_words: ["rent_amount"],
   rental_deposit_receipt_text: ["deposit_payment_status", "deposit_due_date"],
   rental_payment_method_text: ["rental_payment_method", "rental_payment_method_other"],
-  rental_property_jurisdiction_text: ["property_governorate", "property_city"],
+  rental_property_jurisdiction_text: ["property_governorate", "property_city", "rental_competent_court", "rental_competent_court_other"],
   rental_meter_details_text: [
     "electricity_meter_exists", "electricity_meter", "electricity_meter_type", "electricity_meter_reading",
     "water_meter_exists", "water_meter", "water_meter_type", "water_meter_reading",
@@ -414,7 +414,7 @@ export const derivedClauseVariableDependencies: Record<string, readonly string[]
   sale_delivery_rule_text: ["sale_payment_plan"],
   sale_inspection_ack_text: ["sale_inspection_acknowledged"],
   sale_occupancy_status_text: ["sale_unit_is_occupied", "sale_occupancy_details"],
-  sale_property_jurisdiction_text: ["sale_unit_governorate", "sale_unit_city"],
+  sale_property_jurisdiction_text: ["sale_unit_governorate", "sale_unit_city", "sale_competent_court", "sale_competent_court_other"],
   sale_email_notices_text: [
     "sale_email_notices_enabled", "sale_notice_use_party_emails", "sale_notice_seller_email", "sale_notice_buyer_email",
     "seller_party_type", "seller_email", "seller_company_email", "buyer_party_type", "buyer_email", "buyer_company_email",
@@ -654,6 +654,14 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
     return raw ? labels[raw] ?? raw : undefined;
   }
   if (fieldKey === "rental_property_jurisdiction_text") {
+    const rawCourt = valueText("rental_competent_court");
+    const courtName = rawCourt === "أخرى" ? valueText("rental_competent_court_other") : rawCourt;
+    if (courtName) {
+      const courtLabel = courtName.trim().startsWith("محكمة") || courtName.trim().startsWith("محاكم")
+        ? courtName.trim()
+        : `محكمة ${courtName.trim()}`;
+      return `تختص بنظر أي نزاع ${courtLabel} الابتدائية ودوائرها الجزئية بحسب الأحوال، مع مراعاة قواعد الاختصاص الولائي والنوعي والقيمي الآمرة.`;
+    }
     const governorate = valueText("property_governorate"); const city = valueText("property_city");
     return governorate && city ? `تختص محليًا المحاكم المصرية التي تقع العين المؤجرة في دائرتها، والكائنة بمدينة/مركز ${city} بمحافظة ${governorate}، مع مراعاة قواعد الاختصاص الولائي والنوعي والقيمي الآمرة.` : undefined;
   }
@@ -804,6 +812,14 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
   }
 
   if (fieldKey === "sale_property_jurisdiction_text") {
+    const rawCourt = valueText("sale_competent_court");
+    const courtName = rawCourt === "أخرى" ? valueText("sale_competent_court_other") : rawCourt;
+    if (courtName) {
+      const courtLabel = courtName.trim().startsWith("محكمة") || courtName.trim().startsWith("محاكم")
+        ? courtName.trim()
+        : `محكمة ${courtName.trim()}`;
+      return `تختص بنظر أي نزاع ${courtLabel} الابتدائية ودوائرها الجزئية بحسب الأحوال، مع مراعاة قواعد الاختصاص الولائي والنوعي والقيمي الآمرة.`;
+    }
     const governorate = valueText("sale_unit_governorate"); const city = valueText("sale_unit_city");
     if (!governorate || !city) return undefined;
     return `تختص محليًا المحكمة التي يقع في دائرتها العقار محل البيع، والكائن بمدينة/مركز ${city} بمحافظة ${governorate}، وذلك مع مراعاة قواعد الاختصاص الولائي والنوعي والقيمي الآمرة.`;
