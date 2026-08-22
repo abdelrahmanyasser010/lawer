@@ -213,6 +213,15 @@ export default function ContractPage() {
               <span className="rounded-full bg-blue-50 border border-blue-200/60 px-2.5 py-1 text-[10px] font-black text-blue-700">
                 {contractStatusLabels[item.status] || item.status}
               </span>
+              {item.status === "draft" && item.permissions.canEdit && (
+                <Link
+                  href={`/wizard/${item.template_slug}?contractId=${item.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#00102e] px-3.5 py-1.5 text-xs font-black text-white hover:bg-[#00102e]/90 transition shadow-sm"
+                >
+                  <FilePenLine className="h-3.5 w-3.5 text-[#d9a84e]" />
+                  <span>متابعة الصياغة</span>
+                </Link>
+              )}
               {item.permissions.canShare && (
                 <button
                   type="button"
@@ -223,17 +232,46 @@ export default function ContractPage() {
                   <span>مشاركة</span>
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-slate-50 transition"
-                title="طباعة"
-              >
-                <Printer className="h-3 w-3" />
-                <span>طباعة</span>
-              </button>
+              {item.status !== "draft" && (
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-slate-50 transition"
+                  title="طباعة"
+                >
+                  <Printer className="h-3 w-3" />
+                  <span>طباعة</span>
+                </button>
+              )}
             </div>
           </div>
+
+          {/* Contextual Next Action: Draft Incomplete */}
+          {item.status === "draft" && (
+            <div className="mt-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/90 p-3.5 text-amber-950">
+              <div className="space-y-0.5 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-[#00102e] text-white">
+                    مسودة قيد الإعداد
+                  </span>
+                  <h2 className="text-xs sm:text-sm font-black text-[#00102e]">المسودة غير مكتملة بعد</h2>
+                </div>
+                <p className="text-[11px] leading-5 text-slate-600">
+                  يمكنك استكمال إدخال بنود وأطراف العقد للوصول إلى خطوة المراجعة وسداد الرسوم واعتماد العقد.
+                </p>
+              </div>
+
+              {item.permissions.canEdit && (
+                <Link
+                  href={`/wizard/${item.template_slug}?contractId=${item.id}`}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#00102e] px-4 py-2 text-xs font-black text-white hover:bg-[#00102e]/90 shadow-sm transition shrink-0"
+                >
+                  <FilePenLine className="h-3.5 w-3.5 text-[#d9a84e]" />
+                  <span>استكمال إعداد العقد</span>
+                </Link>
+              )}
+            </div>
+          )}
 
           {/* Contextual Next Action: Pending Payment */}
           {item.status === "pending_payment" && (
@@ -535,11 +573,17 @@ export default function ContractPage() {
                 )}
                 <div>
                   <div className="text-[11px] font-black text-slate-800">
-                    {item.status === "issued" ? "النسخة المعتمدة جاهزة للتحميل" : "ملف PDF متاح للمراجعة"}
+                    {item.status === "issued"
+                      ? "النسخة المعتمدة جاهزة للتحميل"
+                      : item.status === "draft"
+                      ? "مسودة قيد التجهيز"
+                      : "ملف PDF متاح للمراجعة"}
                   </div>
                   <p className="mt-0.5 text-[10px] leading-4 text-slate-500">
                     {item.status === "issued"
                       ? "النسخة الموثقة المعتمدة بصيغة PDF محفوظة بحسابك."
+                      : item.status === "draft"
+                      ? "معاينة أولية للمسودة أثناء التحرير. يتم إصدار الـ PDF النهائي بعد إكمال البيانات وسداد الرسوم."
                       : "يمكنك الاطلاع على مسودة العقد وتدقيق بنودها."}
                   </p>
                 </div>
@@ -595,6 +639,21 @@ export default function ContractPage() {
                   </span>
                 </div>
               </div>
+
+              {item.status === "draft" && (
+                <div className="mt-3">
+                  <p className="text-[10px] text-slate-500 mb-2 leading-relaxed">
+                    يتم سداد الرسوم بعد استكمال بيانات العقد في خطوة المراجعة.
+                  </p>
+                  <Link
+                    href={`/wizard/${item.template_slug}?contractId=${item.id}`}
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#00102e] hover:bg-[#00102e]/90 py-2 text-xs font-black text-white shadow-sm transition"
+                  >
+                    <FilePenLine className="h-3.5 w-3.5 text-[#d9a84e]" />
+                    <span>استكمال البيانات والانتقال للدفع</span>
+                  </Link>
+                </div>
+              )}
 
               {item.status === "pending_payment" && item.payment_status !== "pending_verification" && (
                 <button

@@ -147,9 +147,11 @@ export default function ContractsPage() {
                           <span className="font-mono text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md inline-block">
                             {item.serialNumber}
                           </span>
-                          <h2 className="mt-1.5 text-sm sm:text-base font-black text-[#00102e] truncate">
-                            {item.title || item.templateNameAr}
-                          </h2>
+                          <Link href={`/contract/${item.id}`} className="block group">
+                            <h2 className="mt-1.5 text-sm sm:text-base font-black text-[#00102e] group-hover:text-[#986410] transition truncate">
+                              {item.title || item.templateNameAr}
+                            </h2>
+                          </Link>
                           <p className="mt-0.5 text-[11px] text-slate-500">
                             {item.status === "issued" ? "نسخة صادرة ومحفوظة بحسابك" : "مسودة محفوظة بحسابك"}
                           </p>
@@ -175,7 +177,7 @@ export default function ContractsPage() {
                       </div>
 
                       <Link
-                        href={`/contract/${item.id}`}
+                        href={item.status === "draft" && item.templateSlug ? `/wizard/${item.templateSlug}?contractId=${item.id}` : `/contract/${item.id}`}
                         className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#00102e] px-3.5 py-2 text-xs font-black text-white shadow-sm hover:bg-[#00102e]/90 active:scale-[0.98] transition"
                       >
                         <span>{nextAction.actionText}</span>
