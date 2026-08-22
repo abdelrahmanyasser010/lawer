@@ -6,6 +6,7 @@ import { CheckCircle2, Loader2, MailWarning, RefreshCw, ShieldCheck } from "luci
 import AuthShell from "@/components/auth/AuthShell";
 import { frontendApi, ApiClientError } from "@/lib/apiClient";
 import { safeInternalRedirect } from "@/lib/safeRedirect";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 type ViewState = "waiting" | "loading" | "success" | "error";
 
@@ -15,6 +16,7 @@ export default function VerifyEmailPage() {
   const [message,setMessage]=useState("أدخل رمز التأكيد المكوّن من 6 أرقام المرسل إلى بريدك. الرمز صالح لمدة 10 دقائق.");
   const [resending,setResending]=useState(false);
   const [resendAfter,setResendAfter]=useState(60);
+  const { user } = useCurrentUser();
   const nextUrl=useMemo(()=>{
     if(typeof window==="undefined")return "/contracts";
     const raw=new URLSearchParams(window.location.search).get("next");
@@ -48,6 +50,12 @@ export default function VerifyEmailPage() {
   }
 
   return <AuthShell title="تأكيد البريد الإلكتروني" subtitle="هذه الخطوة مطلوبة قبل الدفع أو إرسال طلب للمكتب، بينما يمكنك حفظ مسودة العقد قبل التأكيد.">
+    {user?.email && (
+      <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-center text-xs text-slate-500">
+        تم إرسال الرمز إلى{" "}
+        <span className="font-black text-[#00102e]">{user.email}</span>
+      </div>
+    )}
     <div className={`rounded-2xl border p-4 text-xs font-bold leading-6 ${state==="error"?"border-red-200 bg-red-50 text-red-700":state==="success"?"border-emerald-200 bg-emerald-50 text-emerald-700":"border-slate-200 bg-white text-slate-600"}`}>{state==="error"&&<MailWarning className="mb-2 h-5 w-5"/>}{state==="success"&&<CheckCircle2 className="mb-2 h-5 w-5"/>}{message}</div>
     {state!=="success"&&<form onSubmit={verify} className="mt-5 space-y-4">
       <label className="block text-xs font-black text-slate-700">رمز التأكيد<div className="relative mt-2"><ShieldCheck className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"/><input autoFocus value={code} onChange={(e)=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} placeholder="000000" className="w-full rounded-2xl border border-slate-300 py-3.5 pl-4 pr-12 text-center text-2xl font-black tracking-[.35em] text-[#00102e] outline-none focus:border-[#986410]"/></div></label>

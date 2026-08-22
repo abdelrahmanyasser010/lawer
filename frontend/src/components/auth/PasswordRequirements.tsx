@@ -13,20 +13,20 @@ export default function PasswordRequirements({ value }: { value: string }) {
   ] as const;
 
   return (
-    <div className="mt-2 grid gap-1 text-[10px] sm:grid-cols-3">
+    <div className="mt-1.5 grid gap-1 text-[9px] sm:grid-cols-3">
       {rows.map(([ok, label]) => (
         <span
           key={label}
-          className={`inline-flex items-center gap-1.5 ${
+          className={`inline-flex items-center gap-1 ${
             ok ? "text-emerald-700" : "text-slate-400"
           }`}
         >
           {ok ? (
-            <CheckCircle2 className="h-3.5 w-3.5" />
+            <CheckCircle2 className="h-3 w-3" />
           ) : (
             <span
               aria-hidden="true"
-              className="h-3.5 w-3.5 shrink-0 rounded-full border border-current"
+              className="h-3 w-3 shrink-0 rounded-full border border-current"
             />
           )}
 
