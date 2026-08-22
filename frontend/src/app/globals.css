@@ -21,7 +21,8 @@
   }
 
   h1, h2, h3, h4, h5, h6, .font-heading {
-    font-family: 'Alexandria', var(--font-alexandria), sans-serif !important;
+    font-family: 'Cairo', var(--font-cairo), sans-serif !important;
+    letter-spacing: -0.015em;
   }
 
   body {
