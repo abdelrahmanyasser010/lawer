@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useMemo, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -22,7 +22,7 @@ import {
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { usePublicCatalog } from "@/hooks/usePublicCatalog";
-import { apiRequest, ApiClientError } from "@/lib/apiClient";
+import { apiRequest, ApiClientError, frontendApi } from "@/lib/apiClient";
 import { compressMultipleFiles, compressUploadFile } from "@/lib/compression";
 import type { CommunicationChannel, PublicCatalog } from "@/types/customer";
 import { useWizardStore } from "@/store/wizardStore";
@@ -71,6 +71,19 @@ function CreateContractContent() {
   const [query, setQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selected, setSelected] = useState<SelectedVariant | null>(null);
+  // resume draft prompt
+  const [resumePrompt, setResumePrompt] = useState<{ template: CatalogTemplate; variant: CatalogVariant; draftId: number; draftTitle: string } | null>(null);
+  const [myDrafts, setMyDrafts] = useState<Array<{ id: number; templateSlug: string; variantKey: string; title: string }>>([]);
+
+  useEffect(() => {
+    frontendApi.contracts().then((rows) => {
+      setMyDrafts(
+        rows
+          .filter((c) => c.status === "draft" && c.templateSlug)
+          .map((c) => ({ id: c.id, templateSlug: c.templateSlug!, variantKey: c.variantKey || "", title: c.title || c.templateNameAr || "" }))
+      );
+    }).catch(() => {/* ignore, user might not be logged in */});
+  }, []);
 
   const grouped = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -88,6 +101,14 @@ function CreateContractContent() {
 
   function choose(template: CatalogTemplate, variant: CatalogVariant) {
     if (mode === "self_service") {
+      // Check if there's an existing draft for this template+variant
+      const existingDraft = myDrafts.find(
+        (d) => d.templateSlug === template.slug && (!d.variantKey || d.variantKey === variant.key)
+      );
+      if (existingDraft) {
+        setResumePrompt({ template, variant, draftId: existingDraft.id, draftTitle: existingDraft.title });
+        return;
+      }
       resetWizard(template.slug as ContractSlug);
       router.push(`/wizard/${template.slug}?mode=self_service&variant=${encodeURIComponent(variant.key)}`);
       return;
@@ -95,9 +116,66 @@ function CreateContractContent() {
     setSelected({ template, variant });
   }
 
+  function resumeDraft() {
+    if (!resumePrompt) return;
+    router.push(`/wizard/${resumePrompt.template.slug}?contractId=${resumePrompt.draftId}`);
+  }
+
+  function startFresh() {
+    if (!resumePrompt) return;
+    const { template, variant } = resumePrompt;
+    setResumePrompt(null);
+    resetWizard(template.slug as ContractSlug);
+    router.push(`/wizard/${template.slug}?mode=self_service&variant=${encodeURIComponent(variant.key)}`);
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-[#f8fafc]">
       <Navbar />
+
+      {/* Resume Draft Modal */}
+      {resumePrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" dir="rtl">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-[#00102e]">لديك مسودة غير مكتملة</h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">{resumePrompt.draftTitle}</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed mb-5">
+              يوجد عقد من هذا النوع محفوظ كمسودة في حسابك. هل تريد استئنافه من حيث توقفت، أم تريد إنشاء عقد جديد؟
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={resumeDraft}
+                className="w-full rounded-xl bg-[#00102e] py-2.5 text-xs font-black text-white hover:bg-[#00102e]/90 transition"
+              >
+                استئناف المسودة الموجودة
+              </button>
+              <button
+                type="button"
+                onClick={startFresh}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+              >
+                إنشاء عقد جديد
+              </button>
+              <button
+                type="button"
+                onClick={() => setResumePrompt(null)}
+                className="w-full rounded-xl py-2 text-[11px] text-slate-400 hover:text-slate-600 transition"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="flex-1">
         <section className="border-b border-slate-200 bg-white pt-8 pb-4 sm:pt-10 sm:pb-4">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">

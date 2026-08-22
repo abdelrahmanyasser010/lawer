@@ -110,6 +110,7 @@ export const frontendApi = {
   updateProfile: (body: Partial<CustomerProfile>) => apiRequest<CustomerProfile>("/api/v1/users/profile", { method: "PATCH", body: JSON.stringify(body) }),
   contracts: () => apiRequest<ContractSummary[]>("/api/v1/contracts/my"),
   contract: (id: number | string) => apiRequest<ContractDetails>(`/api/v1/contracts/${id}`),
+  deleteDraft: (id: number | string) => apiRequest<{ deleted: boolean }>(`/api/v1/contracts/${id}/draft`, { method: "DELETE" }),
   requests: () => apiRequest<ServiceRequestSummary[]>("/api/v1/service-requests/my"),
   request: (id: number | string) => apiRequest<ServiceRequestDetails>(`/api/v1/service-requests/${id}`),
   notifications: () => apiRequest<{ items: CustomerNotification[]; unreadCount: number }>("/api/v1/notifications"),

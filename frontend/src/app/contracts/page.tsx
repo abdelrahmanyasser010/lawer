@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Clock3, FilePlus2, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock3, FilePlus2, FileText, Loader2, Trash2, AlertTriangle } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { ApiClientError, frontendApi } from "@/lib/apiClient";
@@ -29,6 +29,8 @@ export default function ContractsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "issued">("all");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     frontendApi.contracts()
@@ -36,6 +38,19 @@ export default function ContractsPage() {
       .catch((caught) => setError(caught instanceof ApiClientError && caught.status === 401 ? "سجل الدخول لعرض عقودك." : caught instanceof Error ? caught.message : "تعذر تحميل العقود"))
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleDelete(id: number) {
+    setDeletingId(id);
+    try {
+      await frontendApi.deleteDraft(id);
+      setItems((prev) => prev.filter((c) => c.id !== id));
+    } catch {
+      // silent — المستخدم يرى أن العقد لم يحذف
+    } finally {
+      setDeletingId(null);
+      setConfirmDeleteId(null);
+    }
+  }
 
   const counts = useMemo(() => {
     const all = items.length;
@@ -135,6 +150,9 @@ export default function ContractsPage() {
               {filtered.map((item) => {
                 const nextAction = getContractNextAction(item.status);
                 const statusConfig = statusStyles[item.status] || { bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-200" };
+                const isDraft = item.status === "draft";
+                const isConfirming = confirmDeleteId === item.id;
+                const isDeleting = deletingId === item.id;
 
                 return (
                   <article
@@ -156,12 +174,47 @@ export default function ContractsPage() {
                             {item.status === "issued" ? "نسخة صادرة ومحفوظة بحسابك" : "مسودة محفوظة بحسابك"}
                           </p>
                         </div>
-                        <span
-                          className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-black border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
-                        >
-                          {contractStatusLabels[item.status] || item.status}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-black border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
+                          >
+                            {contractStatusLabels[item.status] || item.status}
+                          </span>
+                          {isDraft && (
+                            <button
+                              type="button"
+                              title="حذف المسودة"
+                              onClick={() => setConfirmDeleteId(isConfirming ? null : item.id)}
+                              className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Inline Delete Confirmation */}
+                      {isConfirming && (
+                        <div className="mt-2 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
+                          <p className="flex-1 text-[10px] font-bold text-rose-700">هل تريد حذف هذه المسودة نهائياً؟</p>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item.id)}
+                            disabled={isDeleting}
+                            className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-2.5 py-1 text-[10px] font-black text-white hover:bg-rose-700 disabled:opacity-60 transition"
+                          >
+                            {isDeleting ? <Loader2 className="h-3 w-3 animate-spin" /> : "حذف"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="rounded-lg px-2 py-1 text-[10px] font-bold text-slate-500 hover:bg-slate-100 transition"
+                          >
+                            إلغاء
+                          </button>
+                        </div>
+                      )}
 
                       {/* Next Action Box */}
                       <div className="mt-2 rounded-lg bg-slate-50 border border-slate-100 p-2 text-[10px] sm:text-[11px] text-slate-600">

@@ -55,6 +55,7 @@ $register = static function (string $prefix = 'v1'): void {
                 Route::get('{id}/documents/{documentId}/download',[ContractController::class,'downloadDocument'])->whereNumber(['id','documentId']);
                 Route::get('{id}',[ContractController::class,'show'])->whereNumber('id');
                 Route::patch('{id}/draft',[ContractController::class,'updateDraft'])->whereNumber('id');
+                Route::delete('{id}/draft',[ContractController::class,'deleteDraft'])->whereNumber('id');
                 Route::post('{id}/submit',[ContractController::class,'submit'])->whereNumber('id');
                 Route::post('{id}/revision-request',[ContractController::class,'revisionRequest'])->whereNumber('id');
                 Route::post('{id}/finalize',[ContractController::class,'finalize'])->whereNumber('id');
