@@ -186,50 +186,50 @@ export default function ContractPage() {
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:py-8 sm:px-6">
 
         {/* Breadcrumb */}
-        <Link href="/contracts" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#00102e] transition mb-3">
-          <ArrowRight className="h-3.5 w-3.5" /> العودة إلى عقودي
+        <Link href="/contracts" className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-[#00102e] transition mb-3">
+          <ArrowRight className="h-3 w-3" /> العودة إلى عقودي
         </Link>
 
         {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">{error}</div>}
         {notice && <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-bold text-emerald-800">{notice}</div>}
 
         {/* Compact Legal Workspace Header */}
-        <header className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <header className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                <span className="font-mono text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
                   {item.serial_number}
                 </span>
-                <span className="text-xs text-[#986410] font-bold">• ملف العقد</span>
+                <span className="text-[11px] text-[#986410] font-bold">• ملف العقد</span>
               </div>
-              <h1 className="mt-2 text-xl sm:text-2xl font-black text-[#00102e]">{contractTitle}</h1>
-              <p className="mt-1 text-xs text-slate-500 font-medium">
+              <h1 className="mt-1.5 text-base sm:text-lg font-black text-[#00102e]">{contractTitle}</h1>
+              <p className="mt-0.5 text-[11px] text-slate-500 font-medium">
                 العقد محفوظ في حسابك ويمكنك مراجعة بياناته قبل الاعتماد.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-              <span className="rounded-full bg-blue-50 border border-blue-200/60 px-3.5 py-1.5 text-xs font-black text-blue-700">
+              <span className="rounded-full bg-blue-50 border border-blue-200/60 px-2.5 py-1 text-[10px] font-black text-blue-700">
                 {contractStatusLabels[item.status] || item.status}
               </span>
               {item.permissions.canShare && (
                 <button
                   type="button"
                   onClick={() => setShareOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#986410]/30 bg-[#986410]/5 px-3.5 py-1.5 text-xs font-black text-[#00102e] hover:bg-[#986410]/10 transition"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#986410]/30 bg-[#986410]/5 px-2.5 py-1 text-[11px] font-black text-[#00102e] hover:bg-[#986410]/10 transition"
                 >
-                  <Share2 className="h-3.5 w-3.5 text-[#986410]" />
+                  <Share2 className="h-3 w-3 text-[#986410]" />
                   <span>مشاركة</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
+                className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-slate-50 transition"
                 title="طباعة"
               >
-                <Printer className="h-3.5 w-3.5" />
+                <Printer className="h-3 w-3" />
                 <span>طباعة</span>
               </button>
             </div>
@@ -237,7 +237,7 @@ export default function ContractPage() {
 
           {/* Contextual Next Action: Pending Payment */}
           {item.status === "pending_payment" && (
-            <div className={`mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border p-3.5 ${
+            <div className={`mt-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border p-3 ${
               item.payment_status === "rejected" ? "bg-red-50 border-red-200 text-red-950" :
               item.payment_status === "needs_client_info" ? "bg-amber-50 border-amber-200 text-amber-950" :
               item.payment_status === "pending_verification" ? "bg-blue-50 border-blue-200 text-blue-950" :
@@ -245,14 +245,14 @@ export default function ContractPage() {
             }`}>
               <div className="space-y-0.5 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-[#00102e] text-white">
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-[#00102e] text-white">
                     الخطوة المطلوبة الآن
                   </span>
-                  <span className="text-xs font-black">
+                  <span className="text-[11px] font-black">
                     {item.payment_status === "pending_verification" ? "إيصال سداد الرسوم قيد المراجعة" : "استكمال سداد رسوم إعداد العقد"}
                   </span>
                 </div>
-                <p className="text-xs leading-5 opacity-90">
+                <p className="text-[11px] leading-5 opacity-90">
                   {item.payment_status === "pending_verification"
                     ? "تم استلام إيصال التحويل ويجري مراجعته لتثبيت النسخة المعتمدة."
                     : `يرجى إرفاق إيصال تحويل رسوم الإعداد (${platformFee} ج.م) ليتم اعتماد النسخة النهائية للعقد.`}
@@ -263,7 +263,7 @@ export default function ContractPage() {
                 <button
                   type="button"
                   onClick={() => setPaymentOpen(true)}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#00102e] px-4 py-2 text-xs font-black text-white hover:bg-[#00102e]/90 shadow-sm transition shrink-0"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#00102e] px-3.5 py-1.5 text-xs font-black text-white hover:bg-[#00102e]/90 shadow-sm transition shrink-0"
                 >
                   <Upload className="h-3.5 w-3.5 text-[#d9a84e]" />
                   <span>إرفاق إيصال سداد الرسوم</span>
@@ -274,21 +274,21 @@ export default function ContractPage() {
 
           {/* Contextual Next Action: Edit Window Active */}
           {isSelfService && item.status === "client_review" && (
-            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-amber-950">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="space-y-1 flex-1">
+            <div className="mt-3.5 rounded-xl border border-amber-200 bg-amber-50/90 p-3.5 text-amber-950">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="space-y-0.5 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-700 text-white">
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-700 text-white">
                       متاح للمراجعة والتعديل
                     </span>
-                    <h2 className="text-sm font-black text-amber-950">متاح تعديل بعض بيانات العقد</h2>
+                    <h2 className="text-xs sm:text-sm font-black text-amber-950">متاح تعديل بعض بيانات العقد</h2>
                   </div>
-                  <p className="text-xs leading-5 text-amber-900">
+                  <p className="text-[11px] leading-5 text-amber-900">
                     يمكنك تعديل البيانات المسموح بها حتى {formatDate(item.editWindow.expiresAt)}. بعد انتهاء المهلة يتم تثبيت النسخة الحالية من العقد.
                   </p>
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-xs font-bold text-amber-800">الوقت المتبقي للتعديل:</span>
-                    <span className="font-mono text-sm font-black text-amber-950 bg-amber-100 px-2 py-0.5 rounded-md" dir="ltr">
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <span className="text-[11px] font-bold text-amber-800">الوقت المتبقي للتعديل:</span>
+                    <span className="font-mono text-xs font-black text-amber-950 bg-amber-100 px-2 py-0.5 rounded-md" dir="ltr">
                       {formatRemaining(remaining)}
                     </span>
                   </div>
@@ -298,7 +298,7 @@ export default function ContractPage() {
                   {item.permissions.canEdit && (
                     <Link
                       href={`/wizard/${item.template_slug}?contractId=${item.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 transition shadow-sm"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 hover:bg-slate-50 transition shadow-sm"
                     >
                       <FilePenLine className="h-3.5 w-3.5 text-[#986410]" />
                       <span>تعديل البيانات المتاحة</span>
@@ -308,7 +308,7 @@ export default function ContractPage() {
                       type="button"
                       disabled={busy}
                       onClick={() => setFinalizeConfirmOpen(true)}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#00102e] px-4 py-2 text-xs font-black text-white hover:bg-[#00102e]/90 shadow-sm transition disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#00102e] px-3 py-1.5 text-xs font-black text-white hover:bg-[#00102e]/90 shadow-sm transition disabled:opacity-50"
                     >
                       <LockKeyhole className="h-3.5 w-3.5 text-[#d9a84e]" />
                       <span>اعتماد النسخة الحالية الآن</span>
@@ -320,16 +320,16 @@ export default function ContractPage() {
           )}
 
           {isSelfService && item.status === "client_review" && item.permissions.canFinalize && !item.editWindow.active && (
-            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50/90 p-4 text-blue-950">
+            <div className="mt-3.5 rounded-xl border border-blue-200 bg-blue-50/90 p-3.5 text-blue-950">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-blue-700 px-2 py-0.5 text-[10px] font-black text-white">
+                    <span className="rounded-md bg-blue-700 px-1.5 py-0.5 text-[9px] font-black text-white">
                       جاهز للاعتماد
                     </span>
-                    <h2 className="text-sm font-black text-blue-950">انتهت مهلة التعديل ويمكن اعتماد النسخة</h2>
+                    <h2 className="text-xs sm:text-sm font-black text-blue-950">انتهت مهلة التعديل ويمكن اعتماد النسخة</h2>
                   </div>
-                  <p className="text-xs leading-5 text-blue-900">
+                  <p className="text-[11px] leading-5 text-blue-900">
                     يمكنك تثبيت النسخة الحالية وتجهيز ملف PDF النهائي من حسابك.
                   </p>
                 </div>
@@ -337,7 +337,7 @@ export default function ContractPage() {
                   type="button"
                   disabled={busy}
                   onClick={() => setFinalizeConfirmOpen(true)}
-                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#00102e] px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-[#00102e]/90 disabled:opacity-50"
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#00102e] px-3.5 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-[#00102e]/90 disabled:opacity-50"
                 >
                   <LockKeyhole className="h-3.5 w-3.5 text-[#d9a84e]" />
                   <span>اعتماد النسخة وتجهيز PDF</span>
@@ -348,18 +348,18 @@ export default function ContractPage() {
         </header>
 
         {/* Workspace Layout: Tabs (Main ~70%) vs Sidebar (~30%) */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1.22fr_0.78fr] items-start">
+        <div className="mt-5 grid gap-5 lg:grid-cols-[1.22fr_0.78fr] items-start">
 
           {/* Main Column: Tabs & Document Preview */}
-          <div className="space-y-4">
+          <div className="space-y-3.5">
 
             {/* View Mode Navigation Tabs */}
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
               <div className="flex items-center gap-2 overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => setActiveTab("document")}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-black transition ${
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition ${
                     activeTab === "document"
                       ? "bg-[#00102e] text-white shadow-sm"
                       : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
@@ -372,7 +372,7 @@ export default function ContractPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("data")}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-black transition ${
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition ${
                     activeTab === "data"
                       ? "bg-[#00102e] text-white shadow-sm"
                       : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
@@ -385,7 +385,7 @@ export default function ContractPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("history")}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-black transition ${
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition ${
                     activeTab === "history"
                       ? "bg-[#00102e] text-white shadow-sm"
                       : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
@@ -396,7 +396,7 @@ export default function ContractPage() {
                 </button>
               </div>
 
-              <span className="text-[11px] text-slate-400 font-bold hidden sm:inline">
+              <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">
                 منصة Z Draft للخدمات القانونية
               </span>
             </div>
@@ -417,18 +417,18 @@ export default function ContractPage() {
 
             {/* Tab 2: Grouped Data Breakdown (Clean Legal Categories) */}
             {activeTab === "data" && (
-              <div className="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+              <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
 
                 {/* 1. أطراف التعاقد */}
                 <div>
-                  <h3 className="text-sm font-black text-[#00102e] border-b border-slate-100 pb-2">
+                  <h3 className="text-xs sm:text-sm font-black text-[#00102e] border-b border-slate-100 pb-1.5">
                     بيانات أطراف التعاقد
                   </h3>
-                  <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <dl className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
                     {groupedData.parties.map((row) => (
-                      <div key={row.key} className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-                        <dt className="text-[11px] font-bold text-slate-500">{row.label}</dt>
-                        <dd className="mt-1 text-xs font-black text-slate-900">{row.value}</dd>
+                      <div key={row.key} className="rounded-xl bg-slate-50 p-2.5 border border-slate-100">
+                        <dt className="text-[10px] font-bold text-slate-500">{row.label}</dt>
+                        <dd className="mt-0.5 text-[11px] font-black text-slate-900">{row.value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -436,14 +436,14 @@ export default function ContractPage() {
 
                 {/* 2. محل العقد */}
                 <div>
-                  <h3 className="text-sm font-black text-[#00102e] border-b border-slate-100 pb-2">
+                  <h3 className="text-xs sm:text-sm font-black text-[#00102e] border-b border-slate-100 pb-1.5">
                     بيانات العين محل العقد (العين المؤجرة / المبيعة)
                   </h3>
-                  <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <dl className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
                     {groupedData.subject.map((row) => (
-                      <div key={row.key} className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-                        <dt className="text-[11px] font-bold text-slate-500">{row.label}</dt>
-                        <dd className="mt-1 text-xs font-black text-slate-900">{row.value}</dd>
+                      <div key={row.key} className="rounded-xl bg-slate-50 p-2.5 border border-slate-100">
+                        <dt className="text-[10px] font-bold text-slate-500">{row.label}</dt>
+                        <dd className="mt-0.5 text-[11px] font-black text-slate-900">{row.value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -451,14 +451,14 @@ export default function ContractPage() {
 
                 {/* 3. البيانات المالية */}
                 <div>
-                  <h3 className="text-sm font-black text-[#00102e] border-b border-slate-100 pb-2">
+                  <h3 className="text-xs sm:text-sm font-black text-[#00102e] border-b border-slate-100 pb-1.5">
                     البيانات المالية للعقد وآلية السداد
                   </h3>
-                  <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <dl className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
                     {groupedData.financials.map((row) => (
-                      <div key={row.key} className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-                        <dt className="text-[11px] font-bold text-slate-500">{row.label}</dt>
-                        <dd className="mt-1 text-xs font-black text-[#00102e]">{row.value}</dd>
+                      <div key={row.key} className="rounded-xl bg-slate-50 p-2.5 border border-slate-100">
+                        <dt className="text-[10px] font-bold text-slate-500">{row.label}</dt>
+                        <dd className="mt-0.5 text-[11px] font-black text-[#00102e]">{row.value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -466,14 +466,14 @@ export default function ContractPage() {
 
                 {groupedData.others.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-black text-[#00102e] border-b border-slate-100 pb-2">
+                    <h3 className="text-xs sm:text-sm font-black text-[#00102e] border-b border-slate-100 pb-1.5">
                       بيانات وشروط إضافية
                     </h3>
-                    <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <dl className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
                       {groupedData.others.map((row) => (
-                        <div key={row.key} className="rounded-xl bg-slate-50 p-3.5 border border-slate-100">
-                          <dt className="text-[11px] font-bold text-slate-500">{row.label}</dt>
-                          <dd className="mt-1 text-xs font-black text-slate-900">{row.value}</dd>
+                        <div key={row.key} className="rounded-xl bg-slate-50 p-2.5 border border-slate-100">
+                          <dt className="text-[10px] font-bold text-slate-500">{row.label}</dt>
+                          <dd className="mt-0.5 text-[11px] font-black text-slate-900">{row.value}</dd>
                         </div>
                       ))}
                     </dl>
@@ -484,28 +484,28 @@ export default function ContractPage() {
 
             {/* Tab 3: Detailed Versions Timeline */}
             {activeTab === "history" && (
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
-                <h3 className="text-sm font-black text-[#00102e] border-b border-slate-100 pb-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+                <h3 className="text-xs sm:text-sm font-black text-[#00102e] border-b border-slate-100 pb-1.5">
                   سجل نسخ العقد وتاريخ التعديلات
                 </h3>
-                <div className="mt-4 space-y-3">
+                <div className="mt-3 space-y-2.5">
                   {item.versions.map((ver) => (
-                    <div key={ver.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4">
+                    <div key={ver.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <strong className="text-xs font-black text-slate-800">النسخة {ver.versionNumber}</strong>
-                          <span className="rounded-full bg-blue-50 border border-blue-200/60 px-2.5 py-0.5 text-[10px] font-black text-blue-700">
+                          <strong className="text-[11px] font-black text-slate-800">النسخة {ver.versionNumber}</strong>
+                          <span className="rounded-full bg-blue-50 border border-blue-200/60 px-2 py-0.5 text-[9px] font-black text-blue-700">
                             {contractStatusLabels[ver.status] || ver.status}
                           </span>
                         </div>
-                        <p className="mt-1 text-[11px] text-slate-500">
+                        <p className="mt-0.5 text-[10px] text-slate-500">
                           تم الحفظ في: {formatDate(ver.createdAt)}
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setActiveTab("document")}
-                        className="rounded-xl bg-[#00102e] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#00102e]/90 transition"
+                        className="rounded-xl bg-[#00102e] px-3 py-1 text-xs font-bold text-white hover:bg-[#00102e]/90 transition"
                       >
                         معاينة
                       </button>
@@ -517,27 +517,27 @@ export default function ContractPage() {
           </div>
 
           {/* Sidebar Column: Actions & Meta */}
-          <aside className="space-y-6">
+          <aside className="space-y-4">
 
             {/* 1. Official Document (PDF) Card */}
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-base font-black text-[#00102e]">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="text-xs sm:text-sm font-black text-[#00102e]">
                 {item.status === "issued" ? "النسخة المعتمدة للعقد" : "نسخة المعاينة (PDF)"}
               </h2>
 
-              <div className="mt-3 flex items-start gap-3 rounded-xl bg-slate-50 p-3.5 border border-slate-100">
+              <div className="mt-2.5 flex items-start gap-2.5 rounded-xl bg-slate-50 p-3 border border-slate-100">
                 {item.pdf_status === "ready" ? (
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" />
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
                 ) : item.pdf_status === "failed" ? (
-                  <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 mt-0.5" />
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
                 ) : (
-                  <Clock3 className="h-5 w-5 shrink-0 text-slate-400 mt-0.5" />
+                  <Clock3 className="h-4 w-4 shrink-0 text-slate-400 mt-0.5" />
                 )}
                 <div>
-                  <div className="text-xs font-black text-slate-800">
+                  <div className="text-[11px] font-black text-slate-800">
                     {item.status === "issued" ? "النسخة المعتمدة جاهزة للتحميل" : "ملف PDF متاح للمراجعة"}
                   </div>
-                  <p className="mt-0.5 text-[11px] leading-5 text-slate-500">
+                  <p className="mt-0.5 text-[10px] leading-4 text-slate-500">
                     {item.status === "issued"
                       ? "النسخة الموثقة المعتمدة بصيغة PDF محفوظة بحسابك."
                       : "يمكنك الاطلاع على مسودة العقد وتدقيق بنودها."}
@@ -548,23 +548,23 @@ export default function ContractPage() {
               {item.permissions.canDownloadPdf && documents.length === 0 && (
                 <a
                   href={apiUrl(`/api/v1/contracts/${item.id}/pdf`)}
-                  className="mt-3.5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-2.5 text-xs font-black text-white shadow-sm transition"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-3.5 py-2 text-xs font-black text-white shadow-sm transition"
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="h-3.5 w-3.5" />
                   <span>{item.status === "issued" ? "تحميل النسخة المعتمدة (PDF)" : "تحميل نسخة المعاينة (PDF)"}</span>
                 </a>
               )}
 
               {documents.length > 0 && (
-                <div className="mt-3 space-y-2">
+                <div className="mt-2.5 space-y-2">
                   {documents.map((doc) => (
                     <a
                       key={doc.id}
                       href={apiUrl(`/api/v1/contracts/${item.id}/documents/${doc.id}/download`)}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-black text-emerald-900 hover:bg-emerald-100/70 transition"
+                      className="flex items-center justify-between gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-900 hover:bg-emerald-100/70 transition"
                     >
                       <span>{doc.titleAr}</span>
-                      <Download className="h-4 w-4 shrink-0" />
+                      <Download className="h-3.5 w-3.5 shrink-0" />
                     </a>
                   ))}
                 </div>
@@ -572,19 +572,19 @@ export default function ContractPage() {
             </section>
 
             {/* 2. Platform Fee / Payment Card */}
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-base font-black text-[#00102e]">رسوم إعداد العقد</h2>
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="text-xs sm:text-sm font-black text-[#00102e]">رسوم إعداد العقد</h2>
 
-              <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-3.5 space-y-2">
+              <div className="mt-2.5 rounded-xl bg-slate-50 border border-slate-100 p-3 space-y-2">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs font-bold text-slate-600">رسوم الخدمة:</span>
+                  <span className="text-[11px] font-bold text-slate-600">رسوم الخدمة:</span>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-lg font-black text-[#00102e]">{platformFee.toLocaleString("ar-EG")}</span>
-                    <span className="text-xs font-bold text-[#986410]">ج.م</span>
+                    <span className="text-sm sm:text-base font-black text-[#00102e]">{platformFee.toLocaleString("ar-EG")}</span>
+                    <span className="text-[11px] font-bold text-[#986410]">ج.م</span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-slate-500 border-t border-slate-200/60 pt-2">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-200/60 pt-2">
                   <span>حالة الرسوم:</span>
                   <span className="font-bold text-slate-800">
                     {item.payment_status === "approved"
@@ -600,7 +600,7 @@ export default function ContractPage() {
                 <button
                   type="button"
                   onClick={() => setPaymentOpen(true)}
-                  className="mt-3.5 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#00102e] hover:bg-[#00102e]/90 py-2.5 text-xs font-black text-white shadow-sm transition"
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#00102e] hover:bg-[#00102e]/90 py-2 text-xs font-black text-white shadow-sm transition"
                 >
                   <Upload className="h-3.5 w-3.5 text-[#d9a84e]" />
                   <span>إرفاق إيصال سداد الرسوم</span>
@@ -609,18 +609,18 @@ export default function ContractPage() {
             </section>
 
             {/* 3. Versions History Widget */}
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-base font-black text-[#00102e]">سجل نسخ العقد</h2>
-              <div className="mt-3 space-y-2">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="text-xs sm:text-sm font-black text-[#00102e]">سجل نسخ العقد</h2>
+              <div className="mt-2.5 space-y-2">
                 {item.versions.map((ver) => (
-                  <div key={ver.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                    <div className="flex items-center justify-between gap-2 text-xs">
+                  <div key={ver.id} className="rounded-xl border border-slate-100 bg-slate-50 p-2.5">
+                    <div className="flex items-center justify-between gap-2 text-[11px]">
                       <strong className="font-black text-slate-800">النسخة {ver.versionNumber}</strong>
-                      <span className="rounded bg-slate-200/70 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                      <span className="rounded bg-slate-200/70 px-1.5 py-0.5 text-[9px] font-bold text-slate-600">
                         {contractStatusLabels[ver.status] || ver.status}
                       </span>
                     </div>
-                    <p className="mt-1 text-[10px] text-slate-400">
+                    <p className="mt-0.5 text-[10px] text-slate-400">
                       {formatDate(ver.createdAt)}
                     </p>
                   </div>
@@ -630,14 +630,14 @@ export default function ContractPage() {
 
             {/* 4. Post-issuance note */}
             {item.status === "issued" && (
-              <section className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
-                <h3 className="text-xs font-black text-amber-950">هل تحتاج تعديلاً بعد الاعتماد؟</h3>
-                <p className="mt-1 text-[11px] leading-5 text-amber-900">
+              <section className="rounded-2xl border border-amber-200 bg-amber-50/70 p-3.5 shadow-sm">
+                <h3 className="text-[11px] font-black text-amber-950">هل تحتاج تعديلاً بعد الاعتماد؟</h3>
+                <p className="mt-1 text-[10px] leading-4 text-amber-900">
                   النسخة المعتمدة تظل ثابتة للحفاظ على الحجية القانونية. إذا أردت مراجعة إضافية يمكنك إنشاء طلب مراجعة عقد جديد من المكتب.
                 </p>
                 <Link
                   href="/request-review"
-                  className="mt-3 inline-block rounded-xl bg-amber-700 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-amber-800 transition"
+                  className="mt-2.5 inline-block rounded-xl bg-amber-700 px-3 py-1 text-xs font-bold text-white hover:bg-amber-800 transition"
                 >
                   طلب مراجعة عقد
                 </Link>
