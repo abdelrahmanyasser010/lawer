@@ -467,6 +467,7 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
     const type = valueText(`${prefix}_party_type`);
     if (type === "company") {
       const company = valueText(`${prefix}_company_name`);
+      if (!company) return undefined;
       const legalForm = valueText(`${prefix}_company_legal_form`);
       const register = valueText(`${prefix}_commercial_register`);
       const tax = valueText(`${prefix}_tax_number`);
@@ -474,22 +475,27 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
       const capacity = valueText(`${prefix}_representative_capacity`);
       const address = valueText(`${prefix}_company_address`);
       const basis = valueText(`${prefix}_authority_basis`);
-      if (!company || !legalForm || !register || !tax || !rep || !capacity || !address || !basis) return undefined;
       let authority = basis === "commercial_register" ? "، بموجب الصفة الثابتة بالسجل التجاري" : "";
       if (basis === "power_of_attorney") {
         const no = valueText(`${prefix}_power_of_attorney_number`); const year = valueText(`${prefix}_power_of_attorney_year`); const office = valueText(`${prefix}_power_of_attorney_office`);
-        if (!no || !year || !office) return undefined;
-        authority = `، بموجب توكيل رقم ${no} لسنة ${year} موثق لدى ${office}`;
+        if (no && year && office) authority = `، بموجب توكيل رقم ${no} لسنة ${year} موثق لدى ${office}`;
       }
       const phone = valueText(`${prefix}_company_phone`); const email = valueText(`${prefix}_company_email`);
-      return `شركة/منشأة «${company}»، شكلها القانوني ${legalForm}، سجل تجاري رقم ${register}، والرقم الضريبي الموحد ${tax}، ومقرها ${address}، ويمثلها قانونًا السيد/ ${rep} بصفته ${capacity}${authority}${phone ? `، ورقم الهاتف ${phone}` : ""}${email ? `، والبريد الإلكتروني ${email}` : ""}، ويشار إليها في هذا العقد بـ «${role}».`;
+      return `شركة/منشأة «${company}»${legalForm ? `، شكلها القانوني ${legalForm}` : ""}${register ? `، سجل تجاري رقم ${register}` : ""}${tax ? `، والرقم الضريبي الموحد ${tax}` : ""}${address ? `، ومقرها ${address}` : ""}${rep ? `، ويمثلها قانونًا السيد/ ${rep}` : ""}${capacity ? ` بصفته ${capacity}` : ""}${authority}${phone ? `، ورقم الهاتف ${phone}` : ""}${email ? `، والبريد الإلكتروني ${email}` : ""}، ويشار إليها في هذا العقد بـ «${role}».`;
     }
-    const name = valueText(`${prefix}_name`); const nationality = valueText(`${prefix}_nationality`); const identityType = valueText(`${prefix}_identity_document_type`); const identity = valueText(`${prefix}_national_id`); const address = valueText(`${prefix}_address`); const phone = valueText(`${prefix}_phone`);
-    if (!name || !nationality || !identityType || !identity || !address || !phone) return undefined;
+    const name = valueText(`${prefix}_name`);
+    if (!name) return undefined;
+    const nationality = valueText(`${prefix}_nationality`);
+    const identityType = valueText(`${prefix}_identity_document_type`);
+    const identity = valueText(`${prefix}_national_id`);
+    const address = valueText(`${prefix}_address`);
+    const phone = valueText(`${prefix}_phone`);
     const identityLabel = identityType === "passport" ? "رقم جواز السفر" : "الرقم القومي";
-    const issuer = valueText(`${prefix}_id_issuer`); const issueDate = valueText(`${prefix}_id_issue_date`); const email = valueText(`${prefix}_email`);
+    const issuer = valueText(`${prefix}_id_issuer`);
+    const issueDate = valueText(`${prefix}_id_issue_date`);
+    const email = valueText(`${prefix}_email`);
     const issueText = issuer || issueDate ? `، ${issuer ? `صادر من ${issuer}` : ""}${issuer && issueDate ? " " : ""}${issueDate ? `بتاريخ ${issueDate}` : ""}` : "";
-    return `السيد/ ${name}، ${nationality} الجنسية، يحمل ${identityLabel} رقم ${identity}${issueText}، وعنوانه ${address}، ورقم هاتفه ${phone}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
+    return `السيد/ ${name}${nationality ? `، ${nationality} الجنسية` : ""}${identity ? `، يحمل ${identityLabel} رقم ${identity}${issueText}` : ""}${address ? `، وعنوانه ${address}` : ""}${phone ? `، ورقم هاتفه ${phone}` : ""}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
   }
 
   if (fieldKey === "social_activity_definition") {
@@ -615,20 +621,31 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
     const role = prefix === "landlord" ? "الطرف الأول (المؤجر)" : "الطرف الثاني (المستأجر)";
     const type = valueText(`${prefix}_party_type`);
     if (type === "company") {
-      const company = valueText(`${prefix}_company_name`); const legalForm = valueText(`${prefix}_company_legal_form`);
-      const register = valueText(`${prefix}_commercial_register`); const tax = valueText(`${prefix}_tax_card`);
-      const rep = valueText(`${prefix}_legal_representative`); const capacity = valueText(`${prefix}_representative_capacity`);
-      const address = valueText(`${prefix}_company_address`); const phone = valueText(`${prefix}_company_phone`); const email = valueText(`${prefix}_company_email`);
-      if (!company || !legalForm || !register || !tax || !rep || !capacity || !address) return undefined;
-      return `شركة/منشأة «${company}»، شكلها القانوني ${legalForm}، سجل تجاري رقم ${register}، والبطاقة الضريبية رقم ${tax}، ومقرها ${address}، ويمثلها قانونًا السيد/ ${rep} بصفته ${capacity}${phone ? `، ورقم الهاتف ${phone}` : ""}${email ? `، والبريد الإلكتروني ${email}` : ""}، ويشار إليها في هذا العقد بـ «${role}».`;
+      const company = valueText(`${prefix}_company_name`);
+      if (!company) return undefined;
+      const legalForm = valueText(`${prefix}_company_legal_form`);
+      const register = valueText(`${prefix}_commercial_register`);
+      const tax = valueText(`${prefix}_tax_card`);
+      const rep = valueText(`${prefix}_legal_representative`);
+      const capacity = valueText(`${prefix}_representative_capacity`);
+      const address = valueText(`${prefix}_company_address`);
+      const phone = valueText(`${prefix}_company_phone`);
+      const email = valueText(`${prefix}_company_email`);
+      return `شركة/منشأة «${company}»${legalForm ? `، شكلها القانوني ${legalForm}` : ""}${register ? `، سجل تجاري رقم ${register}` : ""}${tax ? `، والبطاقة الضريبية رقم ${tax}` : ""}${address ? `، ومقرها ${address}` : ""}${rep ? `، ويمثلها قانونًا السيد/ ${rep}` : ""}${capacity ? ` بصفته ${capacity}` : ""}${phone ? `، ورقم الهاتف ${phone}` : ""}${email ? `، والبريد الإلكتروني ${email}` : ""}، ويشار إليها في هذا العقد بـ «${role}».`;
     }
-    const name = valueText(`${prefix}_name`); const nationality = valueText(`${prefix}_nationality`); const identityType = valueText(`${prefix}_identity_document_type`);
-    const identity = valueText(`${prefix}_national_id`); const address = valueText(`${prefix}_address`); const phone = valueText(`${prefix}_phone`);
-    if (!name || !nationality || !identityType || !identity || !address || !phone) return undefined;
+    const name = valueText(`${prefix}_name`);
+    if (!name) return undefined;
+    const nationality = valueText(`${prefix}_nationality`);
+    const identityType = valueText(`${prefix}_identity_document_type`);
+    const identity = valueText(`${prefix}_national_id`);
+    const address = valueText(`${prefix}_address`);
+    const phone = valueText(`${prefix}_phone`);
     const identityLabel = identityType === "passport" ? "رقم جواز السفر" : "الرقم القومي";
-    const issuer = valueText(`${prefix}_id_issuer`); const issueDate = valueText(`${prefix}_id_issue_date`); const email = valueText(`${prefix}_email`);
+    const issuer = valueText(`${prefix}_id_issuer`);
+    const issueDate = valueText(`${prefix}_id_issue_date`);
+    const email = valueText(`${prefix}_email`);
     const issueText = issuer || issueDate ? `، ${issuer ? `صادر من ${issuer}` : ""}${issuer && issueDate ? " " : ""}${issueDate ? `بتاريخ ${issueDate}` : ""}` : "";
-    return `السيد/ ${name}، ${nationality} الجنسية، يحمل ${identityLabel} رقم ${identity}${issueText}، وعنوانه ${address}، ورقم هاتفه ${phone}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
+    return `السيد/ ${name}${nationality ? `، ${nationality} الجنسية` : ""}${identity ? `، يحمل ${identityLabel} رقم ${identity}${issueText}` : ""}${address ? `، وعنوانه ${address}` : ""}${phone ? `، ورقم هاتفه ${phone}` : ""}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
   }
 
   if (fieldKey === "lease_duration_text") {
@@ -758,19 +775,31 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
     const role = prefix === "seller" ? "الطرف الأول (البائع)" : "الطرف الثاني (المشتري)";
     const type = valueText(`${prefix}_party_type`);
     if (type === "company") {
-      const company = valueText(`${prefix}_company_name`); const legalForm = valueText(`${prefix}_company_legal_form`);
-      const register = valueText(`${prefix}_commercial_register`); const tax = valueText(`${prefix}_tax_card`);
-      const rep = valueText(`${prefix}_legal_representative`); const capacity = valueText(`${prefix}_representative_capacity`);
-      const address = valueText(`${prefix}_company_address`); const phone = valueText(`${prefix}_phone`); const email = valueText(`${prefix}_company_email`);
-      if (!company || !legalForm || !register || !tax || !rep || !capacity || !address || !phone) return undefined;
-      return `شركة/منشأة «${company}»، شكلها القانوني ${legalForm}، سجل تجاري رقم ${register}، والبطاقة الضريبية رقم ${tax}، ومقرها ${address}، ويمثلها قانونًا السيد/ ${rep} بصفته ${capacity}، ورقم الهاتف ${phone}${email ? `، والبريد الإلكتروني ${email}` : ""}، ويشار إليها في هذا العقد بـ «${role}».`;
+      const company = valueText(`${prefix}_company_name`);
+      if (!company) return undefined;
+      const legalForm = valueText(`${prefix}_company_legal_form`);
+      const register = valueText(`${prefix}_commercial_register`);
+      const tax = valueText(`${prefix}_tax_card`);
+      const rep = valueText(`${prefix}_legal_representative`);
+      const capacity = valueText(`${prefix}_representative_capacity`);
+      const address = valueText(`${prefix}_company_address`);
+      const phone = valueText(`${prefix}_phone`);
+      const email = valueText(`${prefix}_company_email`);
+      return `شركة/منشأة «${company}»${legalForm ? `، شكلها القانوني ${legalForm}` : ""}${register ? `، سجل تجاري رقم ${register}` : ""}${tax ? `، والبطاقة الضريبية رقم ${tax}` : ""}${address ? `، ومقرها ${address}` : ""}${rep ? `، ويمثلها قانونًا السيد/ ${rep}` : ""}${capacity ? ` بصفته ${capacity}` : ""}${phone ? `، ورقم الهاتف ${phone}` : ""}${email ? `، والبريد الإلكتروني ${email}` : ""}، ويشار إليها في هذا العقد بـ «${role}».`;
     }
-    const name = valueText(`${prefix}_name`); const nationality = valueText(`${prefix}_nationality`); const identityType = valueText(`${prefix}_identity_document_type`); const identity = valueText(`${prefix}_national_id`); const address = valueText(`${prefix}_address`); const phone = valueText(`${prefix}_phone`);
-    if (!name || !nationality || !identityType || !identity || !address || !phone) return undefined;
+    const name = valueText(`${prefix}_name`);
+    if (!name) return undefined;
+    const nationality = valueText(`${prefix}_nationality`);
+    const identityType = valueText(`${prefix}_identity_document_type`);
+    const identity = valueText(`${prefix}_national_id`);
+    const address = valueText(`${prefix}_address`);
+    const phone = valueText(`${prefix}_phone`);
     const identityLabel = identityType === "passport" ? "رقم جواز السفر" : "الرقم القومي";
-    const issuer = valueText(`${prefix}_id_issuer`); const issueDate = valueText(`${prefix}_id_issue_date`); const email = valueText(`${prefix}_email`);
+    const issuer = valueText(`${prefix}_id_issuer`);
+    const issueDate = valueText(`${prefix}_id_issue_date`);
+    const email = valueText(`${prefix}_email`);
     const issueText = issuer || issueDate ? `، ${issuer ? `صادر من ${issuer}` : ""}${issuer && issueDate ? " " : ""}${issueDate ? `بتاريخ ${issueDate}` : ""}` : "";
-    return `السيد/ ${name}، ${nationality} الجنسية، يحمل ${identityLabel} رقم ${identity}${issueText}، وعنوانه ${address}، ورقم هاتفه ${phone}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
+    return `السيد/ ${name}${nationality ? `، ${nationality} الجنسية` : ""}${identity ? `، يحمل ${identityLabel} رقم ${identity}${issueText}` : ""}${address ? `، وعنوانه ${address}` : ""}${phone ? `، ورقم هاتفه ${phone}` : ""}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
   }
 
   if (fieldKey === "sale_total_price_words") return numberToEgyptianPoundsWords(fieldValues.sale_total_price) || undefined;
@@ -967,6 +996,7 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
     const type = valueText(`${prefix}_party_type`);
     if (type === "company") {
       const company = valueText(`${prefix}_company_name`);
+      if (!company) return undefined;
       const legalForm = valueText(`${prefix}_company_legal_form`);
       const register = valueText(`${prefix}_commercial_register`);
       const tax = valueText(`${prefix}_tax_number`);
@@ -974,32 +1004,30 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
       const capacity = valueText(`${prefix}_representative_capacity`);
       const address = valueText(`${prefix}_company_address`);
       const basis = valueText(`${prefix}_authority_basis`);
-      if (!company || !legalForm || !register || !tax || !rep || !capacity || !address || !basis) return undefined;
       let authority = basis === "commercial_register" ? "، بموجب الصفة الثابتة بالسجل التجاري" : "";
       if (basis === "power_of_attorney") {
         const no = valueText(`${prefix}_power_of_attorney_number`);
         const year = valueText(`${prefix}_power_of_attorney_year`);
         const office = valueText(`${prefix}_power_of_attorney_office`);
-        if (!no || !year || !office) return undefined;
-        authority = `، بموجب توكيل رقم ${no} لسنة ${year} موثق لدى ${office}`;
+        if (no && year && office) authority = `، بموجب توكيل رقم ${no} لسنة ${year} موثق لدى ${office}`;
       }
       const phone = valueText(`${prefix}_company_phone`);
       const email = valueText(`${prefix}_company_email`);
-      return `شركة/منشأة «${company}»، شكلها القانوني ${legalForm}، سجل تجاري رقم ${register}، والرقم الضريبي الموحد ${tax}، ومقرها ${address}، ويمثلها قانونًا السيد/ ${rep} بصفته ${capacity}${authority}${phone ? `، ورقم الهاتف ${phone}` : ""}${email ? `، والبريد الإلكتروني ${email}` : ""}، ويشار إليها في هذا العقد بـ «${role}».`;
+      return `شركة/منشأة «${company}»${legalForm ? `، شكلها القانوني ${legalForm}` : ""}${register ? `، سجل تجاري رقم ${register}` : ""}${tax ? `، والرقم الضريبي الموحد ${tax}` : ""}${address ? `، ومقرها ${address}` : ""}${rep ? `، ويمثلها قانونًا السيد/ ${rep}` : ""}${capacity ? ` بصفته ${capacity}` : ""}${authority}${phone ? `، ورقم الهاتف ${phone}` : ""}${email ? `، والبريد الإلكتروني ${email}` : ""}، ويشار إليها في هذا العقد بـ «${role}».`;
     }
     const name = valueText(`${prefix}_name`);
+    if (!name) return undefined;
     const nationality = valueText(`${prefix}_nationality`);
     const identityType = valueText(`${prefix}_identity_document_type`);
     const identity = valueText(`${prefix}_national_id`);
     const address = valueText(`${prefix}_address`);
     const phone = valueText(`${prefix}_phone`);
-    if (!name || !nationality || !identityType || !identity || !address || !phone) return undefined;
     const identityLabel = identityType === "passport" ? "رقم جواز السفر" : "الرقم القومي";
     const issuer = valueText(`${prefix}_id_issuer`);
     const issueDate = valueText(`${prefix}_id_issue_date`);
     const email = valueText(`${prefix}_email`);
     const issueText = issuer || issueDate ? `، ${issuer ? `صادر من ${issuer}` : ""}${issuer && issueDate ? " " : ""}${issueDate ? `بتاريخ ${issueDate}` : ""}` : "";
-    return `السيد/ ${name}، ${nationality} الجنسية، يحمل ${identityLabel} رقم ${identity}${issueText}، وعنوانه ${address}، ورقم هاتفه ${phone}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
+    return `السيد/ ${name}${nationality ? `، ${nationality} الجنسية` : ""}${identity ? `، يحمل ${identityLabel} رقم ${identity}${issueText}` : ""}${address ? `، وعنوانه ${address}` : ""}${phone ? `، ورقم هاتفه ${phone}` : ""}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
   }
 
   if (fieldKey === "visual_contract_value_words") return numberToEgyptianPoundsWords(fieldValues.visual_contract_value) || undefined;
@@ -1114,16 +1142,15 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
     const prefix = fieldKey.startsWith("website_client_") ? "website_client" : "website_provider";
     const role = prefix === "website_client" ? "الطرف الأول (العميل)" : "الطرف الثاني (مقدم الخدمة)";
     const type = valueText(`${prefix}_party_type`);
-    const optional = (label: string, key: string) => { const value = valueText(key); return value ? `، ${label} ${value}` : ""; };
     if (type === "company") {
       const company = valueText(`${prefix}_company_name`);
+      if (!company) return undefined;
       const legalForm = valueText(`${prefix}_company_legal_form`);
       const register = valueText(`${prefix}_commercial_register`);
       const tax = valueText(`${prefix}_tax_number`);
       const rep = valueText(`${prefix}_legal_representative`);
       const capacity = valueText(`${prefix}_representative_capacity`);
       const address = valueText(`${prefix}_company_address`);
-      if (!company || !legalForm || !register || !tax || !rep || !capacity || !address) return undefined;
       let authority = "";
       if (prefix === "website_provider") {
         const basis = valueText(`${prefix}_authority_basis`);
@@ -1138,22 +1165,22 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
       }
       const email = valueText(`${prefix}_company_email`);
       const phone = valueText(`${prefix}_company_phone`);
-      return `شركة/منشأة «${company}»، الشكل القانوني ${legalForm}، سجل تجاري رقم ${register}، والرقم الضريبي الموحد ${tax}، ومقرها ${address}، ويمثلها قانونًا السيد/ ${rep} بصفته ${capacity}${authority}${phone ? `، ورقم الهاتف ${phone}` : ""}${email ? `، والبريد الإلكتروني ${email}` : ""}، ويشار إليها في هذا العقد بـ «${role}».`;
+      return `شركة/منشأة «${company}»${legalForm ? `، الشكل القانوني ${legalForm}` : ""}${register ? `، سجل تجاري رقم ${register}` : ""}${tax ? `، والرقم الضريبي الموحد ${tax}` : ""}${address ? `، ومقرها ${address}` : ""}${rep ? `، ويمثلها قانونًا السيد/ ${rep}` : ""}${capacity ? ` بصفته ${capacity}` : ""}${authority}${phone ? `، ورقم الهاتف ${phone}` : ""}${email ? `، والبريد الإلكتروني ${email}` : ""}، ويشار إليها في هذا العقد بـ «${role}».`;
     }
 
     const name = valueText(`${prefix}_name`);
+    if (!name) return undefined;
     const nationality = valueText(`${prefix}_nationality`);
     const identityType = valueText(`${prefix}_identity_document_type`);
     const identity = valueText(`${prefix}_national_id`);
     const address = valueText(`${prefix}_address`);
     const phone = valueText(`${prefix}_phone`);
-    if (!name || !nationality || !identityType || !identity || !address || !phone) return undefined;
     const identityLabel = identityType === "passport" ? "رقم جواز السفر" : "الرقم القومي";
     const issuer = valueText(`${prefix}_id_issuer`);
     const issueDate = valueText(`${prefix}_id_issue_date`);
     const email = valueText(`${prefix}_email`);
     const issueText = issuer || issueDate ? `، ${issuer ? `صادر من ${issuer}` : ""}${issuer && issueDate ? " " : ""}${issueDate ? `بتاريخ ${issueDate}` : ""}` : "";
-    return `السيد/ ${name}، ${nationality} الجنسية، يحمل ${identityLabel} رقم ${identity}${issueText}، وعنوانه ${address}، ورقم هاتفه ${phone}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
+    return `السيد/ ${name}${nationality ? `، ${nationality} الجنسية` : ""}${identity ? `، يحمل ${identityLabel} رقم ${identity}${issueText}` : ""}${address ? `، وعنوانه ${address}` : ""}${phone ? `، ورقم هاتفه ${phone}` : ""}${email ? `، وبريده الإلكتروني ${email}` : ""}، ويشار إليه في هذا العقد بـ «${role}».`;
   }
 
   if (fieldKey === "website_total_price_words") return numberToEgyptianPoundsWords(fieldValues.website_total_price) || undefined;
