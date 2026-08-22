@@ -56,11 +56,11 @@ export default function ContractsPage() {
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8 sm:px-6">
 
-        {/* Header with Title and Create Contract CTA */}
+          {/* Header with Title and Create Contract CTA */}
         <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-[#00102e]">عقودي</h1>
-            <p className="mt-1 text-xs sm:text-sm text-slate-600">
+            <h1 className="text-xl sm:text-2xl font-black text-[#00102e]">عقودي</h1>
+            <p className="mt-1 text-[11px] sm:text-xs text-slate-600">
               مسوداتك وعقودك المحفوظة في حسابك، من بداية الإعداد حتى الإصدار النهائي.
             </p>
           </div>
@@ -144,25 +144,25 @@ export default function ContractsPage() {
                     <div>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <span className="font-mono text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md inline-block">
+                          <span className="font-mono text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md inline-block">
                             {item.serialNumber}
                           </span>
-                          <h2 className="mt-2 text-base sm:text-lg font-black text-[#00102e] truncate">
+                          <h2 className="mt-1.5 text-sm sm:text-base font-black text-[#00102e] truncate">
                             {item.title || item.templateNameAr}
                           </h2>
-                          <p className="mt-0.5 text-xs text-slate-500">
+                          <p className="mt-0.5 text-[11px] text-slate-500">
                             {item.status === "issued" ? "نسخة صادرة ومحفوظة بحسابك" : "مسودة محفوظة بحسابك"}
                           </p>
                         </div>
                         <span
-                          className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-black border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
+                          className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
                         >
                           {contractStatusLabels[item.status] || item.status}
                         </span>
                       </div>
 
                       {/* Next Action Box */}
-                      <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-2.5 text-xs text-slate-600">
+                      <div className="mt-2.5 rounded-xl bg-slate-50 border border-slate-100 p-2 text-[11px] text-slate-600">
                         <b className="text-slate-800">الخطوة التالية:</b> {nextAction.label}
                       </div>
                     </div>
