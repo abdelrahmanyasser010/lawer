@@ -24,21 +24,31 @@ export async function compressUploadFile(file: File): Promise<CompressedResult> 
     };
   }
 
+  const targetMime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+
   const options = {
     maxSizeMB: 1, // Max 1MB after compression
     maxWidthOrHeight: 1920,
     useWebWorker: true,
-    initialQuality: 0.8
+    initialQuality: 0.8,
+    fileType: targetMime,
   };
 
   try {
-    const compressedFile = await imageCompression(file, options);
-    const compressedSizeKB = Math.round(compressedFile.size / 1024);
+    const compressedBlob = await imageCompression(file, options);
+    const compressedSizeKB = Math.round(compressedBlob.size / 1024);
     const savedKB = originalSizeKB - compressedSizeKB;
     const ratio = originalSizeKB > 0 ? Math.round((savedKB / originalSizeKB) * 100) : 0;
 
+    const ext = targetMime === 'image/png' ? '.png' : '.jpg';
+    const baseName = file.name.replace(/\.[^/.]+$/, "");
+    const finalFile = new File([compressedBlob], `${baseName}${ext}`, {
+      type: targetMime,
+      lastModified: Date.now(),
+    });
+
     return {
-      file: compressedFile,
+      file: finalFile,
       originalSizeKB,
       compressedSizeKB,
       compressionRatio: `${ratio > 0 ? ratio : 0}%`
