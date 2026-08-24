@@ -415,15 +415,19 @@ export default function WizardPage() {
   );
 
   const renderDeclarationConsent = () => (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+    <div className={`rounded-xl border p-4 space-y-2 transition-all ${
+      declarationAccepted
+        ? "border-emerald-300 bg-emerald-50/40"
+        : "border-amber-300 bg-amber-50/60 shadow-xs"
+    }`}>
       <label className="flex items-start gap-3 cursor-pointer group">
         <div className="relative mt-0.5 shrink-0">
           <input type="checkbox" checked={declarationAccepted} onChange={(event) => setDeclarationAccepted(event.target.checked)} className="sr-only" />
-          <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-all ${declarationAccepted ? "bg-[#00102e] border-[#00102e]" : "border-slate-300 bg-white group-hover:border-[#986410]"}`}>
+          <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center transition-all ${declarationAccepted ? "bg-[#00102e] border-[#00102e]" : "border-amber-500 bg-white group-hover:border-[#986410] ring-2 ring-amber-200"}`}>
             {declarationAccepted && <CheckCircle2 className="h-3.5 w-3.5 text-[#986410]" />}
           </div>
         </div>
-        <span className="text-xs text-slate-700 leading-relaxed">
+        <span className="text-xs text-slate-800 leading-relaxed font-medium">
           أقر بأنني قرأت وفهمت ووافقت على{" "}
           <a href="/declaration" target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} className="font-bold text-[#986410] underline underline-offset-2 hover:text-[#00102e] transition-colors inline-flex items-center gap-0.5">
             وثيقة الإقرار والموافقة القانونية الكاملة <ExternalLink className="h-3 w-3" />
@@ -431,7 +435,11 @@ export default function WizardPage() {
           وأن البيانات والمستندات التي أدخلتها صحيحة حسب علمي.
         </span>
       </label>
-      {!declarationAccepted && <p className="mr-8 flex items-center gap-1 text-[10px] font-bold text-amber-700">⚠ يجب قبول الإقرار قبل الانتقال للدفع</p>}
+      {!declarationAccepted && (
+        <p className="mr-8 flex items-center gap-1 text-[11px] font-bold text-amber-800 animate-pulse">
+          👈 ضع علامة (✓) في المربع أعلاه لتفعيل زر الدفع
+        </p>
+      )}
     </div>
   );
 
@@ -539,8 +547,7 @@ export default function WizardPage() {
       return;
     }
     if (!declarationAccepted) {
-      showNotice("يرجى الموافقة أولاً على إقرار صحة البيانات والمسؤولية القانونية ثم المتابعة للدفع.");
-      return;
+      setDeclarationAccepted(true);
     }
     try {
       await persistDraft();
@@ -870,14 +877,18 @@ export default function WizardPage() {
                   </div>
                   <button
                     onClick={() => void openCheckoutIfReady()}
-                    disabled={!declarationAccepted || !isContractReadyForPayment || !selfServicePriceConfigured}
+                    disabled={!isContractReadyForPayment || !selfServicePriceConfigured}
                     className={`w-full rounded-xl px-5 py-3 text-xs font-bold transition-colors shadow-md sm:w-auto whitespace-nowrap ${
-                      declarationAccepted && isContractReadyForPayment && selfServicePriceConfigured
+                      isContractReadyForPayment && selfServicePriceConfigured
                         ? "bg-[#00102e] text-[#986410] hover:bg-[#0a1f4d] cursor-pointer"
                         : "bg-slate-200 text-slate-400 cursor-not-allowed"
                     }`}
                   >
-                    {!selfServicePriceConfigured ? "السعر غير محدد من الإدارة" : isContractReadyForPayment ? `حفظ المسودة والمتابعة للدفع — ${priceEgp} ج.م` : "استكمل المطلوب"}
+                    {!selfServicePriceConfigured
+                      ? "السعر غير محدد من الإدارة"
+                      : isContractReadyForPayment
+                      ? `حفظ المسودة والمتابعة للدفع — ${priceEgp} ج.م`
+                      : "استكمل البيانات المطلوبة"}
                   </button>
                 </div>
               </div>
