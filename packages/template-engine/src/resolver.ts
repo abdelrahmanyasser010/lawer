@@ -652,8 +652,9 @@ function derivedClauseVariable(fieldKey: string, fieldValues: Record<string, any
     const n = Number(fieldValues.lease_duration_value ?? 0); const unit = valueText("lease_duration_unit");
     if (!Number.isFinite(n) || n <= 0 || !unit) return undefined;
     const d = n.toLocaleString("ar-EG");
-    if (unit === "months") { if (n === 1) return "شهر واحد"; if (n === 2) return "شهرين"; if (Number.isInteger(n) && n >= 3 && n <= 10) return `${d} أشهر`; return `${d} شهرًا`; }
-    if (unit === "years") { if (n === 1) return "سنة واحدة"; if (n === 2) return "سنتين"; if (Number.isInteger(n) && n >= 3 && n <= 10) return `${d} سنوات`; return `${d} سنة`; }
+    if (unit === "days" || unit === "يوم") { if (n === 1) return "يوم واحد"; if (n === 2) return "يومان"; if (Number.isInteger(n) && n >= 3 && n <= 10) return `${d} أيام`; return `${d} يومًا`; }
+    if (unit === "months" || unit === "شهر") { if (n === 1) return "شهر واحد"; if (n === 2) return "شهرين"; if (Number.isInteger(n) && n >= 3 && n <= 10) return `${d} أشهر`; return `${d} شهرًا`; }
+    if (unit === "years" || unit === "سنة") { if (n === 1) return "سنة واحدة"; if (n === 2) return "سنتين"; if (Number.isInteger(n) && n >= 3 && n <= 10) return `${d} سنوات`; return `${d} سنة`; }
     return undefined;
   }
   if (fieldKey === "deposit_amount_words") return numberToEgyptianPoundsWords(fieldValues.deposit_amount) || undefined;

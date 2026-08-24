@@ -204,7 +204,7 @@ input[type="number"] {
 .zdraft-document-page .zd-doc-title {
   margin: 1.5mm 0 1.5mm !important;
   color: #111 !important;
-  font-size: 13.5pt !important;
+  font-size: 17.5pt !important;
   font-weight: 800 !important;
   line-height: 1.25 !important;
   text-align: center;
@@ -220,14 +220,14 @@ input[type="number"] {
 
 .zdraft-document-page .zd-doc-meta-inline {
   color: #333;
-  font-size: 8.5pt;
+  font-size: 9.4pt;
   text-align: center;
 }
 
 .zdraft-document-page .zd-doc-meta {
   margin-bottom: 4mm;
   color: #333;
-  font-size: 8.5pt;
+  font-size: 9.4pt;
   text-align: center;
 }
 
@@ -413,7 +413,7 @@ input[type="number"] {
   margin: 0;
   color: #111 !important;
   font-size: 11.35pt !important;
-  line-height: 1.46 !important;
+  line-height: 1.44 !important;
   text-align: justify;
   white-space: normal;
 }

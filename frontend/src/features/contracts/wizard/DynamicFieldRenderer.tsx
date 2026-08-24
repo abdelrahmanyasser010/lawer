@@ -66,7 +66,7 @@ function MoneyFieldInput({
       </div>
       {words && (
         <div className="rounded-lg border border-[#986410]/20 bg-[#986410]/5 px-3 py-2 text-[10px] font-bold leading-5 text-[#00102e]" dir="rtl">
-          <span className="text-[#986410]">كتابةً تلقائيًا: </span>{words}
+          {words}
         </div>
       )}
     </div>
@@ -362,6 +362,11 @@ export default function DynamicFieldRenderer({
       placeholder = "اختر نوع مستند إثبات الهوية أولًا";
       helpText = "اختر رقم قومي أو جواز سفر، ثم أدخل الرقم كما هو بالمستند";
     }
+  }
+
+  if (field.key.includes("supporting_documents") || field.key.includes("extra_docs")) {
+    placeholder = placeholder || "مثال: صور بطاقات الطرفين، إيصال مرافق، محضر استلام/جرد المنقولات";
+    helpText = helpText || "المستندات أو المرفقات التي يتم إرفاقها بالعقد عند التوقيع لإثبات الحالة أو الهوية أو قراءات العدادات";
   }
 
   const effectiveField: WizardFieldDefinition = {

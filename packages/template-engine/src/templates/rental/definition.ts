@@ -128,7 +128,7 @@ const rentalCommonSteps: WizardStepDefinition[] = [
     articleRange: "مدة العقد وتسليم العين",
     fields: [
       { key: "lease_duration_value", type: "number", labelAr: "مدة العقد", required: true, validation: { min: 1 } },
-      { key: "lease_duration_unit", type: "radio", labelAr: "وحدة مدة العقد", required: true, options: [{ value: "months", labelAr: "شهر" }, { value: "years", labelAr: "سنة" }] },
+      { key: "lease_duration_unit", type: "radio", labelAr: "وحدة مدة العقد", required: true, options: [{ value: "days", labelAr: "يوم" }, { value: "months", labelAr: "شهر" }, { value: "years", labelAr: "سنة" }] },
       { key: "start_date", type: "date", labelAr: "تاريخ بداية الإيجار", required: true },
       { key: "end_date", type: "date", labelAr: "تاريخ انتهاء الإيجار", required: true },
       { key: "property_delivery_date", type: "date", labelAr: "تاريخ تسليم العين المؤجرة", required: true },
@@ -142,7 +142,7 @@ const rentalCommonSteps: WizardStepDefinition[] = [
       { key: "deposit_amount", type: "money", labelAr: "مبلغ التأمين", required: true, validation: { min: 0 } },
       { key: "deposit_payment_status", type: "radio", labelAr: "حالة سداد مبلغ التأمين", required: true, printInDocument: false, options: [{ value: "received", labelAr: "تم سداده واستلامه" }, { value: "due_later", labelAr: "سيتم سداده لاحقًا" }] },
       { key: "deposit_due_date", type: "date", labelAr: "موعد سداد مبلغ التأمين", visibleWhen: { fieldKey: "deposit_payment_status", operator: "equals", value: "due_later" }, requiredWhen: { fieldKey: "deposit_payment_status", operator: "equals", value: "due_later" } },
-      { key: "rent_period", type: "radio", labelAr: "الفترة التي تستحق عنها الأجرة", required: true, options: [{ value: "شهر", labelAr: "شهر" }, { value: "سنة", labelAr: "سنة" }] },
+      { key: "rent_period", type: "radio", labelAr: "الفترة التي تستحق عنها الأجرة", required: true, options: [{ value: "يوم", labelAr: "يوم" }, { value: "شهر", labelAr: "شهر" }, { value: "سنة", labelAr: "سنة" }] },
       { key: "rent_amount", type: "money", labelAr: "القيمة الإيجارية", required: true, validation: { min: 0 } },
       
       { key: "annual_increase_enabled", type: "checkbox", labelAr: "تطبيق الزيادة الدورية المنصوص عليها في هذا النوع من العقد", printInDocument: false },

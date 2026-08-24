@@ -68,8 +68,7 @@ export default function ArabicCurrencyInput({
 
       {/* Arabic Words Display */}
       {hasValue && !isInvalid && (
-        <div className="rounded-lg border border-[#986410]/25 bg-[#986410]/5 px-3.5 py-2.5 flex items-start gap-2">
-          <span className="text-[10px] text-[#986410] font-bold shrink-0 mt-0.5">كتابةً تلقائيًا:</span>
+        <div className="rounded-lg border border-[#986410]/25 bg-[#986410]/5 px-3.5 py-2 flex items-center">
           <span className="text-[11px] text-[#00102e] font-bold leading-relaxed" dir="rtl">
             {arabicText}
           </span>
