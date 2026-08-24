@@ -119,17 +119,101 @@ final class TemplateEngineService
                 }
             }
         }
-        if (($definition['slug'] ?? null) === 'apartment_sale' && ($fieldValues['sale_payment_plan'] ?? null) !== 'installments' && in_array('sale_installment_schedule', array_map('strval', $optionalKeys), true)) {
-            $issues[] = 'ملحق جدول الأقساط يُستخدم فقط عند اختيار السداد بالتقسيط';
-        }
-        if (($definition['slug'] ?? null) === 'apartment_sale' && ($fieldValues['sale_payment_plan'] ?? null) === 'installments') {
-            $total = (float)($fieldValues['sale_total_price'] ?? 0);
-            $down = (float)($fieldValues['sale_down_payment'] ?? 0);
-            $remaining = (float)($fieldValues['sale_remaining_amount'] ?? 0);
-            if ($total > 0 && abs($total - ($down + $remaining)) > 0.01) {
-                $issues[] = 'إجمالي الثمن يجب أن يساوي الدفعة المقدمة + باقي الثمن';
+        $slug = (string)($definition['slug'] ?? '');
+
+        // Freelancer - Social Media Management
+        if ($slug === 'freelancer' && $variantKey === 'social_media_management') {
+            $serviceKeys = [
+                'social_service_account_management', 'social_service_strategy', 'social_service_copywriting', 'social_service_design',
+                'social_service_content_production', 'social_service_publishing', 'social_service_paid_ads', 'social_service_reports',
+                'social_service_community_management', 'social_service_coordination', 'social_service_photography', 'social_service_influencers',
+                'social_service_other_enabled',
+            ];
+            $hasAnyService = false;
+            foreach ($serviceKeys as $sKey) {
+                if (!empty($fieldValues[$sKey])) { $hasAnyService = true; break; }
+            }
+            if (!$hasAnyService) {
+                $issues[] = 'يجب اختيار خدمة واحدة على الأقل ضمن نطاق خدمات إدارة حسابات ومنصات التواصل الاجتماعي';
+            }
+            if (($fieldValues['social_fee_nature'] ?? null) === 'total' && ($fieldValues['social_payment_mode'] ?? null) === 'installments') {
+                $total = (float)($fieldValues['social_fee'] ?? 0);
+                $rows = is_array($fieldValues['social_payment_schedule'] ?? null) ? $fieldValues['social_payment_schedule'] : [];
+                $installmentsTotal = 0.0;
+                foreach ($rows as $r) { if (is_array($r)) $installmentsTotal += (float)($r['amount'] ?? 0); }
+                if ($total > 0 && count($rows) > 0 && abs($installmentsTotal - $total) > 0.01) {
+                    $issues[] = "مجموع الدفعات ({$installmentsTotal}) يجب أن يساوي إجمالي المقابل المالي ({$total})";
+                }
             }
         }
+
+        // Freelancer - Visual Identity Design
+        if ($slug === 'freelancer' && $variantKey === 'visual_identity_design' && ($fieldValues['visual_payment_mode'] ?? null) === 'installments') {
+            $total = (float)($fieldValues['visual_contract_value'] ?? 0);
+            $rows = is_array($fieldValues['visual_main_payment_schedule'] ?? null) ? $fieldValues['visual_main_payment_schedule'] : [];
+            $installmentsTotal = 0.0;
+            foreach ($rows as $r) { if (is_array($r)) $installmentsTotal += (float)($r['amount'] ?? 0); }
+            if ($total > 0 && count($rows) > 0 && abs($installmentsTotal - $total) > 0.01) {
+                $issues[] = "مجموع الدفعات ({$installmentsTotal}) يجب أن يساوي إجمالي المقابل المالي ({$total})";
+            }
+        }
+
+        // Freelancer - Website Development
+        if ($slug === 'freelancer' && $variantKey === 'website_development' && ($fieldValues['website_payment_mode'] ?? null) === 'installments') {
+            $total = (float)($fieldValues['website_total_price'] ?? 0);
+            $rows = is_array($fieldValues['website_payment_schedule'] ?? null) ? $fieldValues['website_payment_schedule'] : [];
+            $installmentsTotal = 0.0;
+            foreach ($rows as $r) { if (is_array($r)) $installmentsTotal += (float)($r['amount'] ?? 0); }
+            if ($total > 0 && count($rows) > 0 && abs($installmentsTotal - $total) > 0.01) {
+                $issues[] = "مجموع الدفعات ({$installmentsTotal}) يجب أن يساوي إجمالي المقابل المالي ({$total})";
+            }
+        }
+
+        // Rental Contracts (Residential, Commercial, Administrative)
+        if ($slug === 'rental') {
+            $start = (string)($fieldValues['start_date'] ?? '');
+            $end = (string)($fieldValues['end_date'] ?? '');
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $start) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $end) && $end <= $start) {
+                $issues[] = "تاريخ نهاية الإيجار ({$end}) يجب أن يكون بعد تاريخ بداية الإيجار ({$start})";
+            }
+
+            foreach (['commercial', 'administrative'] as $prefix) {
+                if (!empty($fieldValues["{$prefix}_guarantee_checks_enabled"])) {
+                    $expected = (int)($fieldValues["{$prefix}_guarantee_checks_count"] ?? 0);
+                    $raw = trim((string)($fieldValues["{$prefix}_guarantee_check_numbers"] ?? ''));
+                    if ($expected > 0 && $raw !== '') {
+                        $numbers = array_values(array_filter(array_map('trim', preg_split('/[،,;؛\n]+/u', $raw)), fn($x) => $x !== ''));
+                        if (count($numbers) !== $expected) {
+                            $issues[] = "عدد أرقام شيكات الضمان المدخلة (".count($numbers).") يجب أن يساوي عدد الشيكات المحدد ({$expected})";
+                        }
+                    }
+                }
+            }
+        }
+
+        // Apartment Sale / Land / Villa Contracts
+        if ($slug === 'apartment_sale') {
+            $plan = (string)($fieldValues['sale_payment_plan'] ?? '');
+            if ($plan !== 'installments' && in_array('sale_installment_schedule', array_map('strval', $optionalKeys), true)) {
+                $issues[] = 'ملحق جدول الأقساط يُستخدم فقط عند اختيار السداد بالتقسيط';
+            }
+            if ($plan === 'installments') {
+                $total = (float)($fieldValues['sale_total_price'] ?? 0);
+                $down = (float)($fieldValues['sale_down_payment'] ?? 0);
+                $remaining = $total - $down;
+                $rows = is_array($fieldValues['sale_installment_schedule_rows'] ?? null) ? $fieldValues['sale_installment_schedule_rows'] : [];
+                $installmentsTotal = 0.0;
+                foreach ($rows as $r) { if (is_array($r)) $installmentsTotal += (float)($r['amount'] ?? 0); }
+
+                if ($total > 0 && ($down < 0 || $down > $total)) {
+                    $issues[] = "الدفعة المقدمة ({$down} ج.م) يجب ألا تتجاوز إجمالي ثمن البيع ({$total} ج.م)";
+                }
+                if ($remaining >= 0 && count($rows) > 0 && abs($installmentsTotal - $remaining) > 0.01) {
+                    $issues[] = "مجموع الأقساط ({$installmentsTotal} ج.م) يجب أن يساوي باقي الثمن ({$remaining} ج.م)";
+                }
+            }
+        }
+
         foreach ($resolved['steps'] as $step) {
             foreach ($step['fields'] ?? [] as $field) {
                 $fKey = (string)($field['key'] ?? '');
