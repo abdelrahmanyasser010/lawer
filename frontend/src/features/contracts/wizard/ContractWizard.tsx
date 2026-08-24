@@ -7,7 +7,7 @@ import Footer from "@/components/layout/Footer";
 import VodafoneCashModal from "@/components/checkout/VodafoneCashModal";
 import {
   Lock, ArrowRight, ArrowLeft,
-  ShieldCheck, CheckCircle2, Zap, ExternalLink, FileText, AlertTriangle,
+  ShieldCheck, CheckCircle2, Zap, ExternalLink, FileText, AlertTriangle, AlertCircle,
 } from "lucide-react";
 import { apiRequest, ApiClientError } from "@/lib/apiClient";
 import type { ContractSlug, CreationMode } from "@/types/zdraft";
@@ -525,9 +525,32 @@ export default function WizardPage() {
     return { required, optional, activeCount: rendered.length };
   }, [draft, selectedVariantDefinition, templateDefinition]);
 
-  const dynamicValidationIssues = resolvedWizard && draft
-    ? validateDynamicDefinition(resolvedWizard, draft)
-    : [];
+  const dynamicValidationIssues = useMemo(() => {
+    if (!resolvedWizard || !draft) return [];
+    return validateDynamicDefinition(resolvedWizard, draft);
+  }, [draft, resolvedWizard]);
+
+  const fieldErrors = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const issue of dynamicValidationIssues) {
+      if (issue.fieldKey) {
+        map[issue.fieldKey] = issue.labelAr;
+      }
+    }
+    return map;
+  }, [dynamicValidationIssues]);
+
+  const issuesByStepKey = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const issue of dynamicValidationIssues) {
+      if (issue.stepKey) {
+        if (!map[issue.stepKey]) map[issue.stepKey] = [];
+        map[issue.stepKey].push(issue.labelAr);
+      }
+    }
+    return map;
+  }, [dynamicValidationIssues]);
+
   const isContractReadyForPayment = dynamicValidationIssues.length === 0;
 
   const persistDraft = async () => {
@@ -724,39 +747,74 @@ export default function WizardPage() {
           </div>
         </div>
 
-        {/* Steps Progress - Sleek and Compact */}
+        {/* Steps Progress - Sleek and Compact with Live Validation Indicators */}
         <div className="mb-2 flex items-center justify-between gap-3 text-[10px] font-black text-slate-500">
           <span>مسار إعداد العقد</span>
-          <span aria-live="polite" className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[#00102e]">
-            الخطوة {currentStep} من {progressSteps.length}
-          </span>
+          <div className="flex items-center gap-2">
+            {dynamicValidationIssues.length > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-black text-rose-700">
+                <AlertCircle className="h-3 w-3 text-rose-600" />
+                {dynamicValidationIssues.length} ملاحظة يلزم استكمالها
+              </span>
+            )}
+            <span aria-live="polite" className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[#00102e]">
+              الخطوة {currentStep} من {progressSteps.length}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 hide-scrollbar">
-          {progressSteps.map((s, i) => (
-            <React.Fragment key={s.step}>
-              <button
-                onClick={() => setCurrentStep(s.step)}
-                className={`flex max-w-[210px] shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-right transition-all cursor-pointer ${
-                  currentStep === s.step
-                    ? "bg-[#00102e] text-white shadow-sm"
-                    : currentStep > s.step
-                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                    : "bg-white text-slate-500 border border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <span className={`text-[10px] font-black rounded-full w-5 h-5 shrink-0 flex items-center justify-center ${
-                  currentStep === s.step ? "bg-[#986410] text-white" : currentStep > s.step ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-600"
-                }`}>{s.step}</span>
-                <span className="min-w-0 leading-tight">
-                  <span className="block text-[11px] font-bold">{s.label}</span>
-                  {s.articleRange && <span className="mt-0.5 block text-[8px] font-bold opacity-70">{s.articleRange}</span>}
-                </span>
-              </button>
-              {i < progressSteps.length - 1 && (
-                <div className={`h-0.5 flex-1 min-w-[8px] shrink-0 rounded-full ${currentStep > s.step ? "bg-emerald-400" : "bg-slate-200"}`} />
-              )}
-            </React.Fragment>
-          ))}
+          {progressSteps.map((s, i) => {
+            const stepIssues = issuesByStepKey[s.key] || [];
+            const hasIssues = stepIssues.length > 0;
+            const isCurrent = currentStep === s.step;
+            const isCompleted = !hasIssues && currentStep > s.step;
+
+            return (
+              <React.Fragment key={s.step}>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(s.step)}
+                  className={`flex max-w-[220px] shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-right transition-all cursor-pointer ${
+                    isCurrent
+                      ? "bg-[#00102e] text-white shadow-sm ring-2 ring-[#986410]/50"
+                      : hasIssues
+                      ? "bg-rose-50/90 text-rose-900 border border-rose-200 hover:bg-rose-100/90"
+                      : isCompleted
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+                      : "bg-white text-slate-500 border border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <span className={`text-[10px] font-black rounded-full w-5 h-5 shrink-0 flex items-center justify-center ${
+                    isCurrent
+                      ? "bg-[#986410] text-white"
+                      : hasIssues
+                      ? "bg-rose-600 text-white"
+                      : isCompleted
+                      ? "bg-emerald-600 text-white"
+                      : "bg-slate-200 text-slate-600"
+                  }`}>
+                    {hasIssues && !isCurrent ? "!" : isCompleted ? "✓" : s.step}
+                  </span>
+                  <span className="min-w-0 leading-tight">
+                    <span className="flex items-center gap-1 text-[11px] font-bold">
+                      <span className="truncate">{s.label}</span>
+                      {hasIssues && (
+                        <span className="rounded-full bg-rose-200 px-1 py-0.2 text-[8.5px] font-black text-rose-900 shrink-0">
+                          {stepIssues.length}
+                        </span>
+                      )}
+                    </span>
+                    {s.articleRange && <span className="mt-0.5 block text-[8px] font-bold opacity-70 truncate">{s.articleRange}</span>}
+                  </span>
+                </button>
+                {i < progressSteps.length - 1 && (
+                  <div className={`h-0.5 flex-1 min-w-[8px] shrink-0 rounded-full ${
+                    hasIssues ? "bg-rose-300" : currentStep > s.step ? "bg-emerald-400" : "bg-slate-200"
+                  }`} />
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
 
         {/* SPLIT: LEFT = live preview, RIGHT = form */}
@@ -768,6 +826,9 @@ export default function WizardPage() {
               <DynamicOptionalStep
                 step={activeStep}
                 fieldValues={formData}
+                fieldErrors={fieldErrors}
+                stepErrors={issuesByStepKey[activeStep.key] || []}
+                touchedFieldKeys={touchedFieldKeys}
                 onFieldChange={(fieldKey, value) => setStoredFieldValue(contractSlug, fieldKey, value)}
                 onFieldFocus={(fieldKey, labelAr) => {
                   setPreviewTab("document");

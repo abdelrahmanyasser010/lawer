@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
-import { Calendar, HelpCircle, Trash2 } from "lucide-react";
+import { AlertCircle, Calendar, Check, HelpCircle, Trash2 } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { evaluateCondition, numberToEgyptianPoundsWords } from "@zdraft/template-engine";
 import type {
@@ -16,14 +16,23 @@ interface DynamicFieldRendererProps {
   field: WizardFieldDefinition;
   value: ContractFieldValue | undefined;
   allFormValues?: Record<string, any>;
+  errorMessage?: string;
+  touched?: boolean;
   onChange: (value: ContractFieldValue) => void;
   onFocus?: () => void;
   onFilesSelected?: (files: File[]) => Promise<void> | void;
   uploading?: boolean;
 }
 
-const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[12px] text-slate-900 transition-all focus:border-[#00102e] focus:outline-none focus:ring-1 focus:ring-[#986410]/30";
+const baseInputClass =
+  "w-full rounded-lg border bg-white px-3 py-2.5 text-[12px] text-slate-900 transition-all focus:outline-none focus:ring-1";
+
+function getInputClass(hasError?: boolean): string {
+  if (hasError) {
+    return `${baseInputClass} border-rose-400 bg-rose-50/10 focus:border-rose-600 focus:ring-rose-500/20 text-rose-950`;
+  }
+  return `${baseInputClass} border-slate-300 focus:border-[#00102e] focus:ring-[#986410]/30`;
+}
 
 function scalarValue(value: ContractFieldValue | undefined): PrimitiveFieldValue {
   if (Array.isArray(value)) return "";
@@ -36,12 +45,14 @@ function MoneyFieldInput({
   min,
   max,
   placeholder,
+  hasError,
 }: {
   value: PrimitiveFieldValue;
   onChange: (value: PrimitiveFieldValue) => void;
   min?: string | number;
   max?: string | number;
   placeholder?: string;
+  hasError?: boolean;
 }) {
   const raw = String(value ?? "");
   const numeric = Number(raw);
@@ -59,7 +70,7 @@ function MoneyFieldInput({
           min={min}
           max={max}
           step="0.01"
-          className={`${inputClass} pl-14`}
+          className={`${getInputClass(hasError)} pl-14`}
           dir="ltr"
         />
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">ج.م</span>
@@ -78,11 +89,13 @@ function DateFieldInput({
   onChange,
   min,
   max,
+  hasError,
 }: {
   value: string;
   onChange: (val: string) => void;
   min?: string | number;
   max?: string | number;
+  hasError?: boolean;
 }) {
   const hiddenInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -112,9 +125,9 @@ function DateFieldInput({
         readOnly
         value={displayDate || ""}
         placeholder="اختر التاريخ"
-        className={`${inputClass} cursor-pointer pr-4 pl-10`}
+        className={`${getInputClass(hasError)} cursor-pointer pr-4 pl-10`}
       />
-      <Calendar className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+      <Calendar className={`pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 ${hasError ? "text-rose-500" : "text-slate-400"}`} />
       <input
         ref={hiddenInputRef}
         type="date"
@@ -133,6 +146,7 @@ function renderScalarControl(
   field: WizardFieldDefinition,
   value: PrimitiveFieldValue,
   onChange: (value: PrimitiveFieldValue) => void,
+  hasError?: boolean,
 ) {
   if (field.type === "textarea") {
     return (
@@ -140,14 +154,14 @@ function renderScalarControl(
         value={String(value ?? "")}
         onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value)}
         placeholder={field.placeholder}
-        className={`${inputClass} min-h-24 resize-y`}
+        className={`${getInputClass(hasError)} min-h-24 resize-y`}
       />
     );
   }
 
   if (field.type === "radio") {
     return (
-      <div className="grid gap-1.5 sm:grid-cols-2">
+      <div className={`grid gap-1.5 sm:grid-cols-2 ${hasError ? "p-1 rounded-xl bg-rose-50/20 border border-rose-300" : ""}`}>
         {field.options?.map((option) => {
           const selected = String(value ?? "") === option.value;
           return (
@@ -172,7 +186,7 @@ function renderScalarControl(
 
   if (field.type === "select") {
     return (
-      <select value={String(value ?? "")} onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value)} className={inputClass}>
+      <select value={String(value ?? "")} onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value)} className={getInputClass(hasError)}>
         <option value="">اختر...</option>
         {field.options?.map((option) => (
           <option key={option.value} value={option.value}>
@@ -185,14 +199,14 @@ function renderScalarControl(
 
   if (field.type === "checkbox") {
     return (
-      <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+      <label className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 ${hasError ? "border-rose-400 bg-rose-50/20" : "border-slate-200 bg-slate-50"}`}>
         <input
           type="checkbox"
           checked={Boolean(value)}
           onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.checked)}
           className="mt-0.5 h-4 w-4 accent-[#986410]"
         />
-        <span className={`text-[11px] font-bold leading-5 ${field.required ? "text-[#c66b22]" : "text-slate-700"}`}>
+        <span className={`text-[11px] font-bold leading-5 ${field.required ? (hasError ? "text-rose-700" : "text-[#c66b22]") : "text-slate-700"}`}>
           {field.labelAr} {field.required && <span aria-label="إلزامي">*</span>}
         </span>
       </label>
@@ -207,6 +221,7 @@ function renderScalarControl(
         min={field.validation?.min}
         max={field.validation?.max}
         placeholder={field.placeholder}
+        hasError={hasError}
       />
     );
   }
@@ -218,6 +233,7 @@ function renderScalarControl(
         onChange={(val) => onChange(val)}
         min={field.validation?.min}
         max={field.validation?.max}
+        hasError={hasError}
       />
     );
   }
@@ -231,7 +247,7 @@ function renderScalarControl(
       placeholder={field.placeholder}
       min={field.validation?.min}
       max={field.validation?.max}
-      className={inputClass}
+      className={getInputClass(hasError)}
     />
   );
 }
@@ -240,10 +256,12 @@ function RepeaterRenderer({
   field,
   value,
   onChange,
+  hasError,
 }: {
   field: WizardFieldDefinition;
   value: RepeaterRowValue[];
   onChange: (value: RepeaterRowValue[]) => void;
+  hasError?: boolean;
 }) {
   const rows = Array.isArray(value) && value.length > 0 ? value : [{}];
 
@@ -257,7 +275,7 @@ function RepeaterRenderer({
   };
 
   return (
-    <div className="space-y-2.5">
+    <div className={`space-y-2.5 ${hasError ? "p-2 rounded-xl border border-rose-300 bg-rose-50/10" : ""}`}>
       {rows.map((row, index) => (
         <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
           <div className="mb-2.5 flex items-center justify-between gap-3">
@@ -285,7 +303,7 @@ function RepeaterRenderer({
                       <select
                         value={String(row[column.key] ?? "")}
                         onChange={(event: ChangeEvent<HTMLSelectElement>) => updateRow(index, column.key, event.target.value)}
-                        className={inputClass}
+                        className={getInputClass(false)}
                       >
                         <option value="">اختر...</option>
                         {column.options?.map((option) => (
@@ -313,7 +331,7 @@ function RepeaterRenderer({
                         value={String(row[column.key] ?? "")}
                         onChange={(event: ChangeEvent<HTMLInputElement>) => updateRow(index, column.key, event.target.value)}
                         placeholder={column.placeholder}
-                        className={inputClass}
+                        className={getInputClass(false)}
                       />
                     )}
                   </div>
@@ -337,12 +355,26 @@ export default function DynamicFieldRenderer({
   field,
   value,
   allFormValues = {},
+  errorMessage,
+  touched,
   onChange,
   onFocus,
 }: DynamicFieldRendererProps) {
+  const hasError = Boolean(errorMessage);
+
   if (field.type === "repeater") {
     const listValue = Array.isArray(value) ? (value as RepeaterRowValue[]) : [];
-    return <div onFocusCapture={onFocus}><RepeaterRenderer field={field} value={listValue} onChange={onChange} /></div>;
+    return (
+      <div onFocusCapture={onFocus} className="space-y-1.5">
+        <RepeaterRenderer field={field} value={listValue} onChange={onChange} hasError={hasError} />
+        {hasError && (
+          <p className="flex items-center gap-1.5 text-[11px] font-bold text-rose-600 animate-fadeIn">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
+            <span>{errorMessage}</span>
+          </p>
+        )}
+      </div>
+    );
   }
 
   const label = resolveWizardFieldLabel(field, allFormValues);
@@ -355,9 +387,9 @@ export default function DynamicFieldRenderer({
     if (selectedType === "passport" || label === "رقم جواز السفر") {
       placeholder = "أدخل رقم جواز السفر الساري";
       helpText = "أدخل رقم جواز السفر كما هو مثبت بالمستند";
-    } else if (selectedType === "national_id" || label === "الرقم القومي") {
+    } else if (selectedType === "national_id" || label === "الرقم القومي" || field.key.includes("witness")) {
       placeholder = "14 رقمًا قوميًا";
-      helpText = "أدخل الرقم القومي المكون من 14 رقمًا";
+      helpText = "أدخل الرقم القومي المكون من 14 رقمًا بدون حروف أو مسافات";
     } else {
       placeholder = "اختر نوع مستند إثبات الهوية أولًا";
       helpText = "اختر رقم قومي أو جواز سفر، ثم أدخل الرقم كما هو بالمستند";
@@ -378,12 +410,20 @@ export default function DynamicFieldRenderer({
   return (
     <div className="space-y-1.5" onFocusCapture={onFocus}>
       {field.type !== "checkbox" && (
-        <label className="block text-xs font-bold text-[#00102e]">
-          {label} {field.required && <span className="text-[#c66b22]">*</span>}
-        </label>
+        <div className="flex items-center justify-between gap-2">
+          <label className={`block text-xs font-bold ${hasError ? "text-rose-700" : "text-[#00102e]"}`}>
+            {label} {field.required && <span className={hasError ? "text-rose-600" : "text-[#c66b22]"}>*</span>}
+          </label>
+        </div>
       )}
-      {renderScalarControl(effectiveField, scalarValue(value), (next) => onChange(next))}
-      {helpText && (
+      {renderScalarControl(effectiveField, scalarValue(value), (next) => onChange(next), hasError)}
+      {hasError && (
+        <p className="flex items-center gap-1.5 text-[11px] font-bold text-rose-600 animate-fadeIn">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
+          <span>{errorMessage}</span>
+        </p>
+      )}
+      {helpText && !hasError && (
         <details className="group max-w-full text-[10.5px] text-slate-500">
           <summary className="inline-flex cursor-pointer list-none items-center gap-1 font-bold text-slate-400 transition hover:text-[#986410] [&::-webkit-details-marker]:hidden">
             <HelpCircle className="h-3 w-3" />
