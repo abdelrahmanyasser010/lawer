@@ -1799,7 +1799,7 @@
         },
         {
           "key": "rental_witnesses",
-          "titleAr": "الشهود والمستندات الداعمة",
+          "titleAr": "الشهود",
           "articleRange": "التوقيعات",
           "fields": [
             {
@@ -1869,11 +1869,6 @@
                 "operator": "truthy"
               },
               "printInDocument": false
-            },
-            {
-              "key": "rental_supporting_documents",
-              "type": "attachment",
-              "labelAr": "مستندات داعمة للعقد (اختياري)"
             }
           ]
         },
@@ -4018,7 +4013,7 @@
         },
         {
           "key": "rental_witnesses",
-          "titleAr": "الشهود والمستندات الداعمة",
+          "titleAr": "الشهود",
           "articleRange": "التوقيعات",
           "fields": [
             {
@@ -4088,11 +4083,6 @@
                 "operator": "truthy"
               },
               "printInDocument": false
-            },
-            {
-              "key": "rental_supporting_documents",
-              "type": "attachment",
-              "labelAr": "مستندات داعمة للعقد (اختياري)"
             }
           ]
         },
@@ -6197,7 +6187,7 @@
         },
         {
           "key": "rental_witnesses",
-          "titleAr": "الشهود والمستندات الداعمة",
+          "titleAr": "الشهود",
           "articleRange": "التوقيعات",
           "fields": [
             {
@@ -6267,11 +6257,6 @@
                 "operator": "truthy"
               },
               "printInDocument": false
-            },
-            {
-              "key": "rental_supporting_documents",
-              "type": "attachment",
-              "labelAr": "مستندات داعمة للعقد (اختياري)"
             }
           ]
         },

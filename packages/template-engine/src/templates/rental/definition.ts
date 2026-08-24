@@ -203,7 +203,7 @@ const rentalCommonSteps: WizardStepDefinition[] = [
   },
   {
     key: "rental_witnesses",
-    titleAr: "الشهود والمستندات الداعمة",
+    titleAr: "الشهود",
     articleRange: "التوقيعات",
     fields: [
       { key: "rental_witness_1_enabled", type: "checkbox", labelAr: "إضافة الشاهد الأول", printInDocument: false },
@@ -212,10 +212,10 @@ const rentalCommonSteps: WizardStepDefinition[] = [
       { key: "rental_witness_2_enabled", type: "checkbox", labelAr: "إضافة الشاهد الثاني", printInDocument: false },
       { key: "rental_witness_2_name", type: "text", labelAr: "اسم الشاهد الثاني", visibleWhen: { fieldKey: "rental_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "rental_witness_2_enabled", operator: "truthy" }, printInDocument: false },
       { key: "rental_witness_2_national_id", type: "text", labelAr: "الرقم القومي للشاهد الثاني", visibleWhen: { fieldKey: "rental_witness_2_enabled", operator: "truthy" }, requiredWhen: { fieldKey: "rental_witness_2_enabled", operator: "truthy" }, printInDocument: false },
-      { key: "rental_supporting_documents", type: "attachment", labelAr: "مستندات داعمة للعقد (اختياري)" },
     ],
   },
 ];
+
 
 const residentialVariantStep: WizardStepDefinition = {
   key: "rental_residential_details",

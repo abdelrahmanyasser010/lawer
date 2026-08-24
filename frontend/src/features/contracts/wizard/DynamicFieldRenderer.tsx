@@ -55,34 +55,25 @@ function MoneyFieldInput({
   hasError?: boolean;
 }) {
   const raw = String(value ?? "");
-  const numeric = Number(raw);
-  const hasValidValue = raw.trim() !== "" && Number.isFinite(numeric) && numeric >= 0;
-  const words = hasValidValue ? numberToEgyptianPoundsWords(numeric) : "";
 
   return (
-    <div className="space-y-1.5">
-      <div className="relative">
-        <input
-          type="number"
-          value={raw}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
-          placeholder={placeholder}
-          min={min}
-          max={max}
-          step="0.01"
-          className={`${getInputClass(hasError)} pl-14`}
-          dir="ltr"
-        />
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">ج.م</span>
-      </div>
-      {words && (
-        <div className="rounded-lg border border-[#986410]/20 bg-[#986410]/5 px-3 py-2 text-[10px] font-bold leading-5 text-[#00102e]" dir="rtl">
-          {words}
-        </div>
-      )}
+    <div className="relative">
+      <input
+        type="number"
+        value={raw}
+        onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
+        placeholder={placeholder}
+        min={min}
+        max={max}
+        step="0.01"
+        className={`${getInputClass(hasError)} pl-14`}
+        dir="ltr"
+      />
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">ج.م</span>
     </div>
   );
 }
+
 
 function DateFieldInput({
   value,

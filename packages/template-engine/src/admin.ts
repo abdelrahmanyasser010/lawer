@@ -135,8 +135,8 @@ export const rentalFieldCoverageExternalBindings: Record<string, VariantFieldCov
   rental_witness_2_enabled: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يتحكم في ظهور بلوك الشاهد الثاني خارج جسم المواد القانونية." },
   rental_witness_2_name: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
   rental_witness_2_national_id: { sectionAr: "قسم التوقيعات والشهود", reasonAr: "يُطبع في بلوك الشاهد الثاني خارج جسم المواد القانونية." },
-  rental_supporting_documents: { sectionAr: "قسم المرفقات", reasonAr: "مستندات داعمة تُرفق بالعقد ولا تُطبع كقيمة داخل جسم المواد القانونية." },
 };
+
 
 function conditionFieldKeys(condition: ConditionDefinition | undefined): string[] {
   if (!condition) return [];
