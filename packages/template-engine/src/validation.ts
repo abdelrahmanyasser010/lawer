@@ -179,7 +179,11 @@ export function validateDynamicDefinition(
     const start = String(fv.start_date ?? "");
     const end = String(fv.end_date ?? "");
     if (/^\d{4}-\d{2}-\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}$/.test(end) && end <= start) {
-      issues.push({ stepKey: "lease_term", fieldKey: "end_date", labelAr: "تاريخ نهاية الإيجار يجب أن يكون بعد تاريخ بداية الإيجار" });
+      issues.push({
+        stepKey: "rental_terms",
+        fieldKey: "end_date",
+        labelAr: `تاريخ نهاية الإيجار (${end}) يجب أن يكون بعد تاريخ بداية الإيجار (${start})`,
+      });
     }
 
     const checkCountIssue = (prefix: "commercial" | "administrative", stepKey: string) => {
@@ -212,13 +216,17 @@ export function validateDynamicDefinition(
     const installmentsTotal = rows.reduce((sum, row) => sum + Number((row as RepeaterRowValue).amount ?? 0), 0);
 
     if (Number.isFinite(total) && total > 0 && Number.isFinite(down) && (down < 0 || down > total)) {
-      issues.push({ stepKey: "sale_payment", fieldKey: "sale_down_payment", labelAr: "الدفعة المقدمة يجب ألا تتجاوز إجمالي ثمن البيع" });
+      issues.push({
+        stepKey: "sale_payment",
+        fieldKey: "sale_down_payment",
+        labelAr: `الدفعة المقدمة (${down} ج.م) يجب ألا تتجاوز إجمالي ثمن البيع (${total} ج.م)`,
+      });
     }
     if (Number.isFinite(remaining) && remaining >= 0 && rows.length > 0 && Math.abs(installmentsTotal - remaining) > 0.01) {
       issues.push({
         stepKey: "sale_payment",
         fieldKey: "sale_installment_schedule_rows",
-        labelAr: `مجموع الأقساط (${installmentsTotal}) يجب أن يساوي باقي الثمن (${remaining})`,
+        labelAr: `مجموع الأقساط (${installmentsTotal} ج.م) يجب أن يساوي باقي الثمن (${remaining} ج.م)`,
       });
     }
   }
