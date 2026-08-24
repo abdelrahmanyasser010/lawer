@@ -112,7 +112,7 @@ test("website manual annexes are active only after explicit user selection and s
 
 
 test("visual identity semantics remain intact in freelancer v15", () => {
-  assert.equal(freelancerTemplateDefinition.version, 17);
+  assert.equal(freelancerTemplateDefinition.version, 18);
   const visual = freelancerTemplateDefinition.variants.find((item) => item.key === "visual_identity_design");
   assert.ok(visual);
   const allFields = visual.steps.flatMap((step) => step.fields);
@@ -347,20 +347,20 @@ test("full nine-contract publication files stay version-aligned", () => {
   const rentalBackend = JSON.parse(readFileSync(new URL("../../../backend/database/template-definitions/rental.json", import.meta.url), "utf8"));
   const saleBackend = JSON.parse(readFileSync(new URL("../../../backend/database/template-definitions/apartment_sale.json", import.meta.url), "utf8"));
   const freelancerBackend = JSON.parse(readFileSync(new URL("../../../backend/database/template-definitions/freelancer.json", import.meta.url), "utf8"));
-  const migration = readFileSync(new URL("../../../backend/database/migrations/2026_08_20_000100_publish_court_jurisdiction_versions.php", import.meta.url), "utf8");
-  assert.equal(rentalTemplateDefinition.version, 17);
-  assert.equal(apartmentSaleTemplateDefinition.version, 16);
-  assert.equal(freelancerTemplateDefinition.version, 17);
-  assert.equal(rentalBackend.version, 17);
-  assert.equal(saleBackend.version, 16);
-  assert.equal(freelancerBackend.version, 17);
-  assert.match(migration, /'slug' => 'freelancer'[\s\S]*'version' => 17/);
-  assert.match(migration, /'slug' => 'apartment_sale'[\s\S]*'version' => 16/);
-  assert.match(migration, /'slug' => 'rental'[\s\S]*'version' => 17/);
+  const migration = readFileSync(new URL("../../../backend/database/migrations/2026_08_24_000100_publish_v18_automated_words_and_witness_cleanup.php", import.meta.url), "utf8");
+  assert.equal(rentalTemplateDefinition.version, 18);
+  assert.equal(apartmentSaleTemplateDefinition.version, 17);
+  assert.equal(freelancerTemplateDefinition.version, 18);
+  assert.equal(rentalBackend.version, 18);
+  assert.equal(saleBackend.version, 17);
+  assert.equal(freelancerBackend.version, 18);
+  assert.match(migration, /'slug' => 'freelancer'[\s\S]*'version' => 18/);
+  assert.match(migration, /'slug' => 'apartment_sale'[\s\S]*'version' => 17/);
+  assert.match(migration, /'slug' => 'rental'[\s\S]*'version' => 18/);
 });
 
 test("rental v15 exposes three source-specific lease variants with explicit competent court step", () => {
-  assert.equal(rentalTemplateDefinition.version, 17);
+  assert.equal(rentalTemplateDefinition.version, 18);
   assert.deepEqual(
     rentalTemplateDefinition.variants.map((variant) => variant.key),
     ["residential_lease", "commercial_lease", "administrative_lease"],
@@ -646,7 +646,7 @@ test("rental residential repeater makes other payment details required in the sa
 });
 
 test("sale v14 exposes three source-specific variants with fail-closed property logic", () => {
-  assert.equal(apartmentSaleTemplateDefinition.version, 16);
+  assert.equal(apartmentSaleTemplateDefinition.version, 17);
   assert.deepEqual(apartmentSaleTemplateDefinition.variants.map((item) => item.key), ["preliminary_sale", "registrable_sale", "inherited_sale"]);
   const forbidden = new Set(["sale_jurisdiction_court", "sale_total_price_words", "sale_remaining_amount", "preliminary_include_benefits_clause"]);
   for (const variant of apartmentSaleTemplateDefinition.variants) {
