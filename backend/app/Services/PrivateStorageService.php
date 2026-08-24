@@ -14,6 +14,15 @@ final class PrivateStorageService
     }
     public function put(string $key, string $bytes): array
     {
+        $root = config('filesystems.disks.private.root', storage_path('app/private'));
+        if (!is_dir($root)) {
+            @mkdir($root, 0775, true);
+        }
+        $fullPath = $root . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $key);
+        $dir = dirname($fullPath);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
         Storage::disk('private')->put($key, $bytes);
         return ['key' => $key, 'sizeBytes' => strlen($bytes), 'sha256' => hash('sha256', $bytes)];
     }

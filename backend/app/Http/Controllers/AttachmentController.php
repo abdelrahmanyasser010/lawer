@@ -27,10 +27,42 @@ final class AttachmentController extends Controller
             if($processed['thumbnail']){$thumbKey=$this->storage->key($prefix.'/thumbnails',$processed['thumbnail']['name'],'webp');$thumb=$this->storage->put($thumbKey,$processed['thumbnail']['bytes']);}
             if($processed['isImage']&&config('zdraft.image.preserve_original')){$originalKey=$this->storage->key($prefix.'/originals',$file->getClientOriginalName());$raw=file_get_contents($file->getRealPath());$original=$this->storage->put($originalKey,$raw===false?'':$raw);}
             $originalName=mb_substr(basename($file->getClientOriginalName()),0,255)?:'attachment';
-            $row=DB::selectOne("INSERT INTO document_attachments (attachable_type,attachable_id,owner_user_id,file_path,storage_key,storage_driver,file_name,file_type,file_size_bytes,content_hash,visibility,scan_status,scan_engine,scanned_at,is_compressed,display_order,original_file_name,source_file_type,source_file_size_bytes,source_content_hash,image_width,image_height,metadata_stripped,processing_version,processed_at,thumbnail_file_path,thumbnail_storage_key,thumbnail_file_type,thumbnail_file_size_bytes,thumbnail_content_hash,original_file_path,original_storage_key,original_storage_driver) VALUES ('pending',0,?,?,?,?,?,?,?,?, 'private','clean',?,CURRENT_TIMESTAMP,?,1,?,?,?,?,?,?,?,?,CASE WHEN ? IS NULL THEN NULL ELSE CURRENT_TIMESTAMP END,?,?,?,?,?,?,?,?) RETURNING id",[
-                $uid,$this->storage->path($key),$key,'local',$processed['canonicalName'],$processed['canonicalMime'],$stored['sizeBytes'],$stored['sha256'],'fileinfo'.(config('zdraft.clamav.enabled')?'+clamav':''),$processed['isCompressed'],$originalName,$processed['originalMime'],$processed['originalSizeBytes'],$processed['originalSha256'],$processed['width'],$processed['height'],$processed['metadataStripped'],$processed['processingVersion'],$processed['processingVersion'],$thumb?$this->storage->path($thumb['key']):null,$thumb['key']??null,$processed['thumbnail']['mime']??null,$thumb['sizeBytes']??null,$thumb['sha256']??null,$original?$this->storage->path($original['key']):null,$original['key']??null,$original?'local':null
+            $id = (int) DB::table('document_attachments')->insertGetId([
+                'attachable_type' => 'pending',
+                'attachable_id' => 0,
+                'owner_user_id' => $uid,
+                'file_path' => $this->storage->path($key),
+                'storage_key' => $key,
+                'storage_driver' => 'local',
+                'file_name' => $processed['canonicalName'],
+                'file_type' => $processed['canonicalMime'],
+                'file_size_bytes' => $stored['sizeBytes'],
+                'content_hash' => $stored['sha256'],
+                'visibility' => 'private',
+                'scan_status' => 'clean',
+                'scan_engine' => 'fileinfo' . (config('zdraft.clamav.enabled') ? '+clamav' : ''),
+                'scanned_at' => now(),
+                'is_compressed' => !empty($processed['isCompressed']),
+                'display_order' => 1,
+                'original_file_name' => $originalName,
+                'source_file_type' => $processed['originalMime'],
+                'source_file_size_bytes' => $processed['originalSizeBytes'],
+                'source_content_hash' => $processed['originalSha256'],
+                'image_width' => $processed['width'],
+                'image_height' => $processed['height'],
+                'metadata_stripped' => !empty($processed['metadataStripped']),
+                'processing_version' => $processed['processingVersion'],
+                'processed_at' => $processed['processingVersion'] ? now() : null,
+                'thumbnail_file_path' => $thumb ? $this->storage->path($thumb['key']) : null,
+                'thumbnail_storage_key' => $thumb['key'] ?? null,
+                'thumbnail_file_type' => $processed['thumbnail']['mime'] ?? null,
+                'thumbnail_file_size_bytes' => $thumb['sizeBytes'] ?? null,
+                'thumbnail_content_hash' => $thumb['sha256'] ?? null,
+                'original_file_path' => $original ? $this->storage->path($original['key']) : null,
+                'original_storage_key' => $original['key'] ?? null,
+                'original_storage_driver' => $original ? 'local' : null,
+                'created_at' => now(),
             ]);
-            $id=(int)$row->id;
             $this->audit->write($request,$processed['isImage']?'attachment.image_processed':'attachment.uploaded','attachment',$id,null,['originalFileName'=>$originalName,'storedFileName'=>$processed['canonicalName'],'sourceMime'=>$processed['originalMime'],'storedMime'=>$processed['canonicalMime'],'sourceSize'=>$processed['originalSizeBytes'],'storedSize'=>$stored['sizeBytes'],'sourceHash'=>$processed['originalSha256'],'storedHash'=>$stored['sha256'],'metadataStripped'=>$processed['metadataStripped'],'thumbnailCreated'=>(bool)$thumb,'originalPreserved'=>(bool)$original,'scanStatus'=>'clean','storageDriver'=>'local']);
             return $this->created($request,['id'=>$id,'fileName'=>$processed['canonicalName'],'originalFileName'=>$originalName,'mimeType'=>$processed['canonicalMime'],'originalMimeType'=>$processed['originalMime'],'sizeBytes'=>$stored['sizeBytes'],'originalSizeBytes'=>$processed['originalSizeBytes'],'hash'=>$stored['sha256'],'originalHash'=>$processed['originalSha256'],'scanStatus'=>'clean','isImage'=>$processed['isImage'],'isCompressed'=>$processed['isCompressed'],'metadataStripped'=>$processed['metadataStripped'],'width'=>$processed['width'],'height'=>$processed['height'],'thumbnailAvailable'=>(bool)$thumb,'thumbnailUrl'=>$thumb?"/api/v1/attachments/{$id}/thumbnail":null],$processed['isImage']?'تمت معالجة الصورة وحفظها في التخزين الخاص':'تم رفع الملف إلى التخزين الخاص');
         }catch(\Throwable $e){$this->storage->delete($key);$this->storage->delete($thumb['key']??null);$this->storage->delete($original['key']??null);throw$e;}
