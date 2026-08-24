@@ -7,7 +7,7 @@ import Footer from "@/components/layout/Footer";
 import VodafoneCashModal from "@/components/checkout/VodafoneCashModal";
 import {
   Lock, ArrowRight, ArrowLeft,
-  ShieldCheck, CheckCircle2, Zap, ExternalLink, FileText,
+  ShieldCheck, CheckCircle2, Zap, ExternalLink, FileText, AlertTriangle,
 } from "lucide-react";
 import { apiRequest, ApiClientError } from "@/lib/apiClient";
 import type { ContractSlug, CreationMode } from "@/types/zdraft";
@@ -864,7 +864,39 @@ export default function WizardPage() {
                   )}
                 </details>
 
-                {renderReviewLifecycleAndShare()}
+                {dynamicValidationIssues.length > 0 && (
+                  <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs space-y-2.5">
+                    <div className="flex items-center gap-2 font-black text-red-800 text-sm">
+                      <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
+                      <span>يلزم تصحيح {dynamicValidationIssues.length} {dynamicValidationIssues.length === 1 ? "ملاحظة" : "ملاحظات"} للمتابعة للدفع:</span>
+                    </div>
+                    <div className="space-y-1.5 pt-0.5">
+                      {dynamicValidationIssues.map((issue, idx) => {
+                        const stepIndex = activeSteps.findIndex((s) => s.key === issue.stepKey);
+                        const stepNumber = stepIndex >= 0 ? stepIndex + 1 : 1;
+                        const stepTitle = activeSteps[stepIndex]?.titleAr || "الخطوة";
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => jumpToField(stepNumber, issue.fieldKey, issue.labelAr)}
+                            title={`انقر لتصحيح الخطأ في خطوة ${stepNumber}: ${stepTitle}`}
+                            className="w-full text-right flex items-center justify-between gap-2 rounded-lg bg-white border border-red-200 p-2.5 text-xs text-red-900 hover:bg-red-100/60 transition cursor-pointer shadow-2xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-bold text-red-600 shrink-0">⚠</span>
+                              <span className="font-medium truncate">{issue.labelAr}</span>
+                              <span className="text-[10px] text-slate-400 font-bold shrink-0">({stepTitle})</span>
+                            </div>
+                            <span className="shrink-0 text-[11px] font-bold text-red-700 flex items-center gap-1">
+                              تصحيح <ArrowLeft className="h-3 w-3" />
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {renderDeclarationConsent()}
 
@@ -888,7 +920,7 @@ export default function WizardPage() {
                       ? "السعر غير محدد من الإدارة"
                       : isContractReadyForPayment
                       ? `حفظ المسودة والمتابعة للدفع — ${priceEgp} ج.م`
-                      : "استكمل البيانات المطلوبة"}
+                      : `استكمل المطلوب (${dynamicValidationIssues.length} ملاحظة)`}
                   </button>
                 </div>
               </div>
