@@ -2,6 +2,7 @@ export const contractStatusLabels: Record<string, string> = {
   draft: "مسودة",
   pending_payment: "بانتظار مراجعة الدفع",
   pending_review: "قيد مراجعة المكتب",
+  internal_review: "قيد المراجعة والتدقيق",
   assigned: "قيد متابعة المكتب",
   in_progress: "قيد الإعداد",
   client_review: "متاح للمراجعة",
@@ -9,8 +10,10 @@ export const contractStatusLabels: Record<string, string> = {
   approved: "تمت مراجعة النسخة",
   locked: "تم تثبيت النسخة",
   issued: "صادر",
+  archived: "مؤرشف",
   cancelled: "ملغى",
 };
+
 
 export function getContractNextAction(status: string): { label: string; actionText: string } {
   switch (status) {
