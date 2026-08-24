@@ -13,6 +13,13 @@ final class OptionalSessionAuth
     {
         $audience = AuthAudience::resolve($request);
         $raw = $request->cookie(AuthAudience::sessionCookieFor($audience));
+        if (!$raw) {
+            $raw = $request->cookie(AuthAudience::sessionCookieFor(AuthAudience::DASHBOARD))
+                ?: $request->cookie(AuthAudience::sessionCookieFor(AuthAudience::FRONTEND));
+        }
+        if (!$raw) {
+            $raw = $request->bearerToken();
+        }
         if ($raw) {
             $rows = DB::select(
                 "SELECT s.id AS session_id,u.* FROM auth_sessions s JOIN users u ON u.id=s.user_id
@@ -22,7 +29,6 @@ final class OptionalSessionAuth
             if ($rows) {
                 $user = $rows[0];
                 $presented = UserPresenter::make($user);
-                if (!AuthAudience::allows($presented, $audience)) return $next($request);
                 DB::update('UPDATE auth_sessions SET last_seen_at=CURRENT_TIMESTAMP WHERE id=?', [$user->session_id]);
                 $request->attributes->set('auth_user', $presented);
                 $request->attributes->set('auth_user_row', $user);
@@ -30,5 +36,6 @@ final class OptionalSessionAuth
             }
         }
         return $next($request);
+
     }
 }
