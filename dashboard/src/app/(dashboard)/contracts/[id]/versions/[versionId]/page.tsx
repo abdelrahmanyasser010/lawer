@@ -51,9 +51,10 @@ export default function ContractVersionEditorPage() {
         if (!active) return;
         if (details.current_version_id !== versionId) throw new Error("يمكن تحرير الإصدار الحالي فقط");
         const current = details.versions.find((item) => item.id === versionId);
-        if (!current || !["draft", "internal_review", "revision_requested"].includes(current.status)) {
+        if (!current || ["locked", "issued"].includes(current.status)) {
           throw new Error("هذا الإصدار مقفول أو غير قابل للتعديل");
         }
+
         setContract(details);
         setDraft({
           templateSlug: details.template_definition.slug,

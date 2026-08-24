@@ -41,11 +41,13 @@ export const adminNavigation: NavigationGroup[] = [
     items: [
       { href: "/work", label: "مركز المتابعة", icon: ClipboardList, permission: "requests.view" },
       { href: "/contracts", label: "العقود", icon: FileText, permission: "contracts.view" },
+      { href: "/contracts/create", label: "إنشاء عقد جديد", icon: FileText, permission: "contracts.create_office", feature: "officeContractCreation" },
       { href: "/reviews", label: "مراجعة العقود", icon: FileCheck2, permission: "contracts.review", feature: "contractEditing" },
       { href: "/payments", label: "المدفوعات", icon: CreditCard, permission: "payments.review" },
       { href: "/users", label: "العملاء", icon: Users, permission: "clients.view" },
     ],
   },
+
   {
     label: "إدارة المنصة",
     items: [
