@@ -435,8 +435,11 @@ export default function WizardPage() {
     </div>
   );
 
-  const requiredReviewItems = useMemo(() => (resolvedWizard?.steps ?? []).flatMap((step) =>
-    step.fields
+  const requiredReviewItems = useMemo(() => (resolvedWizard?.steps ?? []).flatMap((step) => {
+    const stepIndex = activeSteps.findIndex((s) => s.key === step.key);
+    const stepNumber = stepIndex >= 0 ? stepIndex + 1 : 1;
+
+    return step.fields
       .filter((field) => field.required)
       .map((field) => {
         const raw = field.type === "attachment"
@@ -455,9 +458,28 @@ export default function WizardPage() {
           : field.type === "repeater"
             ? (entries ? `${entries} بند` : "—")
             : formatWizardFieldValue(field, raw, formData);
-        return { key: field.key, label: resolveWizardFieldLabel(field, formData), value, complete };
-      }),
-  ), [draft?.attachmentRefs, formData, resolvedWizard]);
+        return {
+          key: field.key,
+          label: resolveWizardFieldLabel(field, formData),
+          value,
+          complete,
+          stepNumber,
+          stepTitle: step.titleAr,
+        };
+      });
+  }), [activeSteps, draft?.attachmentRefs, formData, resolvedWizard]);
+
+  const jumpToField = (stepNumber: number, fieldKey: string, fieldLabel: string) => {
+    setCurrentStep(stepNumber);
+    setPreviewTab("document");
+    setActivePreviewField({ key: fieldKey, labelAr: fieldLabel });
+    window.setTimeout(() => {
+      const formEl = document.getElementById("wizard-form");
+      if (formEl) {
+        formEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 80);
+  };
 
   const clauseReview = useMemo(() => {
     if (!templateDefinition || !selectedVariantDefinition || !draft?.variantKey) {
@@ -776,11 +798,29 @@ export default function WizardPage() {
                     البيانات الإجبارية — {requiredReviewItems.filter((item) => item.complete).length}/{requiredReviewItems.length} مكتملة
                   </summary>
                   <div className="mt-3 max-h-80 space-y-2 overflow-y-auto pl-1">
-                    {requiredReviewItems.map(({ key, label, value, complete }) => (
-                      <div key={key} className={`flex items-start justify-between gap-3 rounded-lg border px-3 py-2 ${complete ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
-                        <span className="text-slate-700">{label}</span>
-                        <span className={`max-w-[55%] text-left font-bold ${complete ? "text-emerald-800" : "text-red-600"}`}>{complete ? value : "⚠ مطلوب"}</span>
-                      </div>
+                    {requiredReviewItems.map(({ key, label, value, complete, stepNumber, stepTitle }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => jumpToField(stepNumber, key, label)}
+                        title={`الانتقال إلى خطوة ${stepNumber}: ${stepTitle}`}
+                        className={`w-full text-right flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition cursor-pointer ${
+                          complete
+                            ? "border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/70"
+                            : "border-red-200 bg-red-50/80 hover:bg-red-100 shadow-xs"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-slate-700 font-medium truncate text-xs">{label}</span>
+                          <span className="text-[10px] text-slate-400 font-bold shrink-0">({stepTitle})</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className={`text-left font-bold text-xs ${complete ? "text-emerald-800" : "text-red-600"}`}>
+                            {complete ? value : "⚠ مطلوب"}
+                          </span>
+                          <ArrowLeft className="h-3 w-3 text-slate-400" />
+                        </div>
+                      </button>
                     ))}
                   </div>
                 </details>
