@@ -143,10 +143,11 @@ final class TemplateEngineService
                 if ($idVal === '') continue;
 
                 $legacyEgyptian = in_array($natVal, ['مصري', 'egyptian', 'مصرية', 'مصري الجنسية'], true);
-                $effectiveType = $selectedType !== '' ? $selectedType : ($natVal !== '' ? ($legacyEgyptian ? 'national_id' : 'passport') : '');
+                $effectiveType = $selectedType !== '' ? $selectedType : ($natVal !== '' ? ($legacyEgyptian ? 'national_id' : 'passport') : (str_contains($fKey, 'witness') ? 'national_id' : ''));
                 $digitsOnly = preg_replace('/\D/', '', $idVal);
+                $fieldLabel = (string)($field['labelAr'] ?? 'الرقم القومي');
                 if ($effectiveType === 'national_id' && (strlen($digitsOnly) !== 14 || $digitsOnly !== $idVal)) {
-                    $issues[] = 'الرقم القومي — مطلوب 14 رقمًا بدون مسافات أو حروف';
+                    $issues[] = "{$fieldLabel} — مطلوب 14 رقمًا بدون مسافات أو حروف";
                 } elseif ($effectiveType === 'passport' && mb_strlen($idVal) < 5) {
                     $issues[] = 'رقم جواز السفر — يجب ألا يقل عن 5 خانات';
                 }

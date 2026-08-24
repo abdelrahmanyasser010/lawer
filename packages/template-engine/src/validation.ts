@@ -245,14 +245,15 @@ export function validateDynamicDefinition(
       if (!idVal) continue;
 
       const legacyEgyptian = ["مصري", "egyptian", "مصرية", "مصري الجنسية"].includes(nationalityVal);
-      const effectiveType = selectedType || (nationalityVal ? (legacyEgyptian ? "national_id" : "passport") : "");
+      const effectiveType = selectedType || (nationalityVal ? (legacyEgyptian ? "national_id" : "passport") : (field.key.includes("witness") ? "national_id" : ""));
       const digitsOnly = idVal.replace(/\D/g, "");
+      const fieldLabel = field.labelAr || "الرقم القومي";
 
       if (effectiveType === "national_id" && (digitsOnly.length !== 14 || digitsOnly !== idVal)) {
         issues.push({
           stepKey: step.key,
           fieldKey: field.key,
-          labelAr: "الرقم القومي — مطلوب 14 رقمًا بدون مسافات أو حروف",
+          labelAr: `${field.labelAr || "الرقم القومي"} — مطلوب 14 رقمًا بدون مسافات أو حروف`,
         });
       } else if (effectiveType === "passport" && idVal.length < 5) {
         issues.push({

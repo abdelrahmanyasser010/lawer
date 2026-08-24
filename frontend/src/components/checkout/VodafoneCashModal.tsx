@@ -122,7 +122,27 @@ export default function VodafoneCashModal({
         onClose();
         return;
       }
-      setError(caught instanceof Error ? caught.message : "تعذر إرسال إثبات التحويل.");
+      if (caught instanceof ApiClientError && caught.details) {
+        if (Array.isArray(caught.details) && caught.details.length > 0) {
+          const formattedDetails = caught.details
+            .map((d: unknown) => {
+              if (typeof d === "string") return d;
+              if (typeof d === "object" && d !== null) {
+                return (d as { labelAr?: string; message?: string }).labelAr || (d as { message?: string }).message || JSON.stringify(d);
+              }
+              return String(d);
+            })
+            .join("\n• ");
+          setError(`${caught.message}:\n• ${formattedDetails}`);
+        } else if (typeof caught.details === "object" && caught.details !== null) {
+          const detailMsgs = Object.values(caught.details as Record<string, unknown>).flat().join("\n• ");
+          setError(`${caught.message}:\n• ${detailMsgs}`);
+        } else {
+          setError(caught.message);
+        }
+      } else {
+        setError(caught instanceof Error ? caught.message : "تعذر إرسال إثبات التحويل.");
+      }
     } finally {
       setSubmitting(false);
     }
