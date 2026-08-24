@@ -373,8 +373,12 @@ export default function WizardPage() {
     ?? templateDefinition?.nameAr
     ?? defaultContractTitle(slug);
 
-  const priceEgp = draft?.variantKey
-    ? (templateDefinition?.variantPricing?.[draft.variantKey]?.selfServicePriceEgp ?? 0)
+  const priceEgp = backendContract?.original_price_egp !== undefined && Number(backendContract.original_price_egp) > 0
+    ? Number(backendContract.original_price_egp)
+    : draft?.variantKey
+    ? (draft.creationMode === "lawyer_assisted"
+        ? (templateDefinition?.variantPricing?.[draft.variantKey]?.lawyerAssistedPriceEgp ?? 599)
+        : (templateDefinition?.variantPricing?.[draft.variantKey]?.selfServicePriceEgp ?? 59))
     : 0;
   const selfServicePriceConfigured = priceEgp > 0;
 
@@ -559,6 +563,12 @@ export default function WizardPage() {
     setBackendDraftReference(contractSlug, saved);
     setCheckoutContract({ id: saved.id, serialNumber: saved.serialNumber });
     setAutoSaveStatus("تم حفظ المسودة في حسابك ✓");
+    try {
+      const details = await apiRequest<ContractDetails>(`/api/v1/contracts/${saved.id}`);
+      setBackendContract(details);
+    } catch {
+      // ignore
+    }
     return saved;
   };
 
