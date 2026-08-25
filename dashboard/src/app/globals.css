@@ -106,3 +106,342 @@ input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/* ==========================================================================
+   A4 Legal Document Sheet Styles (Identical to Frontend & WeasyPrint)
+   ========================================================================== */
+.zdraft-document-page,
+.zdraft-document-page * {
+  font-family: "Noto Sans Arabic", "DejaVu Sans", Tahoma, Arial, sans-serif !important;
+}
+
+.zdraft-document-page {
+  direction: rtl;
+  color: #111;
+  font-size: 11.35pt;
+  line-height: 1.44;
+}
+
+.zdraft-document-page .zd-doc-masthead {
+  display: flex;
+  flex-direction: column;
+  gap: 2mm;
+  min-height: 18mm;
+  margin-bottom: 5mm;
+  border-bottom: .8pt solid #202020;
+  padding-bottom: 3mm;
+}
+
+.zdraft-document-page .zd-doc-masthead-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.zdraft-document-page .zd-doc-logo {
+  width: 27mm;
+  height: auto;
+  max-height: 15mm;
+  object-fit: contain;
+}
+
+.zdraft-document-page .zd-doc-office {
+  color: #222;
+  font-size: 10.4pt;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.zdraft-document-page .zd-doc-kind {
+  margin-top: 0.5mm;
+  color: #986410;
+  font-size: 8pt;
+  font-weight: 700;
+}
+
+.zdraft-document-page .zd-doc-title {
+  margin: 1.5mm 0 1.5mm !important;
+  color: #111 !important;
+  font-size: 17.5pt !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  text-align: center;
+}
+
+.zdraft-document-page .zd-doc-title-inline {
+  color: #111;
+  font-size: 12.5pt;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.zdraft-document-page .zd-doc-meta-inline {
+  color: #333;
+  font-size: 9.4pt;
+  text-align: center;
+}
+
+.zdraft-document-page .zd-doc-meta {
+  margin-bottom: 4mm;
+  color: #333;
+  font-size: 9.4pt;
+  text-align: center;
+}
+
+.zdraft-document-page .zd-doc-annex-ref {
+  margin: 0 0 3mm;
+  border-top: .6pt solid #777;
+  border-bottom: .6pt solid #777;
+  padding: 2mm 2.5mm;
+  font-size: 8.5pt;
+  text-align: center;
+}
+
+.zdraft-document-page .zd-doc-body {
+  color: #111 !important;
+  font-size: 10pt !important;
+  line-height: 1.42 !important;
+}
+
+.zdraft-document-page .zd-doc-party-title,
+.zdraft-document-page .zd-doc-clause-title {
+  margin: 0 0 1.5mm !important;
+  border-bottom: .45pt solid #9a9a9a;
+  padding: 0 0 0.8mm !important;
+  color: #111 !important;
+  font-size: 10.5pt !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.zdraft-document-page .zd-doc-party-line {
+  margin: 0;
+  padding: 0 0 1.3mm;
+  color: #111 !important;
+  font-size: 9.55pt !important;
+  line-height: 1.48 !important;
+  text-align: justify;
+}
+
+.zdraft-document-page .zd-doc-party-item {
+  display: inline;
+}
+
+.zdraft-document-page .zd-doc-party-item + .zd-doc-party-item::before {
+  content: " ؛ ";
+  color: #777;
+}
+
+.zdraft-document-page .zd-doc-party-item .zd-doc-data-label {
+  display: inline;
+  color: #555 !important;
+  font-size: 8.4pt !important;
+}
+
+.zdraft-document-page .zd-doc-party-item .zd-doc-data-value {
+  display: inline;
+  font-size: 9.55pt !important;
+  font-weight: 700 !important;
+}
+
+.zdraft-document-page .zd-doc-data-section-block {
+  margin: 0 0 3.2mm;
+}
+
+.zdraft-document-page .zd-doc-section-title {
+  margin: 0 0 1.8mm !important;
+  border-bottom: .45pt solid #9a9a9a;
+  padding: 0 0 1mm !important;
+  color: #111 !important;
+  font-size: 11.25pt !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.zdraft-document-page .zd-doc-data-grid {
+  width: 100%;
+  margin-bottom: 1.5mm;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: #111 !important;
+  font-size: 9.5pt !important;
+}
+
+.zdraft-document-page .zd-doc-data-section {
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.zdraft-document-page .zd-doc-data-heading {
+  margin: 0 0 1.8mm !important;
+  border: 0 !important;
+  border-bottom: .45pt solid #9a9a9a !important;
+  background: transparent !important;
+  padding: 0 0 1mm !important;
+  color: #111 !important;
+  font-size: 11.25pt !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.zdraft-document-page .zd-doc-data-heading strong {
+  color: #111 !important;
+  font-size: 11.25pt !important;
+  font-weight: 800 !important;
+}
+
+.zdraft-document-page .zd-doc-data-grid td {
+  width: 50%;
+  border-bottom: .25pt solid #e2e2e2;
+  padding: 1.2mm 1.5mm !important;
+  vertical-align: top;
+}
+
+.zdraft-document-page .zd-doc-data-grid td.empty {
+  border-bottom: 0;
+}
+
+.zdraft-document-page .zd-doc-data-label {
+  margin-bottom: .3mm;
+  color: #666 !important;
+  font-size: 8.15pt !important;
+  line-height: 1.25 !important;
+}
+
+.zdraft-document-page .zd-doc-data-grid td > span.block {
+  margin-bottom: .3mm;
+  color: #666 !important;
+  font-size: 8.15pt !important;
+  line-height: 1.25 !important;
+}
+
+.zdraft-document-page .zd-doc-data-value {
+  color: #111 !important;
+  font-size: 9.5pt !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  overflow-wrap: anywhere;
+}
+
+.zdraft-document-page .zd-doc-data-grid td > span:not(.block):last-child {
+  color: #111 !important;
+  font-size: 9.5pt !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  overflow-wrap: anywhere;
+}
+
+.zdraft-document-page .zd-doc-repeater-title {
+  margin: 2mm 0 1mm;
+  font-size: 9.3pt;
+  font-weight: 700;
+}
+
+.zdraft-document-page .zd-doc-repeater {
+  width: 100%;
+  margin-bottom: 2mm;
+  border-collapse: collapse;
+  font-size: 8.6pt;
+}
+
+.zdraft-document-page .zd-doc-repeater th,
+.zdraft-document-page .zd-doc-repeater td {
+  border: .35pt solid #aaa;
+  padding: 1.1mm 1.4mm;
+  vertical-align: top;
+}
+
+.zdraft-document-page .zd-doc-repeater th {
+  background: #f7f7f7;
+  font-weight: 700;
+}
+
+.zdraft-document-page .zd-doc-clause {
+  margin: 0 0 2.4mm;
+}
+
+.zdraft-document-page .zd-doc-clause + .zd-doc-clause {
+  margin-top: .5mm;
+}
+
+.zdraft-document-page .zd-doc-clause-body {
+  margin: 0;
+  color: #111 !important;
+  font-size: 11.35pt !important;
+  line-height: 1.44 !important;
+  text-align: justify;
+  white-space: normal;
+}
+
+.zdraft-document-page .zd-doc-subclause {
+  display: block;
+  margin-top: 1.25mm;
+  text-align: justify;
+}
+
+.zdraft-document-page .zd-doc-subclause:first-child {
+  margin-top: 0;
+}
+
+.zdraft-document-page .zd-doc-subclause-heading {
+  display: inline;
+  margin-inline-end: 0.35em;
+  font-size: 1.045em;
+  font-weight: 700;
+}
+
+.zdraft-document-page .zd-doc-subclause-number {
+  display: inline-block;
+  margin-inline-end: 0.28em;
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-weight: 800;
+}
+
+.zdraft-document-page .zd-doc-signatures {
+  margin-top: 8mm !important;
+}
+
+.zdraft-document-page .zd-doc-signatures-title {
+  margin-bottom: 3mm;
+  border-bottom: .55pt solid #777;
+  padding-bottom: 1mm;
+  color: #111;
+  font-size: 11.5pt;
+  font-weight: 800;
+}
+
+.zdraft-document-page .zd-doc-signature-grid {
+  gap: 5mm !important;
+}
+
+.zdraft-document-page .zd-doc-signature-box {
+  min-height: 34mm;
+  border: 0 !important;
+  border-top: .75pt solid #444 !important;
+  border-radius: 0 !important;
+  padding: 2mm 0 0 !important;
+  color: #111 !important;
+  font-size: 9.7pt !important;
+}
+
+.zdraft-document-page .zd-doc-signature-role {
+  margin-bottom: 1.5mm;
+  color: #111 !important;
+  font-size: 10.5pt !important;
+  font-weight: 800 !important;
+}
+
+.zdraft-document-page .zd-doc-final-note {
+  margin-top: 5mm;
+  border-top: .35pt solid #ccc;
+  padding-top: 2mm;
+  color: #666 !important;
+  font-size: 7.8pt !important;
+  text-align: center;
+}
+

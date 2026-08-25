@@ -67,7 +67,7 @@ const defaultContext: OfficeContext = {
 };
 
 function inputClass() {
-  return "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs text-slate-900 outline-none transition focus:border-[#986410] focus:ring-2 focus:ring-[#986410]/15";
+  return "w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none transition focus:border-[#986410] focus:ring-1 focus:ring-[#986410]/20";
 }
 
 export default function OfficeContractWizard() {
@@ -290,29 +290,29 @@ export default function OfficeContractWizard() {
   }
 
   if (loading) {
-    return <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-[#986410]" /></div>;
+    return <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-[#986410]" /></div>;
   }
 
   if (error || !definition) {
-    return <div className="m-8 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm font-bold text-rose-800">{error || "تعذر تحميل القالب"}</div>;
+    return <div className="m-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-xs font-bold text-rose-800">{error || "تعذر تحميل القالب"}</div>;
   }
 
   if (isSuccess) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-        <div className="rounded-3xl border border-emerald-200 bg-white p-8 text-center shadow-xl sm:p-12">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><CheckCircle2 className="h-9 w-9" /></div>
-          <h1 className="mt-5 text-2xl font-black text-[#00102e]">تم إنشاء وحفظ مسودة العقد بنجاح</h1>
-          <p className="mt-2 text-sm font-bold text-slate-500">الرقم المرجعي: <span className="font-mono text-[#986410] font-black">{serial}</span></p>
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-right text-xs font-bold leading-7 text-slate-700">
+      <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+        <div className="rounded-2xl border border-emerald-200 bg-white p-8 text-center shadow-lg sm:p-10">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><CheckCircle2 className="h-8 w-8" /></div>
+          <h1 className="mt-4 text-xl font-black text-[#00102e]">تم إنشاء وحفظ مسودة العقد بنجاح</h1>
+          <p className="mt-1 text-xs font-bold text-slate-500">الرقم المرجعي: <span className="font-mono text-[#986410] font-black">{serial}</span></p>
+          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-right text-xs font-bold leading-6 text-slate-700">
             <div>• العميل: <span className="font-black text-[#00102e]">{officeContext.clientMode === "office_internal" ? "استخدام داخلي للمكتب" : officeContext.clientName || "عميل مسجل"}</span></div>
             <div>• القالب: <span className="font-black text-[#00102e]">{definition.nameAr} — {resolved?.variant.nameAr}</span></div>
             <div>• نظام التحصيل: <span className="font-black text-[#00102e]">{officeContext.billingMode === "client_invoice" ? "مطالبة العميل" : officeContext.billingMode === "external_collection" ? "تحصيل خارجي" : "إعفاء من الدفع (استخدام داخلي)"}</span></div>
             <div>• الملاحق: <span className="font-black text-[#00102e]">{selectedOptionalClauseKeys.length ? `${selectedOptionalClauseKeys.length} ملحق مختار` : "لا يوجد"}</span></div>
           </div>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/contracts" className="rounded-xl bg-[#00102e] px-6 py-3 text-xs font-black text-white hover:bg-[#00102e]/90 transition">الانتقال لإدارة العقود</Link>
-            <button type="button" onClick={resetAll} className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-xs font-black text-slate-700 hover:bg-slate-50 transition">إنشاء عقد آخر</button>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link href="/contracts" className="rounded-xl bg-[#00102e] px-5 py-2.5 text-xs font-black text-white hover:bg-[#00102e]/90 transition">الانتقال لإدارة العقود</Link>
+            <button type="button" onClick={resetAll} className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs font-black text-slate-700 hover:bg-slate-50 transition">إنشاء عقد آخر</button>
           </div>
         </div>
       </div>
@@ -323,16 +323,16 @@ export default function OfficeContractWizard() {
   const displaySerial = serial || "مسودة جديدة";
 
   return (
-    <div className="mx-auto max-w-[1550px] px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-[1550px] px-4 py-4 sm:px-6 lg:px-8">
       {/* Top Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5 mb-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3.5 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Link href="/contracts" className="inline-flex items-center gap-1 text-xs font-black text-slate-500 hover:text-[#986410]"><ArrowRight className="h-4 w-4" /> العقود</Link>
-            <span className="text-slate-300">/</span>
-            <span className="text-xs font-black text-[#986410]">إنشاء عقد جديد من المكتب</span>
+            <Link href="/contracts" className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-[#986410]"><ArrowRight className="h-3.5 w-3.5" /> العقود</Link>
+            <span className="text-slate-300 text-[10px]">/</span>
+            <span className="text-[11px] font-bold text-[#986410]">إنشاء عقد جديد من المكتب</span>
           </div>
-          <h1 className="mt-2 text-2xl font-black text-[#00102e] sm:text-3xl">{contractTitle}</h1>
+          <h1 className="mt-1 text-base sm:text-lg font-black text-[#00102e]">{contractTitle}</h1>
         </div>
 
         {/* Action Controls & Context Trigger */}
@@ -340,31 +340,31 @@ export default function OfficeContractWizard() {
           <button
             type="button"
             onClick={() => setShowContextModal(true)}
-            className="inline-flex items-center gap-2 rounded-xl border border-[#986410]/30 bg-[#986410]/10 px-3.5 py-2 text-xs font-black text-[#00102e] hover:bg-[#986410]/20 transition"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#986410]/30 bg-[#986410]/10 px-3 py-1.5 text-xs font-bold text-[#00102e] hover:bg-[#986410]/20 transition"
           >
             <UserRound className="h-3.5 w-3.5 text-[#986410]" />
             <span>العميل: {officeContext.clientMode === "office_internal" ? "استخدام داخلي" : officeContext.clientName || "تحديد العميل"}</span>
-            <span className="rounded-md bg-white px-2 py-0.5 text-[10px] text-slate-700">
+            <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] text-slate-600">
               {officeContext.billingMode === "office_waiver" ? "بدون دفع" : "مطالبة"}
             </span>
           </button>
           <button
             type="button"
             onClick={resetAll}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
           >
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw className="h-3 w-3" />
             بدء جديد
           </button>
         </div>
       </div>
 
-      {notice && <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-black leading-6 text-amber-900">{notice}</div>}
+      {notice && <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs font-bold leading-5 text-amber-900">{notice}</div>}
 
       {/* Template & Variant Selector Bar */}
-      <div className="mb-6 grid gap-3 lg:grid-cols-[1fr_auto]">
+      <div className="mb-4 grid gap-2 lg:grid-cols-[1fr_auto]">
         {/* Template Pills */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {templateCatalog.map((card) => {
             const selected = templateSlug === card.slug;
             return (
@@ -372,13 +372,13 @@ export default function OfficeContractWizard() {
                 key={card.slug}
                 type="button"
                 onClick={() => selectTemplate(card.slug)}
-                className={`flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-xs font-black transition ${
+                className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
                   selected
-                    ? "border-[#986410] bg-[#00102e] text-[#d9a84e] shadow-md"
+                    ? "border-[#986410] bg-[#00102e] text-[#d9a84e] shadow-xs"
                     : "border-slate-200 bg-white text-slate-700 hover:border-[#986410]/50"
                 }`}
               >
-                <FileText className="h-4 w-4" />
+                <FileText className="h-3.5 w-3.5" />
                 <span>{card.nameAr}</span>
               </button>
             );
@@ -387,8 +387,8 @@ export default function OfficeContractWizard() {
 
         {/* Variant Dropdown / Pills */}
         {definition.variants.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-slate-400">النوع:</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-bold text-slate-400">النوع:</span>
             {definition.variants.map((v) => {
               const selected = variantKey === v.key;
               return (
@@ -396,9 +396,9 @@ export default function OfficeContractWizard() {
                   key={v.key}
                   type="button"
                   onClick={() => selectVariant(v.key)}
-                  className={`rounded-xl border px-3 py-1.5 text-xs font-black transition ${
+                  className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold transition ${
                     selected
-                      ? "border-[#986410] bg-[#986410]/15 text-[#00102e] ring-2 ring-[#986410]/20"
+                      ? "border-[#986410] bg-[#986410]/15 text-[#00102e] ring-1 ring-[#986410]/30"
                       : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
@@ -411,7 +411,7 @@ export default function OfficeContractWizard() {
       </div>
 
       {/* Steps Navigation Bar */}
-      <div className="mb-6 flex items-center gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
+      <div className="mb-4 flex items-center gap-1.5 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-2xs">
         {steps.map((step, idx) => {
           const isCurrent = idx === currentStepIndex;
           const isDone = idx < currentStepIndex;
@@ -421,9 +421,9 @@ export default function OfficeContractWizard() {
               key={step.key}
               type="button"
               onClick={() => setCurrentStepKey(step.key)}
-              className={`group flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-black transition ${
+              className={`group flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition ${
                 isCurrent
-                  ? "bg-[#00102e] text-white shadow-sm"
+                  ? "bg-[#00102e] text-white shadow-xs"
                   : stepIssues.length > 0
                   ? "bg-rose-50 text-rose-800 border border-rose-200"
                   : isDone
@@ -431,14 +431,14 @@ export default function OfficeContractWizard() {
                   : "bg-slate-50 text-slate-600 hover:bg-slate-100"
               }`}
             >
-              <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black ${
+              <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-black ${
                 isCurrent ? "bg-[#986410] text-[#00102e]" : isDone ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"
               }`}>
                 {isDone ? "✓" : idx + 1}
               </span>
               <span>{step.titleAr}</span>
               {stepIssues.length > 0 && !isCurrent && (
-                <span className="rounded-full bg-rose-600 px-1.5 py-0.2 text-[9px] text-white">!</span>
+                <span className="rounded-full bg-rose-600 px-1 py-0 text-[8px] text-white">!</span>
               )}
             </button>
           );
@@ -446,23 +446,23 @@ export default function OfficeContractWizard() {
       </div>
 
       {/* MAIN TWO-COLUMN SPLIT: RIGHT = Form, LEFT = Live A4 Document Preview */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
         {/* ── RIGHT COLUMN: DYNAMIC FORM ── */}
-        <div className="xl:col-span-6 space-y-5">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="xl:col-span-6 space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
             {currentStep && !isReviewStep && (
               <>
-                <div className="mb-5 flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+                <div className="mb-4 flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
                   <div>
-                    <span className="text-[10px] font-black text-[#986410]">الخطوة {currentStepIndex + 1} من {steps.length}</span>
-                    <h2 className="mt-1 text-xl font-black text-[#00102e]">{currentStep.titleAr}</h2>
-                    <p className="mt-1 text-xs font-semibold text-slate-500">{currentStep.description || currentStep.articleRange}</p>
+                    <span className="text-[10px] font-bold text-[#986410]">الخطوة {currentStepIndex + 1} من {steps.length}</span>
+                    <h2 className="mt-0.5 text-base font-black text-[#00102e]">{currentStep.titleAr}</h2>
+                    <p className="mt-0.5 text-[11px] font-semibold text-slate-500">{currentStep.description || currentStep.articleRange}</p>
                   </div>
-                  <div className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-700 font-mono">{progress}%</div>
+                  <div className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700 font-mono">{progress}%</div>
                 </div>
 
                 {currentStep.fields.length ? (
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     {currentStep.fields.map((field) => (
                       <div
                         key={field.key}
@@ -472,6 +472,7 @@ export default function OfficeContractWizard() {
                         <DynamicFieldRenderer
                           field={field}
                           value={field.type === "attachment" ? (attachmentRefs[field.key]?.length ? [`${attachmentRefs[field.key].length} ملف مرفوع`] : []) : fieldValues[field.key]}
+                          allFormValues={fieldValues}
                           onChange={(value) => {
                             setActivePreviewField({ key: field.key, labelAr: field.labelAr });
                             setFieldValues((current) => ({ ...current, [field.key]: value }));
@@ -483,26 +484,26 @@ export default function OfficeContractWizard() {
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center text-xs font-bold text-slate-500">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-xs font-bold text-slate-500">
                     لا توجد حقول إدخال في هذه الخطوة.
                   </div>
                 )}
 
-                <div className="mt-8 flex items-center justify-between border-t border-slate-100 pt-5">
+                <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
                   <button
                     type="button"
                     disabled={currentStepIndex === 0}
                     onClick={() => currentStepIndex > 0 && setCurrentStepKey(steps[currentStepIndex - 1].key)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs font-black text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
                   >
-                    <ArrowRight className="h-4 w-4" /> السابق
+                    <ArrowRight className="h-3.5 w-3.5" /> السابق
                   </button>
                   <button
                     type="button"
                     onClick={goNext}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-6 py-2.5 text-xs font-black text-white hover:bg-[#00102e]/90"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#00102e] px-5 py-2 text-xs font-black text-white hover:bg-[#00102e]/90"
                   >
-                    التالي <ArrowLeft className="h-4 w-4" />
+                    التالي <ArrowLeft className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </>
@@ -510,25 +511,25 @@ export default function OfficeContractWizard() {
 
             {/* Final Review & Issue Step */}
             {isReviewStep && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                    <ShieldCheck className="h-6 w-6" />
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                    <ShieldCheck className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-[#00102e]">مراجعة واعتماد مسودة العقد</h2>
-                    <p className="text-xs font-semibold text-slate-500">تحقق من اكتمال البيانات قبل الحفظ النهائي للمكتب</p>
+                    <h2 className="text-base font-black text-[#00102e]">مراجعة واعتماد مسودة العقد</h2>
+                    <p className="text-[11px] font-semibold text-slate-500">تحقق من اكتمال البيانات قبل الحفظ النهائي للمكتب</p>
                   </div>
                 </div>
 
                 {/* Optional Annexes Selector */}
                 {activeOptionalClauses.length > 0 && (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center gap-2 text-xs font-black text-[#00102e] mb-3">
-                      <FileStack className="h-4 w-4 text-[#986410]" />
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#00102e] mb-2.5">
+                      <FileStack className="h-3.5 w-3.5 text-[#986410]" />
                       <span>الملاحق والبنود الاختيارية</span>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {activeOptionalClauses.map((clause) => {
                         const selected = selectedOptionalClauseKeys.includes(clause.key);
                         return (
@@ -536,15 +537,15 @@ export default function OfficeContractWizard() {
                             key={clause.key}
                             type="button"
                             onClick={() => toggleOptionalClause(clause.key)}
-                            className={`w-full rounded-xl border p-3 text-right transition flex items-center justify-between gap-3 ${
+                            className={`w-full rounded-lg border p-2.5 text-right transition flex items-center justify-between gap-2.5 ${
                               selected ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"
                             }`}
                           >
                             <div>
-                              <div className="text-xs font-black text-[#00102e]">{clause.nameAr}</div>
-                              <div className="mt-0.5 text-[10px] font-semibold text-slate-500">{clause.description}</div>
+                              <div className="text-xs font-bold text-[#00102e]">{clause.nameAr}</div>
+                              <div className="text-[10px] font-semibold text-slate-500">{clause.description}</div>
                             </div>
-                            <span className={`rounded-lg px-2 py-1 text-[10px] font-black ${
+                            <span className={`rounded-md px-2 py-0.5 text-[9px] font-bold ${
                               selected ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"
                             }`}>
                               {selected ? "مختار ✓" : "غير مفعّل"}
@@ -558,9 +559,9 @@ export default function OfficeContractWizard() {
 
                 {/* Validation Summary */}
                 {validationIssues.length > 0 ? (
-                  <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs">
-                    <div className="font-black text-rose-800 mb-2">توجد {validationIssues.length} بيانات مطلوبة تحتاج استكمالاً:</div>
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs">
+                    <div className="font-bold text-rose-800 mb-1.5">توجد {validationIssues.length} بيانات مطلوبة تحتاج استكمالاً:</div>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
                       {validationIssues.map((issue, idx) => (
                         <button
                           key={idx}
@@ -569,7 +570,7 @@ export default function OfficeContractWizard() {
                             const target = steps.find((s) => s.key === issue.stepKey);
                             if (target) setCurrentStepKey(target.key);
                           }}
-                          className="w-full text-right flex items-center justify-between rounded-lg bg-white border border-rose-200 p-2 text-[11px] font-bold text-rose-900 hover:bg-rose-100/70"
+                          className="w-full text-right flex items-center justify-between rounded-md bg-white border border-rose-200 p-2 text-[10.5px] font-bold text-rose-900 hover:bg-rose-100/70"
                         >
                           <span>{issue.labelAr}</span>
                           <span className="text-rose-600">الانتقال للحقل ←</span>
@@ -578,28 +579,28 @@ export default function OfficeContractWizard() {
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800 flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-bold text-emerald-800 flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                     <span>كافة الحقول والبيانات الأساسية مكتملة ومطابقة للقالب القانوني.</span>
                   </div>
                 )}
 
                 {/* Save Draft CTA */}
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
                   <button
                     type="button"
                     onClick={() => setCurrentStepKey(steps[currentStepIndex - 1]?.key || steps[0]?.key)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs font-black text-slate-700 hover:bg-slate-50"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
                   >
-                    <ArrowRight className="h-4 w-4" /> السابق
+                    <ArrowRight className="h-3.5 w-3.5" /> السابق
                   </button>
                   <button
                     type="button"
                     onClick={saveDraft}
                     disabled={saving}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-[#00102e] px-8 py-3 text-xs font-black text-[#d9a84e] shadow-lg hover:bg-[#00102e]/90 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-6 py-2.5 text-xs font-black text-[#d9a84e] shadow-md hover:bg-[#00102e]/90 disabled:opacity-50"
                   >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4 text-[#986410]" />}
+                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BadgeCheck className="h-3.5 w-3.5 text-[#986410]" />}
                     {saving ? "جارٍ الحفظ..." : "حفظ مسودة العقد للمكتب"}
                   </button>
                 </div>
@@ -609,42 +610,42 @@ export default function OfficeContractWizard() {
         </div>
 
         {/* ── LEFT COLUMN: LIVE A4 LEGAL DOCUMENT PREVIEW ── */}
-        <div className="xl:col-span-6 space-y-4">
-          <div className="sticky top-20 rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="xl:col-span-6 space-y-3">
+          <div className="sticky top-20 rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
             {/* Header Tabs */}
-            <div className="flex items-center justify-between border-b border-slate-200 bg-[#00102e] px-4 py-3 text-white">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-slate-200 bg-[#00102e] px-3.5 py-2 text-white">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setPreviewTab("document")}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition ${
+                  className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
                     previewTab === "document" ? "bg-[#986410] text-white" : "bg-white/10 text-slate-300 hover:bg-white/20"
                   }`}
                 >
-                  <FileText className="h-3.5 w-3.5" />
+                  <FileText className="h-3 w-3" />
                   ورقة العقد الحية (A4)
                 </button>
                 <button
                   type="button"
                   onClick={() => setPreviewTab("summary")}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition ${
+                  className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
                     previewTab === "summary" ? "bg-[#986410] text-white" : "bg-white/10 text-slate-300 hover:bg-white/20"
                   }`}
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <CheckCircle2 className="h-3 w-3" />
                   ملخص البنود
                 </button>
               </div>
 
-              <span className="flex max-w-[50%] items-center gap-1 rounded-full border border-[#986410]/30 bg-[#986410]/20 px-2.5 py-0.5 text-[10px] font-bold text-[#d9a84e]">
-                <Zap className="h-3 w-3 shrink-0" />
+              <span className="flex max-w-[50%] items-center gap-1 rounded-full border border-[#986410]/30 bg-[#986410]/20 px-2 py-0.5 text-[9px] font-bold text-[#d9a84e]">
+                <Zap className="h-2.5 w-2.5 shrink-0" />
                 <span className="truncate">{activePreviewField ? `تعديل: ${activePreviewField.labelAr}` : "تحديث حي مباشر"}</span>
               </span>
             </div>
 
             {/* Document Content */}
             {previewTab === "document" ? (
-              <div className="overflow-hidden bg-slate-100/70 p-3 sm:p-5 max-h-[calc(100vh-140px)] overflow-y-auto">
+              <div className="overflow-hidden bg-slate-100/70 p-3 max-h-[calc(100vh-140px)] overflow-y-auto">
                 <LegalDocumentSheet
                   serialNumber={displaySerial}
                   templateSlug={templateSlug}
@@ -658,21 +659,21 @@ export default function OfficeContractWizard() {
                 />
               </div>
             ) : (
-              <div className="p-6 space-y-4 text-xs leading-relaxed max-h-[calc(100vh-140px)] overflow-y-auto" dir="rtl">
-                <div className="text-center pb-4 border-b-2 border-[#00102e]">
-                  <div className="text-[10px] text-[#986410] font-bold uppercase tracking-widest">منصة Z draft — مكتب المحاماة</div>
-                  <h3 className="text-base font-black text-[#00102e] mt-1">{contractTitle}</h3>
-                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">{displaySerial}</p>
+              <div className="p-4 space-y-3 text-xs leading-relaxed max-h-[calc(100vh-140px)] overflow-y-auto" dir="rtl">
+                <div className="text-center pb-3 border-b-2 border-[#00102e]">
+                  <div className="text-[9px] text-[#986410] font-bold uppercase tracking-widest">منصة Z draft — مكتب المحاماة</div>
+                  <h3 className="text-sm font-black text-[#00102e] mt-0.5">{contractTitle}</h3>
+                  <p className="text-[9px] text-slate-400 font-mono">{displaySerial}</p>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="font-black text-[#00102e] mb-3 text-xs">البيانات المدخلة في العقد:</div>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="font-bold text-[#00102e] mb-2 text-xs">البيانات المدخلة في العقد:</div>
+                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                     {Object.entries(fieldValues).length ? (
                       Object.entries(fieldValues).map(([k, v]) => (
-                        <div key={k} className="rounded-xl border border-slate-200 bg-white p-2.5">
-                          <div className="text-[9px] font-bold text-slate-400">{k}</div>
-                          <div className="mt-1 text-[11px] font-black text-[#00102e] break-words">{String(v ?? "—")}</div>
+                        <div key={k} className="rounded-lg border border-slate-200 bg-white p-2">
+                          <div className="text-[8.5px] font-bold text-slate-400">{k}</div>
+                          <div className="mt-0.5 text-[10.5px] font-bold text-[#00102e] break-words">{String(v ?? "—")}</div>
                         </div>
                       ))
                     ) : (
@@ -689,19 +690,19 @@ export default function OfficeContractWizard() {
       {/* Context Modal (Client & Billing Assignment) */}
       {showContextModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs" dir="rtl">
-          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2">
-                <UserRound className="h-5 w-5 text-[#986410]" />
-                <h3 className="text-base font-black text-[#00102e]">تخصيص العميل وسياق العقد</h3>
+          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-1.5">
+                <UserRound className="h-4 w-4 text-[#986410]" />
+                <h3 className="text-sm font-black text-[#00102e]">تخصيص العميل وسياق العقد</h3>
               </div>
-              <button type="button" onClick={() => setShowContextModal(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100">✕</button>
+              <button type="button" onClick={() => setShowContextModal(false)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100">✕</button>
             </div>
 
-            <div className="mt-4 space-y-4 text-xs font-bold">
+            <div className="mt-3.5 space-y-3.5 text-xs font-bold">
               <div>
-                <label className="mb-2 block text-slate-700">إنشاء العقد لصالح</label>
-                <div className="grid grid-cols-3 gap-2">
+                <label className="mb-1.5 block text-slate-700 text-[11px]">إنشاء العقد لصالح</label>
+                <div className="grid grid-cols-3 gap-1.5">
                   {([
                     ["existing", "عميل مسجل"],
                     ["new", "عميل غير مسجل"],
@@ -711,7 +712,7 @@ export default function OfficeContractWizard() {
                       key={value}
                       type="button"
                       onClick={() => setOfficeContext((cur) => ({ ...cur, clientMode: value, clientId: "", clientName: "" }))}
-                      className={`rounded-xl border p-2.5 text-center font-black transition ${
+                      className={`rounded-lg border p-2 text-center font-bold transition text-[11px] ${
                         officeContext.clientMode === value ? "border-[#986410] bg-[#986410]/10 text-[#00102e]" : "border-slate-200 bg-slate-50 text-slate-600"
                       }`}
                     >
@@ -723,7 +724,7 @@ export default function OfficeContractWizard() {
 
               {officeContext.clientMode === "existing" && (
                 <div>
-                  <label className="mb-1 block text-slate-700">اختر العميل المسجل</label>
+                  <label className="mb-1 block text-slate-700 text-[11px]">اختر العميل المسجل</label>
                   <select
                     disabled={optionsLoading}
                     className={inputClass()}
@@ -746,16 +747,16 @@ export default function OfficeContractWizard() {
               )}
 
               {officeContext.clientMode === "new" && (
-                <div className="space-y-3">
-                  <div><label className="mb-1 block text-slate-700">اسم العميل *</label><input className={inputClass()} value={officeContext.clientName} onChange={(e) => setOfficeContext((cur) => ({ ...cur, clientName: e.target.value }))} /></div>
-                  <div><label className="mb-1 block text-slate-700">رقم الهاتف / واتساب</label><input dir="ltr" className={inputClass()} value={officeContext.clientPhone} onChange={(e) => setOfficeContext((cur) => ({ ...cur, clientPhone: e.target.value }))} /></div>
-                  <div><label className="mb-1 block text-slate-700">البريد الإلكتروني</label><input dir="ltr" type="email" className={inputClass()} value={officeContext.clientEmail} onChange={(e) => setOfficeContext((cur) => ({ ...cur, clientEmail: e.target.value }))} /></div>
+                <div className="space-y-2.5">
+                  <div><label className="mb-1 block text-slate-700 text-[11px]">اسم العميل *</label><input className={inputClass()} value={officeContext.clientName} onChange={(e) => setOfficeContext((cur) => ({ ...cur, clientName: e.target.value }))} /></div>
+                  <div><label className="mb-1 block text-slate-700 text-[11px]">رقم الهاتف / واتساب</label><input dir="ltr" className={inputClass()} value={officeContext.clientPhone} onChange={(e) => setOfficeContext((cur) => ({ ...cur, clientPhone: e.target.value }))} /></div>
+                  <div><label className="mb-1 block text-slate-700 text-[11px]">البريد الإلكتروني</label><input dir="ltr" type="email" className={inputClass()} value={officeContext.clientEmail} onChange={(e) => setOfficeContext((cur) => ({ ...cur, clientEmail: e.target.value }))} /></div>
                 </div>
               )}
 
               <div>
-                <label className="mb-2 block text-slate-700">سياسة التحصيل</label>
-                <div className="grid grid-cols-3 gap-2">
+                <label className="mb-1.5 block text-slate-700 text-[11px]">سياسة التحصيل</label>
+                <div className="grid grid-cols-3 gap-1.5">
                   {([
                     ["office_waiver", "بدون دفع (إعفاء)"],
                     ["external_collection", "تحصيل خارجي"],
@@ -765,7 +766,7 @@ export default function OfficeContractWizard() {
                       key={v}
                       type="button"
                       onClick={() => setOfficeContext((cur) => ({ ...cur, billingMode: v as OfficeBillingMode }))}
-                      className={`rounded-xl border p-2.5 text-center font-black transition ${
+                      className={`rounded-lg border p-2 text-center font-bold transition text-[11px] ${
                         officeContext.billingMode === v ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-slate-50 text-slate-600"
                       }`}
                     >
@@ -777,17 +778,17 @@ export default function OfficeContractWizard() {
 
               {officeContext.billingMode === "office_waiver" && officeContext.clientMode !== "office_internal" && (
                 <div>
-                  <label className="mb-1 block text-slate-700">سبب الإعفاء (يُسجل في سجل النظام)</label>
+                  <label className="mb-1 block text-slate-700 text-[11px]">سبب الإعفاء (يُسجل في سجل النظام)</label>
                   <input className={inputClass()} value={officeContext.waiverReason} onChange={(e) => setOfficeContext((cur) => ({ ...cur, waiverReason: e.target.value }))} placeholder="مثال: تم التحصيل كاش في المقر" />
                 </div>
               )}
             </div>
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-5 flex justify-end">
               <button
                 type="button"
                 onClick={() => setShowContextModal(false)}
-                className="rounded-xl bg-[#00102e] px-6 py-2.5 text-xs font-black text-white hover:bg-[#00102e]/90"
+                className="rounded-xl bg-[#00102e] px-5 py-2 text-xs font-bold text-white hover:bg-[#00102e]/90"
               >
                 تطبيق ومتابعة
               </button>

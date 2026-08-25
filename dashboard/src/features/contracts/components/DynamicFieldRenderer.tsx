@@ -1,6 +1,7 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import React, { useRef } from "react";
+import { AlertCircle, Calendar, Check, HelpCircle, Plus, Trash2 } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { evaluateCondition, numberToEgyptianPoundsWords } from "@zdraft/template-engine";
 import type {
@@ -9,17 +10,29 @@ import type {
   RepeaterRowValue,
   WizardFieldDefinition,
 } from "@zdraft/template-engine";
+import { resolveWizardFieldLabel } from "../domain/contractDisplay";
 
 interface DynamicFieldRendererProps {
   field: WizardFieldDefinition;
   value: ContractFieldValue | undefined;
+  allFormValues?: Record<string, any>;
+  errorMessage?: string;
+  touched?: boolean;
   onChange: (value: ContractFieldValue) => void;
+  onFocus?: () => void;
   onFilesSelected?: (files: File[]) => Promise<void> | void;
   uploading?: boolean;
 }
 
-const inputClass =
-  "w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs text-slate-900 transition-all focus:border-[#00102e] focus:outline-none focus:ring-1 focus:ring-[#986410]/30";
+const baseInputClass =
+  "w-full rounded-xl border bg-white px-3 py-2 text-xs text-slate-900 transition-all focus:outline-none focus:ring-1";
+
+function getInputClass(hasError?: boolean): string {
+  if (hasError) {
+    return `${baseInputClass} border-rose-400 bg-rose-50/20 focus:border-rose-600 focus:ring-rose-500/20 text-rose-950`;
+  }
+  return `${baseInputClass} border-slate-300 focus:border-[#00102e] focus:ring-[#986410]/30`;
+}
 
 function scalarValue(value: ContractFieldValue | undefined): PrimitiveFieldValue {
   if (Array.isArray(value)) return "";
@@ -32,12 +45,14 @@ function MoneyFieldInput({
   min,
   max,
   placeholder,
+  hasError,
 }: {
   value: PrimitiveFieldValue;
   onChange: (value: PrimitiveFieldValue) => void;
   min?: string | number;
   max?: string | number;
   placeholder?: string;
+  hasError?: boolean;
 }) {
   const raw = String(value ?? "");
   const numeric = Number(raw);
@@ -45,7 +60,7 @@ function MoneyFieldInput({
   const words = hasValidValue ? numberToEgyptianPoundsWords(numeric) : "";
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <div className="relative">
         <input
           type="number"
@@ -55,16 +70,91 @@ function MoneyFieldInput({
           min={min}
           max={max}
           step="0.01"
-          className={`${inputClass} pl-14`}
+          className={`${getInputClass(hasError)} pl-12`}
           dir="ltr"
         />
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">ج.م</span>
       </div>
       {words && (
-        <div className="rounded-lg border border-[#986410]/20 bg-[#986410]/5 px-3 py-2 text-[10px] font-bold leading-5 text-[#00102e]" dir="rtl">
+        <div className="rounded-lg border border-[#986410]/20 bg-[#986410]/5 px-2.5 py-1 text-[10px] font-bold leading-5 text-[#00102e]" dir="rtl">
           <span className="text-[#986410]">كتابةً تلقائيًا: </span>{words}
         </div>
       )}
+    </div>
+  );
+}
+
+function DateFieldInput({
+  value,
+  onChange,
+  min,
+  max,
+  hasError,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  min?: string | number;
+  max?: string | number;
+  hasError?: boolean;
+}) {
+  const hiddenInputRef = useRef<HTMLInputElement | null>(null);
+
+  const displayDate = value && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? value.split("-").reverse().join(" / ")
+    : value;
+
+  const handleClick = () => {
+    const el = hiddenInputRef.current;
+    if (!el) return;
+    try {
+      const anyEl = el as unknown as { showPicker?: () => void; focus?: () => void };
+      if (typeof anyEl.showPicker === "function") {
+        anyEl.showPicker();
+      } else {
+        anyEl.focus?.();
+      }
+    } catch {
+      (el as unknown as { focus?: () => void }).focus?.();
+    }
+  };
+
+  const setToday = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const today = new Date().toISOString().split("T")[0];
+    onChange(today);
+  };
+
+  return (
+    <div className="space-y-1">
+      <div onClick={handleClick} className="relative flex items-center cursor-pointer">
+        <input
+          type="text"
+          readOnly
+          value={displayDate || ""}
+          placeholder="اختر التاريخ (انقر هنا)"
+          className={`${getInputClass(hasError)} cursor-pointer pr-3 pl-9 font-medium`}
+        />
+        <Calendar className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${hasError ? "text-rose-500" : "text-slate-400"}`} />
+        <input
+          ref={hiddenInputRef}
+          type="date"
+          value={value || ""}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+          min={min ? String(min) : undefined}
+          max={max ? String(max) : undefined}
+          className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
+          tabIndex={-1}
+        />
+      </div>
+      <div className="flex items-center gap-1.5 pt-0.5">
+        <button
+          type="button"
+          onClick={setToday}
+          className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 hover:bg-[#986410]/15 hover:text-[#00102e] transition"
+        >
+          اليوم
+        </button>
+      </div>
     </div>
   );
 }
@@ -73,6 +163,7 @@ function renderScalarControl(
   field: WizardFieldDefinition,
   value: PrimitiveFieldValue,
   onChange: (value: PrimitiveFieldValue) => void,
+  hasError?: boolean,
 ) {
   if (field.type === "textarea") {
     return (
@@ -80,25 +171,26 @@ function renderScalarControl(
         value={String(value ?? "")}
         onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value)}
         placeholder={field.placeholder}
-        className={`${inputClass} min-h-28 resize-y`}
+        className={`${getInputClass(hasError)} min-h-20 resize-y`}
       />
     );
   }
 
   if (field.type === "radio") {
     return (
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className={`grid gap-1.5 sm:grid-cols-2 ${hasError ? "p-1 rounded-xl bg-rose-50/20 border border-rose-300" : ""}`}>
         {field.options?.map((option) => {
           const selected = String(value ?? "") === option.value;
           return (
             <button
               key={option.value}
               type="button"
+              aria-pressed={selected}
               onClick={() => onChange(option.value)}
-              className={`rounded-xl border px-3 py-2.5 text-right text-xs font-black transition ${
+              className={`min-h-8 rounded-lg border px-2.5 py-1.5 text-right text-[11px] font-bold leading-5 transition ${
                 selected
-                  ? "border-[#986410] bg-[#986410]/10 text-[#00102e]"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-[#986410]/40"
+                  ? "border-[#986410] bg-[#986410]/10 text-[#00102e] ring-1 ring-[#986410]/30"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-[#986410]/40 hover:bg-slate-50"
               }`}
             >
               {option.labelAr}
@@ -111,7 +203,11 @@ function renderScalarControl(
 
   if (field.type === "select") {
     return (
-      <select value={String(value ?? "")} onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value)} className={inputClass}>
+      <select
+        value={String(value ?? "")}
+        onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value)}
+        className={getInputClass(hasError)}
+      >
         <option value="">اختر...</option>
         {field.options?.map((option) => (
           <option key={option.value} value={option.value}>
@@ -124,14 +220,14 @@ function renderScalarControl(
 
   if (field.type === "checkbox") {
     return (
-      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <label className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 ${hasError ? "border-rose-400 bg-rose-50/20" : "border-slate-200 bg-slate-50"}`}>
         <input
           type="checkbox"
           checked={Boolean(value)}
           onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.checked)}
-          className="mt-0.5 h-4 w-4 accent-[#986410]"
+          className="mt-0.5 h-3.5 w-3.5 accent-[#986410]"
         />
-        <span className={`text-xs font-bold leading-6 ${field.required ? "text-[#c66b22]" : "text-slate-700"}`}>
+        <span className={`text-[11px] font-bold leading-5 ${field.required ? (hasError ? "text-rose-700" : "text-[#c66b22]") : "text-slate-700"}`}>
           {field.labelAr} {field.required && <span aria-label="إلزامي">*</span>}
         </span>
       </label>
@@ -146,11 +242,24 @@ function renderScalarControl(
         min={field.validation?.min}
         max={field.validation?.max}
         placeholder={field.placeholder}
+        hasError={hasError}
       />
     );
   }
 
-  const type = field.type === "date" ? "date" : field.type === "number" ? "number" : "text";
+  if (field.type === "date") {
+    return (
+      <DateFieldInput
+        value={String(value ?? "")}
+        onChange={(val) => onChange(val)}
+        min={field.validation?.min}
+        max={field.validation?.max}
+        hasError={hasError}
+      />
+    );
+  }
+
+  const type = field.type === "number" ? "number" : "text";
   return (
     <input
       type={type}
@@ -159,8 +268,7 @@ function renderScalarControl(
       placeholder={field.placeholder}
       min={field.validation?.min}
       max={field.validation?.max}
-      className={inputClass}
-      dir={type === "number" || type === "date" ? "ltr" : undefined}
+      className={getInputClass(hasError)}
     />
   );
 }
@@ -169,75 +277,85 @@ function RepeaterRenderer({
   field,
   value,
   onChange,
+  hasError,
 }: {
   field: WizardFieldDefinition;
   value: RepeaterRowValue[];
   onChange: (value: RepeaterRowValue[]) => void;
+  hasError?: boolean;
 }) {
-  const rows = value.length > 0 ? value : [{}];
+  const rows = Array.isArray(value) && value.length > 0 ? value : [{}];
 
   const updateRow = (index: number, key: string, nextValue: PrimitiveFieldValue) => {
-    const nextRows = rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: nextValue } : row));
-    onChange(nextRows);
+    const next = [...rows];
+    next[index] = {
+      ...next[index],
+      [key]: nextValue,
+    };
+    onChange(next);
   };
 
   return (
-    <div className="space-y-3">
+    <div className={`space-y-2 ${hasError ? "p-2 rounded-xl border border-rose-300 bg-rose-50/10" : ""}`}>
       {rows.map((row, index) => (
-        <div key={index} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <span className="text-[11px] font-black text-[#00102e]">عنصر رقم {index + 1}</span>
+        <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <span className="text-[10.5px] font-black text-[#00102e]">عنصر رقم {index + 1}</span>
             <button
               type="button"
               onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}
               disabled={rows.length <= Math.max(1, field.minRows ?? 1)}
-              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2 py-1 text-[10px] font-black text-rose-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-white px-2 py-0.5 text-[9px] font-black text-rose-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Trash2 className="h-3 w-3" /> حذف
             </button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             {field.columns
               ?.filter((column) => !column.visibleWhen || evaluateCondition(column.visibleWhen, row))
               .map((column) => {
                 const required = Boolean(column.required || (column.requiredWhen && evaluateCondition(column.requiredWhen, row)));
                 return (
-              <div key={column.key}>
-                <label className="mb-1 block text-[10px] font-black text-slate-600">
-                  <span className={required ? "text-[#c66b22]" : undefined}>{column.labelAr}</span> {required && <span className="text-[#c66b22]">*</span>}
-                </label>
-                {column.type === "select" ? (
-                  <select
-                    value={String(row[column.key] ?? "")}
-                    onChange={(event: ChangeEvent<HTMLSelectElement>) => updateRow(index, column.key, event.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">اختر...</option>
-                    {column.options?.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.labelAr}
-                      </option>
-                    ))}
-                  </select>
-                ) : column.type === "money" ? (
-                  <MoneyFieldInput
-                    value={(row[column.key] ?? "") as PrimitiveFieldValue}
-                    onChange={(nextValue) => updateRow(index, column.key, nextValue)}
-                    min={column.validation?.min}
-                    max={column.validation?.max}
-                    placeholder={column.placeholder}
-                  />
-                ) : (
-                  <input
-                    type={column.type === "date" ? "date" : column.type === "number" ? "number" : "text"}
-                    value={String(row[column.key] ?? "")}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => updateRow(index, column.key, event.target.value)}
-                    placeholder={column.placeholder}
-                    dir={column.type === "date" || column.type === "number" ? "ltr" : undefined}
-                    className={inputClass}
-                  />
-                )}
-              </div>
+                  <div key={column.key}>
+                    <label className="mb-1 block text-[10px] font-bold text-slate-600">
+                      {column.labelAr} {required && <span className="text-[#c66b22]">*</span>}
+                    </label>
+                    {column.type === "select" ? (
+                      <select
+                        value={String(row[column.key] ?? "")}
+                        onChange={(event: ChangeEvent<HTMLSelectElement>) => updateRow(index, column.key, event.target.value)}
+                        className={getInputClass(false)}
+                      >
+                        <option value="">اختر...</option>
+                        {column.options?.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.labelAr}
+                          </option>
+                        ))}
+                      </select>
+                    ) : column.type === "date" ? (
+                      <DateFieldInput
+                        value={String(row[column.key] ?? "")}
+                        onChange={(val) => updateRow(index, column.key, val)}
+                      />
+                    ) : column.type === "money" ? (
+                      <MoneyFieldInput
+                        value={(row[column.key] ?? "") as PrimitiveFieldValue}
+                        onChange={(nextValue) => updateRow(index, column.key, nextValue)}
+                        min={column.validation?.min}
+                        max={column.validation?.max}
+                        placeholder={column.placeholder}
+                      />
+                    ) : (
+                      <input
+                        type={column.type === "number" ? "number" : "text"}
+                        value={String(row[column.key] ?? "")}
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => updateRow(index, column.key, event.target.value)}
+                        placeholder={column.placeholder}
+                        className={getInputClass(false)}
+                      />
+                    )}
+                  </div>
                 );
               })}
           </div>
@@ -246,76 +364,97 @@ function RepeaterRenderer({
       <button
         type="button"
         onClick={() => onChange([...rows, {}])}
-        className="inline-flex items-center gap-2 rounded-xl border border-[#986410]/30 bg-[#986410]/5 px-3 py-2 text-xs font-black text-[#986410]"
+        className="inline-flex items-center gap-1 rounded-lg border border-dashed border-[#986410]/40 bg-[#986410]/5 px-2.5 py-1 text-[10.5px] font-bold text-[#986410] hover:bg-[#986410]/10"
       >
-        <Plus className="h-4 w-4" /> إضافة عنصر
+        <Plus className="h-3 w-3" /> إضافة بند جديد
       </button>
     </div>
   );
 }
 
-export default function DynamicFieldRenderer({ field, value, onChange, onFilesSelected, uploading = false }: DynamicFieldRendererProps) {
-  if (field.type === "attachment") {
-    const fileNames = Array.isArray(value) && value.every((item) => typeof item === "string")
-      ? (value as string[])
-      : [];
-    return (
-      <div>
-        <label className="mb-1 block text-xs font-black text-slate-700">
-          <span className={field.required ? "text-[#c66b22]" : undefined}>{field.labelAr}</span> {field.required && <span className="text-[#c66b22]">*</span>}
-        </label>
-        <label className="flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-center transition hover:border-[#986410]/50 hover:bg-[#986410]/5">
-          <span className="text-xs font-black text-[#00102e]">{uploading ? "جاري رفع الملفات..." : "اختر صورًا أو ملفات داعمة"}</span>
-          <span className="mt-1 text-[10px] font-semibold text-slate-500">تُرفع الملفات إلى التخزين الخاص ولا تُحفظ داخل المتصفح.</span>
-          <input
-            type="file"
-            multiple
-            disabled={uploading}
-            className="sr-only"
-            onChange={(event: ChangeEvent<HTMLInputElement>) => {
-              const files = Array.from(event.target.files ?? []);
-              if (onFilesSelected) void onFilesSelected(files);
-              else onChange(files.map((file) => file.name));
-              event.target.value = "";
-            }}
-          />
-        </label>
-        {fileNames.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {fileNames.map((name) => (
-              <span key={name} className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[9px] font-bold text-emerald-800">{name}</span>
-            ))}
-          </div>
-        )}
-        {field.helpText && <p className="mt-1 text-[10px] font-semibold leading-5 text-slate-500">{field.helpText}</p>}
-      </div>
-    );
-  }
+export default function DynamicFieldRenderer({
+  field,
+  value,
+  allFormValues = {},
+  errorMessage,
+  touched,
+  onChange,
+  onFocus,
+}: DynamicFieldRendererProps) {
+  const hasError = Boolean(errorMessage);
+
   if (field.type === "repeater") {
-    const rows = Array.isArray(value) && value.every((item) => typeof item === "object" && item !== null)
-      ? (value as RepeaterRowValue[])
-      : [];
+    const listValue = Array.isArray(value) ? (value as RepeaterRowValue[]) : [];
     return (
-      <div>
-        <label className="mb-2 block text-xs font-black text-slate-700">
-          <span className={field.required ? "text-[#c66b22]" : undefined}>{field.labelAr}</span> {field.required && <span className="text-[#c66b22]">*</span>}
-        </label>
-        <RepeaterRenderer field={field} value={rows} onChange={onChange} />
+      <div onFocusCapture={onFocus} className="space-y-1.5">
+        <RepeaterRenderer field={field} value={listValue} onChange={onChange} hasError={hasError} />
+        {hasError && (
+          <p className="flex items-center gap-1.5 text-[10.5px] font-bold text-rose-600">
+            <AlertCircle className="h-3 w-3 shrink-0 text-rose-500" />
+            <span>{errorMessage}</span>
+          </p>
+        )}
       </div>
     );
   }
 
-  if (field.type === "checkbox") {
-    return renderScalarControl(field, scalarValue(value), onChange);
+  const label = resolveWizardFieldLabel(field, allFormValues);
+  let placeholder = field.placeholder;
+  let helpText = field.helpText;
+
+  if (field.key.endsWith("_national_id")) {
+    const typeKey = field.key.replace(/_national_id$/, "_identity_document_type");
+    const selectedType = String(allFormValues[typeKey] ?? "").trim();
+    if (selectedType === "passport" || label === "رقم جواز السفر") {
+      placeholder = "أدخل رقم جواز السفر الساري";
+      helpText = "أدخل رقم جواز السفر كما هو مثبت بالمستند";
+    } else if (selectedType === "national_id" || label === "الرقم القومي" || field.key.includes("witness")) {
+      placeholder = "14 رقمًا قوميًا";
+      helpText = "أدخل الرقم القومي المكون من 14 رقمًا بدون حروف أو مسافات";
+    } else {
+      placeholder = "اختر نوع مستند إثبات الهوية أولًا";
+      helpText = "اختر رقم قومي أو جواز سفر، ثم أدخل الرقم كما هو بالمستند";
+    }
   }
+
+  if (field.key.includes("supporting_documents") || field.key.includes("extra_docs")) {
+    placeholder = placeholder || "مثال: صور بطاقات الطرفين، إيصال مرافق، محضر استلام/جرد المنقولات";
+    helpText = helpText || "المستندات أو المرفقات التي يتم إرفاقها بالعقد عند التوقيع لإثبات الحالة أو الهوية أو قراءات العدادات";
+  }
+
+  const effectiveField: WizardFieldDefinition = {
+    ...field,
+    labelAr: label,
+    placeholder: placeholder || field.placeholder,
+  };
 
   return (
-    <div>
-      <label className="mb-1 block text-xs font-black text-slate-700">
-        <span className={field.required ? "text-[#c66b22]" : undefined}>{field.labelAr}</span> {field.required && <span className="text-[#c66b22]">*</span>}
-      </label>
-      {renderScalarControl(field, scalarValue(value), onChange)}
-      {field.helpText && <p className="mt-1 text-[10px] font-semibold leading-5 text-slate-500">{field.helpText}</p>}
+    <div className="space-y-1" onFocusCapture={onFocus}>
+      {field.type !== "checkbox" && (
+        <div className="flex items-center justify-between gap-2">
+          <label className={`block text-[11px] font-bold ${hasError ? "text-rose-700" : "text-slate-800"}`}>
+            {label} {field.required && <span className={hasError ? "text-rose-600" : "text-[#c66b22]"}>*</span>}
+          </label>
+        </div>
+      )}
+      {renderScalarControl(effectiveField, scalarValue(value), (next) => onChange(next), hasError)}
+      {hasError && (
+        <p className="flex items-center gap-1.5 text-[10.5px] font-bold text-rose-600">
+          <AlertCircle className="h-3 w-3 shrink-0 text-rose-500" />
+          <span>{errorMessage}</span>
+        </p>
+      )}
+      {helpText && !hasError && (
+        <details className="group max-w-full text-[10px] text-slate-500">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-1 font-bold text-slate-400 transition hover:text-[#986410] [&::-webkit-details-marker]:hidden">
+            <HelpCircle className="h-3 w-3" />
+            توضيح
+          </summary>
+          <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10.5px] leading-5 text-slate-600">
+            {helpText}
+          </p>
+        </details>
+      )}
     </div>
   );
 }

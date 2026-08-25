@@ -1031,12 +1031,7 @@ export default function LegalDocumentSheet({
       {isDraft && <DraftWatermark serialNumber={serialNumber} />}
 
       {/* Print-faithful header: matches the WeasyPrint document hierarchy. */}
-      <div
-        id="doc-preamble"
-        data-active-preview={activePreamble ? "exact" : undefined}
-        className={`relative z-10 scroll-mt-28 ${activePreamble ? activeBlockClass : ""}`}
-      >
-        {activePreamble && <LiveFieldMarker label={activeFieldLabel} />}
+      <div id="doc-preamble" className="relative z-10 scroll-mt-28">
         <div className="zd-doc-masthead">
           <div className="zd-doc-masthead-top">
             <div className="w-1/4 flex justify-start">
@@ -1052,10 +1047,18 @@ export default function LegalDocumentSheet({
           <div className="zd-doc-meta-inline">
             رقم المستند: <span dir="ltr" className="font-bold">{serialNumber}</span>
             <span className="mx-2 text-slate-400">|</span>
-            تاريخ العقد: <span dir="ltr">{formattedContractDate}</span>
+            <span
+              data-active-preview={activePreamble ? "exact" : undefined}
+              className={`inline-block px-2 py-0.5 rounded transition ${
+                activePreamble ? "bg-[#d9a84e]/20 ring-2 ring-[#d9a84e] font-bold text-[#00102e]" : ""
+              }`}
+            >
+              تاريخ العقد: <span dir="ltr">{formattedContractDate}</span>
+            </span>
           </div>
         </div>
       </div>
+
 
       {/* Contract Body */}
       <div className="zd-doc-body relative z-10 text-justify text-slate-800">
