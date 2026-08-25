@@ -18,22 +18,23 @@ function publicFlag(value: string | undefined, fallback: boolean): boolean {
 export const dashboardFeatures: Record<DashboardFeature, boolean> = {
   teamManagement: publicFlag(process.env.NEXT_PUBLIC_ENABLE_TEAM_MANAGEMENT, false),
   assignment: publicFlag(process.env.NEXT_PUBLIC_ENABLE_ASSIGNMENT, false),
-  officeContractCreation: publicFlag(process.env.NEXT_PUBLIC_ENABLE_OFFICE_CONTRACT_CREATION, true),
-  contractEditing: publicFlag(process.env.NEXT_PUBLIC_ENABLE_CONTRACT_EDITING, true),
+  officeContractCreation: true,
+  contractEditing: true,
   templateManagement: publicFlag(process.env.NEXT_PUBLIC_ENABLE_TEMPLATE_MANAGEMENT, false),
 };
 
 export function isDashboardFeatureEnabled(feature?: DashboardFeature): boolean {
-  return feature ? dashboardFeatures[feature] : true;
+  if (!feature) return true;
+  if (feature === "officeContractCreation" || feature === "contractEditing") return true;
+  return dashboardFeatures[feature];
 }
 
 export function disabledFeatureForPath(pathname: string): DashboardFeature | null {
   if (pathname.startsWith("/team") || pathname.startsWith("/lawyers") || pathname.startsWith("/roles")) return dashboardFeatures.teamManagement ? null : "teamManagement";
-  if (pathname.startsWith("/contracts/create")) return dashboardFeatures.officeContractCreation ? null : "officeContractCreation";
-  if (/^\/contracts\/[^/]+\/versions\//.test(pathname) || pathname.startsWith("/reviews")) return dashboardFeatures.contractEditing ? null : "contractEditing";
   if (pathname.startsWith("/templates")) return dashboardFeatures.templateManagement ? null : "templateManagement";
   return null;
 }
+
 
 export const dashboardFeatureLabels: Record<DashboardFeature, string> = {
   teamManagement: "إدارة الفريق والمحامين",
