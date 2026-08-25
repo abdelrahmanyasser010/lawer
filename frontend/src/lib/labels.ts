@@ -15,7 +15,38 @@ export const contractStatusLabels: Record<string, string> = {
 };
 
 
-export function getContractNextAction(status: string): { label: string; actionText: string } {
+function pendingPaymentAction(paymentStatus?: string | null, target: "contract" | "request" = "contract"): { label: string; actionText: string } {
+  if (paymentStatus === "pending_verification" || paymentStatus === "replaced") {
+    return {
+      label: "الإيصال قيد المراجعة الآن. سنحدّث الحالة بعد اعتماد الإدارة.",
+      actionText: "متابعة حالة الدفع",
+    };
+  }
+  if (paymentStatus === "needs_client_info") {
+    return {
+      label: "مطلوب توضيح أو إثبات دفع بديل حتى نكمل المراجعة.",
+      actionText: "رفع إثبات بديل",
+    };
+  }
+  if (paymentStatus === "rejected") {
+    return {
+      label: "تعذر اعتماد إثبات الدفع السابق. ارفع إثباتًا صحيحًا للمتابعة.",
+      actionText: "رفع إثبات جديد",
+    };
+  }
+  if (paymentStatus === "approved") {
+    return {
+      label: target === "request" ? "تم اعتماد الدفع، والطلب تحت المتابعة." : "تم اعتماد الدفع، والعقد تحت المتابعة.",
+      actionText: target === "request" ? "متابعة الطلب" : "متابعة العقد",
+    };
+  }
+  return {
+    label: target === "request" ? "ارفع إثبات الدفع لتأكيد الطلب وبدء المتابعة." : "ارفع إثبات الدفع لحفظ العقد وبدء دورة الاعتماد.",
+    actionText: "رفع إثبات الدفع",
+  };
+}
+
+export function getContractNextAction(status: string, paymentStatus?: string | null): { label: string; actionText: string } {
   switch (status) {
     case "draft":
       return {
@@ -23,10 +54,7 @@ export function getContractNextAction(status: string): { label: string; actionTe
         actionText: "متابعة الإعداد",
       };
     case "pending_payment":
-      return {
-        label: "يتم التحقق من إيصال الدفع وسداد الرسوم.",
-        actionText: "متابعة الدفع",
-      };
+      return pendingPaymentAction(paymentStatus, "contract");
     case "pending_review":
     case "assigned":
     case "in_progress":
@@ -93,13 +121,10 @@ export const paymentStatusLabels: Record<string, string> = {
   paid_outside: "تم التحصيل خارج المنصة",
 };
 
-export function getRequestNextAction(status: string): { label: string; actionText: string } {
+export function getRequestNextAction(status: string, paymentStatus?: string | null): { label: string; actionText: string } {
   switch (status) {
     case "awaiting_payment":
-      return {
-        label: "يتم الآن التحقق من إيصال الدفع — لا يلزم إجراء منك.",
-        actionText: "متابعة الطلب",
-      };
+      return pendingPaymentAction(paymentStatus, "request");
     case "awaiting_client_info":
       return {
         label: "بانتظار رفع مستندات أو بيانات إضافية.",

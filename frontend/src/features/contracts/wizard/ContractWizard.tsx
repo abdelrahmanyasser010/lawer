@@ -580,7 +580,8 @@ export default function WizardPage() {
       return;
     }
     if (!declarationAccepted) {
-      setDeclarationAccepted(true);
+      showNotice("يجب قراءة الإقرار القانوني والموافقة عليه بنفسك قبل المتابعة للدفع.");
+      return;
     }
     try {
       await persistDraft();

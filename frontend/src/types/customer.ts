@@ -28,6 +28,8 @@ export interface ContractSummary {
   serialNumber: string;
   title?: string;
   status: string;
+  paymentStatus?: string | null;
+  paymentAmountEgp?: number | null;
   sourceChannel: "customer" | "office";
   variantKey?: string;
   updatedAt: string;
@@ -124,6 +126,9 @@ export interface ServiceRequestSummary {
   meetingUrl?: string | null;
   linkedContractId?: number | null;
   assignedLawyerName?: string | null;
+  paymentStatus?: string | null;
+  paymentAmountEgp?: number | null;
+  paymentStage?: "deposit" | "working" | "balance" | "paid" | "single" | null;
   deliverablesCount: number;
   lastUpdate?: string | null;
   createdAt: string;

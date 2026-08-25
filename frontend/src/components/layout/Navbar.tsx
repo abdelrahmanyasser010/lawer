@@ -81,20 +81,21 @@ export default function Navbar() {
 
   const navItems = useMemo<NavItem[]>(() => {
     const base: NavItem[] = [
-      { href: "/create-contract?mode=self_service", label: "إنشاء عقد", icon: Sparkles },
+      { href: "/create-contract?mode=self_service", label: "إعداد عقد", icon: Sparkles },
       { href: "/request-review", label: "مراجعة عقد", icon: Scale },
     ];
     if (!user) return base;
     return [
       ...base,
-      { href: "/contracts", label: "عقودي", icon: FileText, badge: counts.contracts },
-      { href: "/requests", label: "طلباتي", icon: Scale, badge: counts.requests },
+      { href: "/contracts", label: "سجل العقود", icon: FileText, badge: counts.contracts },
+      { href: "/requests", label: "طلبات الخدمات", icon: Scale, badge: counts.requests },
     ];
   }, [counts, user]);
 
   const active = (href: string) => {
     if (href.startsWith("/#")) return false;
-    return pathname === href || pathname.startsWith(`${href}/`);
+    const hrefPath = href.split("?")[0] || href;
+    return pathname === hrefPath || pathname.startsWith(`${hrefPath}/`);
   };
 
 
@@ -303,4 +304,3 @@ export default function Navbar() {
     </header>
   );
 }
-

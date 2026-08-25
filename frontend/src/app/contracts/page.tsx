@@ -54,14 +54,14 @@ export default function ContractsPage() {
 
   const counts = useMemo(() => {
     const all = items.length;
-    const active = items.filter((i) => !["issued", "cancelled"].includes(i.status)).length;
+    const active = items.filter((i) => !["issued", "cancelled", "archived"].includes(i.status)).length;
     const issued = items.filter((i) => i.status === "issued").length;
     return { all, active, issued };
   }, [items]);
 
   const filtered = useMemo(() => items.filter((item) => {
     if (filter === "issued") return item.status === "issued";
-    if (filter === "active") return !["issued", "cancelled"].includes(item.status);
+    if (filter === "active") return !["issued", "cancelled", "archived"].includes(item.status);
     return true;
   }), [filter, items]);
 
@@ -74,9 +74,9 @@ export default function ContractsPage() {
           {/* Header with Title and Create Contract CTA */}
         <header className="flex flex-col gap-3 border-b border-slate-200/80 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-lg sm:text-xl font-black text-[#00102e]">عقودي</h1>
+            <h1 className="text-lg sm:text-xl font-black text-[#00102e]">سجل العقود</h1>
             <p className="mt-0.5 text-[11px] text-slate-500">
-              مسوداتك وعقودك المحفوظة في حسابك، من بداية الإعداد حتى الإصدار النهائي.
+              المسودات والعقود التي أعددتها داخل المنصة حتى الإصدار النهائي.
             </p>
           </div>
           <Link
@@ -84,16 +84,16 @@ export default function ContractsPage() {
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00102e] px-3.5 py-2 text-xs font-black text-white hover:bg-[#00102e]/90 shadow-sm transition self-start sm:self-auto shrink-0"
           >
             <FilePlus2 className="h-3.5 w-3.5 text-[#d9a84e]" />
-            <span>إنشاء عقد جديد</span>
+            <span>إعداد عقد جديد</span>
           </Link>
         </header>
 
         {/* Filter Tabs with Live Counters */}
         <div className="mt-4 flex items-center gap-2 overflow-x-auto">
           {([
-            { key: "all", label: "الكل", count: counts.all },
-            { key: "active", label: "قيد الإعداد", count: counts.active },
-            { key: "issued", label: "الصادرة", count: counts.issued },
+            { key: "all", label: "كل العقود", count: counts.all },
+            { key: "active", label: "غير مكتملة", count: counts.active },
+            { key: "issued", label: "صادرة", count: counts.issued },
           ] as const).map((tab) => {
             const isActive = filter === tab.key;
             return (
@@ -143,12 +143,12 @@ export default function ContractsPage() {
                 <Image src="/images/empty_contracts.jpg" alt="No contracts" width={80} height={80} className="opacity-80 mix-blend-multiply" />
               </div>
               <p className="text-sm font-black text-[#00102e]">لا توجد عقود في هذا القسم.</p>
-              <p className="mt-1 text-xs text-slate-500">يمكنك البدء في صياغة عقد جديد عبر الضغط على زر إنشاء عقد جديد.</p>
+              <p className="mt-1 text-xs text-slate-500">يمكنك البدء في صياغة عقد جديد عبر زر إعداد عقد جديد.</p>
             </div>
           ) : (
             <div className="grid gap-3.5 md:grid-cols-2">
               {filtered.map((item) => {
-                const nextAction = getContractNextAction(item.status);
+                const nextAction = getContractNextAction(item.status, item.paymentStatus);
                 const statusConfig = statusStyles[item.status] || { bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-200" };
                 const isDraft = item.status === "draft";
                 const isConfirming = confirmDeleteId === item.id;

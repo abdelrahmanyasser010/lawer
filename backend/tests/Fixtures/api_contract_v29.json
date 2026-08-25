@@ -387,6 +387,10 @@
       "path": "/api/v1/contracts/{id}/draft"
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/contracts/{id}/draft"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/contracts/{id}/finalize"
     },
@@ -425,6 +429,14 @@
     {
       "method": "PATCH",
       "path": "/api/v1/notifications/read-all"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notifications/clear-all"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notifications/{id}"
     },
     {
       "method": "PATCH",

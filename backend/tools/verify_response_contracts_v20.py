@@ -60,10 +60,10 @@ add('audit_payloads_decoded',
 
 # Empty notification inbox must settle to the empty-state instead of infinite loading.
 add('dashboard_notifications_empty_state',
-    '[loading,setLoading]=useState(true)' in dash_notice
-    and 'finally{setLoading(false);}' in dash_notice
-    and 'if(loading&&!items.length)' in dash_notice
-    and 'items.length===0' in dash_notice,
+    re.search(r'\[\s*loading\s*,\s*setLoading\s*\]\s*=\s*useState\(true\)', dash_notice) is not None
+    and re.search(r'finally\s*\{\s*setLoading\(false\)\s*;\s*\}', dash_notice, re.S) is not None
+    and re.search(r'if\s*\(\s*loading\s*&&\s*!\s*items\.length\s*\)', dash_notice) is not None
+    and re.search(r'displayedItems\.length\s*===\s*0|items\.length\s*===\s*0', dash_notice) is not None,
     {'loadingState':'explicit'})
 
 

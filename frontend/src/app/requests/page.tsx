@@ -54,20 +54,23 @@ export default function RequestsPage() {
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:py-8 sm:px-6">
 
-        {/* Sleek Workspace Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5 pb-3.5 border-b border-slate-200/80">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-lg sm:text-xl font-black text-[#00102e]">سجل الطلبات</h1>
-            <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-[10px] font-black text-slate-700">
-              {counts.all}
-            </span>
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-lg sm:text-xl font-black text-[#00102e]">طلبات الخدمات</h1>
+              <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-[10px] font-black text-slate-700">
+                {counts.all}
+              </span>
+            </div>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              مراجعة عقود، إعداد بواسطة محامٍ، أو استشارات. العقود الذاتية في سجل العقود.
+            </p>
           </div>
 
-          {/* Filter Tabs with Live Counters */}
           <div className="flex items-center gap-1.5 overflow-x-auto">
             {([
-              { key: "all", label: "الكل", count: counts.all },
-              { key: "active", label: "طلبات جارية", count: counts.active },
+              { key: "all", label: "كل الطلبات", count: counts.all },
+              { key: "active", label: "تحت المتابعة", count: counts.active },
               { key: "completed", label: "مكتملة", count: counts.completed },
             ] as const).map((tab) => {
               const isActive = filter === tab.key;
@@ -125,9 +128,11 @@ export default function RequestsPage() {
             <div className="space-y-3">
               {filtered.map((item) => {
                 const Icon = item.requestType === "contract_review" ? Scale : FileText;
-                const nextAction = getRequestNextAction(item.status);
+                const nextAction = getRequestNextAction(item.status, item.paymentStatus);
                 const statusConfig = statusStyles[item.status] || { bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-200" };
                 const channelLabel = item.communicationChannel ? (communicationLabels[item.communicationChannel] || item.communicationChannel) : "";
+                const needsPaymentProof = item.status === "awaiting_payment" && !["pending_verification", "approved"].includes(item.paymentStatus || "");
+                const requestHref = needsPaymentProof ? `/requests/${item.id}?payment=retry` : `/requests/${item.id}`;
 
                 return (
                   <article
@@ -178,7 +183,7 @@ export default function RequestsPage() {
                       {/* Left Section: Action Button */}
                       <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 pt-2 sm:pt-0">
                         <Link
-                          href={`/requests/${item.id}`}
+                          href={requestHref}
                           className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#00102e] px-3 py-1.5 text-xs font-black text-white shadow-sm hover:bg-[#00102e]/90 active:scale-[0.98] transition shrink-0"
                         >
                           <span>{nextAction.actionText}</span>
