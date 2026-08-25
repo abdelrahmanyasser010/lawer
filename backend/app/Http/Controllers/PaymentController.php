@@ -136,7 +136,10 @@ final class PaymentController extends Controller
             DB::table('payments')->where('id',$id)->update(['status'=>'approved','admin_notes'=>$data['notes']??null,'reviewed_by_admin_id'=>$admin,'reviewed_at'=>now()]);
             if($contract){if($contract->creation_mode==='self_service'){$policy=DB::selectOne("SELECT LEAST(168,GREATEST(1,COALESCE((setting_value_json #>> '{}')::int,24))) AS edit_hours FROM platform_settings WHERE setting_key='contracts.self_service_edit_hours'");$editHours=(int)($policy->edit_hours??24);DB::statement("UPDATE contracts SET status='client_review',core_identity_locked=TRUE,edit_window_started_at=CURRENT_TIMESTAMP,edit_expires_at=CURRENT_TIMESTAMP + (?::text || ' hours')::interval,updated_at=CURRENT_TIMESTAMP WHERE id=?",[$editHours,$row->contract_id]);if($contract->current_version_id)DB::table('contract_versions')->where('id',$contract->current_version_id)->update(['status'=>'client_review']);}else DB::statement("UPDATE contracts SET status='pending_review',updated_at=CURRENT_TIMESTAMP WHERE id=?",[$row->contract_id]);}
             if($sr){$paidRow=DB::selectOne("SELECT COALESCE(SUM(amount_egp) FILTER (WHERE status='approved'),0)::float AS amount FROM payments WHERE service_request_id=?",[$row->service_request_id]);$state=$this->servicePaymentState($sr,(int)$row->service_request_id,(float)($paidRow->amount??0));DB::statement('UPDATE service_requests SET status=?,metadata_json=?::jsonb,completed_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?',[$state['status'],json_encode($state['meta'],JSON_UNESCAPED_UNICODE),$row->service_request_id]);if($this->workflow->supportsBooking((string)$sr->request_type)&&($state['previousStage']??'')!=='balance')$this->schedule->setBookingStatus((int)$row->service_request_id,'confirmed');}
-            $message=$row->contract_id&&$editHours?"يمكنك مراجعة البيانات غير الأساسية لمدة {$editHours} ساعة قبل إصدار النسخة النهائية":$row->serial_number;$this->notifications->notify((int)$row->user_id,'payment_approved','تم اعتماد الدفع',$message,$row->contract_id?"/contract/{$row->contract_id}":"/requests/{$row->service_request_id}");$this->audit->write($request,'payment.approved','payment',$id,['status'=>$row->status],['status'=>'approved','notes'=>$data['notes']??null]);return['user_id'=>$row->user_id,'contract_id'=>$row->contract_id,'service_request_id'=>$row->service_request_id,'serial_number'=>$row->serial_number,'editHours'=>$editHours];
+            $this->notifications->notify((int)$row->user_id,'payment_approved','تم اعتماد الدفع',$message,$row->contract_id?"/contract/{$row->contract_id}":"/requests/{$row->service_request_id}");
+            DB::statement("DELETE FROM dashboard_notifications WHERE notification_type = 'payment_receipt_uploaded' AND (payload_json->>'paymentId' = ? OR message LIKE ?)", [(string) $id, "%{$row->serial_number}%"]);
+            $this->audit->write($request,'payment.approved','payment',$id,['status'=>$row->status],['status'=>'approved','notes'=>$data['notes']??null]);
+            return['user_id'=>$row->user_id,'contract_id'=>$row->contract_id,'service_request_id'=>$row->service_request_id,'serial_number'=>$row->serial_number,'editHours'=>$editHours];
         });
         return$this->ok($request,['id'=>$id,'status'=>'approved']+$result,'تم اعتماد الدفع');
     }
@@ -149,6 +152,7 @@ final class PaymentController extends Controller
             DB::table('payments')->where('id',$id)->update(['status'=>'needs_client_info','admin_notes'=>$data['message'],'reviewed_by_admin_id'=>$admin,'reviewed_at'=>now()]);
             if($row->service_request_id){$sr=DB::table('service_requests')->select('request_type','metadata_json')->where('id',$row->service_request_id)->first();$m=$sr?$this->json($sr->metadata_json):[];if($sr&&$this->workflow->supportsBooking((string)$sr->request_type)&&($m['paymentStage']??'')!=='balance')$this->schedule->setBookingStatus((int)$row->service_request_id,'needs_client_info');}
             $this->notifications->notify((int)$row->user_id,'payment_clarification_requested','مطلوب توضيح بخصوص الدفع',$data['message'],$row->contract_id?"/contract/{$row->contract_id}":"/requests/{$row->service_request_id}");
+            DB::statement("DELETE FROM dashboard_notifications WHERE notification_type = 'payment_receipt_uploaded' AND (payload_json->>'paymentId' = ? OR message LIKE ?)", [(string) $id, "%{$row->serial_number}%"]);
             $this->audit->write($request,'payment.clarification_requested','payment',$id,['status'=>$row->status],['status'=>'needs_client_info','message'=>$data['message']]);return$row;
         });
         return$this->ok($request,['id'=>$id,'status'=>'needs_client_info','contractId'=>$row->contract_id,'serviceRequestId'=>$row->service_request_id],'تم إرسال طلب التوضيح للعميل');
@@ -162,11 +166,13 @@ final class PaymentController extends Controller
             DB::table('payments')->where('id',$id)->update(['status'=>'rejected','admin_notes'=>$data['reason'],'reviewed_by_admin_id'=>$admin,'reviewed_at'=>now()]);
             if($row->service_request_id){$sr=DB::table('service_requests')->select('request_type','metadata_json')->where('id',$row->service_request_id)->first();$m=$sr?$this->json($sr->metadata_json):[];if($sr&&$this->workflow->supportsBooking((string)$sr->request_type)&&($m['paymentStage']??'')!=='balance')$this->schedule->setBookingStatus((int)$row->service_request_id,'cancelled');}
             $this->notifications->notify((int)$row->user_id,'payment_rejected','تعذر اعتماد الدفع',$data['reason'],$row->contract_id?"/contract/{$row->contract_id}":"/requests/{$row->service_request_id}");
+            DB::statement("DELETE FROM dashboard_notifications WHERE notification_type = 'payment_receipt_uploaded' AND (payload_json->>'paymentId' = ? OR message LIKE ?)", [(string) $id, "%{$row->serial_number}%"]);
             $this->audit->write($request,'payment.rejected','payment',$id,['status'=>$row->status],['status'=>'rejected','reason'=>$data['reason']]);
             return['user_id'=>$row->user_id,'contract_id'=>$row->contract_id,'service_request_id'=>$row->service_request_id,'serial_number'=>$row->serial_number];
         });
         return$this->ok($request,['id'=>$id,'status'=>'rejected']+$result,'تم رفض الإيصال وإشعار العميل');
     }
+
 
     public function recordManual(Request $request)
     {

@@ -7,6 +7,8 @@ import { dashboardApiUrl, dashboardRequest } from "@/lib/apiClient";
 import { PageError, PageLoading, StatusBadge } from "@/components/admin/PageFeedback";
 import { AdminDialog } from "@/components/admin/AdminDialog";
 
+import { useSearchParams } from "next/navigation";
+
 type Payment={id:number;clientId:number;serialNumber:string;amountEgp:number;status:string;paymentMethod?:string;senderPhone?:string;receiptAttachmentId?:number;receiptMimeType?:string;receiptThumbnailAvailable?:boolean;contractId?:number;serviceRequestId?:number;contractSerial?:string;serviceRequestSerial?:string;serviceRequestTitle?:string;createdAt:string;reviewedAt?:string;reviewedByName?:string;adminNotes?:string;clientName:string;clientEmail:string;clientPhone?:string;clientWhatsappNumber?:string;clientWhatsappConsentAt?:string|null};
 type PaymentAction={id:number;mode:"approve"|"clarify"|"reject";text:string}|null;
 type PaginatedPayments={items:Payment[];pagination:{page:number;perPage:number;total:number;pages:number}};
@@ -15,8 +17,23 @@ type ManualDraft={linkType:"contract"|"request";linkId:string;amount:string;paym
 const paymentMethodLabels:Record<string,string>={vodafone_cash:"Vodafone Cash",cash:"نقدي",bank_transfer:"تحويل بنكي",external_transfer:"تحصيل خارجي"};
 
 export default function PaymentsPage(){
-  const [items,setItems]=useState<Payment[]>([]),[status,setStatus]=useState("pending_verification"),[error,setError]=useState(""),[notice,setNotice]=useState(""),[loading,setLoading]=useState(true),[busy,setBusy]=useState<number|null>(null),[action,setAction]=useState<PaymentAction>(null),[query,setQuery]=useState(""),[manualOpen,setManualOpen]=useState(false);
-  const [page,setPage]=useState(1),[pagination,setPagination]=useState({page:1,perPage:50,total:0,pages:1});
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams.get("search") || "";
+  const paramStatus = searchParams.get("status");
+  const initialStatus = paramStatus !== null ? paramStatus : (initialSearch ? "" : "pending_verification");
+
+  const [items,setItems]=useState<Payment[]>([]);
+  const [status,setStatus]=useState(initialStatus);
+  const [error,setError]=useState("");
+  const [notice,setNotice]=useState("");
+  const [loading,setLoading]=useState(true);
+  const [busy,setBusy]=useState<number|null>(null);
+  const [action,setAction]=useState<PaymentAction>(null);
+  const [query,setQuery]=useState(initialSearch);
+  const [manualOpen,setManualOpen]=useState(false);
+  const [page,setPage]=useState(1);
+  const [pagination,setPagination]=useState({page:1,perPage:50,total:0,pages:1});
+
   const [manual,setManual]=useState<ManualDraft>({linkType:"contract",linkId:"",amount:"",paymentMethod:"cash",reference:"",notes:""});
   const [previewImage,setPreviewImage]=useState<{url:string;title:string;downloadUrl?:string}|null>(null);
   const load=useCallback(async()=>{setLoading(true);setError("");try{const params=new URLSearchParams({paginate:"1",page:String(page),perPage:"50"});if(status)params.set("status",status);if(query.trim())params.set("search",query.trim());const result=await dashboardRequest<PaginatedPayments>(`/api/v1/admin/payments?${params}`);setItems(result.items);setPagination(result.pagination);}catch(caught){setError(caught instanceof Error?caught.message:"تعذر تحميل المدفوعات");}finally{setLoading(false);}},[status,query,page]);
