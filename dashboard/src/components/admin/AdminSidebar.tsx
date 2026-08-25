@@ -12,8 +12,12 @@ import { setDashboardUser } from "@/lib/session";
 import { dashboardFeatures, isDashboardFeatureEnabled } from "@/config/dashboardFeatures";
 
 function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+  if (href === "/") return pathname === "/";
+  if (pathname === href) return true;
+  if (href === "/contracts") return pathname.startsWith("/contracts") && !pathname.startsWith("/contracts/create");
+  return pathname.startsWith(href);
 }
+
 
 function SidebarBody({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   const staff = getCurrentStaff();
