@@ -36,4 +36,15 @@ final class NotificationController extends Controller
         DB::table('dashboard_notifications')->where('id',$id)->where('recipient_user_id',$request->attributes->get('auth_user')['id'])->update(['read_at' => now()]);
         return $this->ok($request, ['updated' => true]);
     }
+    public function destroy(Request $request, int $id)
+    {
+        DB::table('dashboard_notifications')->where('id',$id)->where('recipient_user_id',$request->attributes->get('auth_user')['id'])->delete();
+        return $this->ok($request, ['deleted' => true]);
+    }
+    public function clearAll(Request $request)
+    {
+        DB::table('dashboard_notifications')->where('recipient_user_id',$request->attributes->get('auth_user')['id'])->delete();
+        return $this->ok($request, ['cleared' => true]);
+    }
 }
+

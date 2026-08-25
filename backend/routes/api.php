@@ -93,7 +93,10 @@ $register = static function (string $prefix = 'v1'): void {
             Route::get('',[NotificationController::class,'index']);
             Route::patch('read-all',[NotificationController::class,'readAll']);
             Route::patch('{id}/read',[NotificationController::class,'read'])->whereNumber('id');
+            Route::delete('clear-all',[NotificationController::class,'clearAll']);
+            Route::delete('{id}',[NotificationController::class,'destroy'])->whereNumber('id');
         });
+
         Route::prefix('dashboard')->middleware(['auth.session','permission:dashboard.view'])->group(function (): void {
             Route::get('summary',[DashboardController::class,'summary']);
             Route::get('work-queue',[DashboardController::class,'workQueue']);
