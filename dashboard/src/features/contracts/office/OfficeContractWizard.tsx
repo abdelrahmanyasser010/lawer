@@ -150,7 +150,15 @@ export default function OfficeContractWizard() {
 
   const resolved = useMemo(() => {
     if (!definition || !variantKey) return null;
-    return resolveWizardDefinition(definition, variantKey, selectedOptionalClauseKeys, fieldValues);
+    const effectiveVariantKey = definition.variants.some((v) => v.key === variantKey)
+      ? variantKey
+      : definition.variants[0]?.key;
+    if (!effectiveVariantKey) return null;
+    try {
+      return resolveWizardDefinition(definition, effectiveVariantKey, selectedOptionalClauseKeys, fieldValues);
+    } catch {
+      return null;
+    }
   }, [definition, fieldValues, selectedOptionalClauseKeys, variantKey]);
 
   const steps = resolved?.steps ?? [];
@@ -197,11 +205,17 @@ export default function OfficeContractWizard() {
   const isReviewStep = currentStep?.fields.length === 0;
 
   function selectTemplate(slug: ContractSlug) {
+    if (slug === templateSlug) return;
     setTemplateSlug(slug);
+    setVariantKey(null);
+    setSelectedOptionalClauseKeys([]);
+    setFieldValues({});
+    setCurrentStepKey("");
     setNotice(null);
     setSavedSource(null);
     setSaving(false);
   }
+
 
   function selectVariant(key: string) {
     if (!definition) return;

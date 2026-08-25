@@ -73,10 +73,11 @@ export function resolveWizardDefinition(
   selectedOptionalClauseKeys: string[],
   fieldValues: ContractDraftData["fieldValues"],
 ): ResolvedWizardDefinition {
-  const variant = template.variants.find((item) => item.key === variantKey);
+  const variant = template.variants.find((item) => item.key === variantKey) ?? template.variants[0];
   if (!variant) {
-    throw new Error(`Variant ${variantKey} is not available for ${template.slug}`);
+    throw new Error(`No variants available for template ${template.slug}`);
   }
+
 
   let steps = variant.steps.map((step) => ({ ...step, fields: [...step.fields] }));
   const activeClauseKeys = new Set(variant.requiredClauseKeys);
