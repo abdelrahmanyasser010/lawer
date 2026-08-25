@@ -58,11 +58,19 @@ export default function Navbar() {
       const requests = results[1].status === "fulfilled"
         ? results[1].value.filter((item) => !["completed", "cancelled"].includes(item.status)).length
         : 0;
-      const notifications = results[2].status === "fulfilled" ? results[2].value.unreadCount : 0;
+      const notifications = pathname === "/notifications" ? 0 : (results[2].status === "fulfilled" ? results[2].value.unreadCount : 0);
       setCounts({ contracts, requests, notifications });
     });
-    return () => { cancelled = true; };
-  }, [user]);
+
+    const handleCleared = () => setCounts((c) => ({ ...c, notifications: 0 }));
+    window.addEventListener("notifications_cleared", handleCleared);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("notifications_cleared", handleCleared);
+    };
+  }, [user, pathname]);
+
 
   useEffect(() => {
     if (!mobileOpen) return;

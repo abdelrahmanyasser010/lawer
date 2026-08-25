@@ -22,10 +22,20 @@ export default function DashboardHeader() {
   }, []);
 
   useEffect(() => {
-    loadUnread();
+    if (pathname === "/notifications") {
+      setUnread(0);
+    } else {
+      loadUnread();
+    }
+    const handleCleared = () => setUnread(0);
+    window.addEventListener("notifications_cleared", handleCleared);
     const timer = window.setInterval(loadUnread, 45_000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.removeEventListener("notifications_cleared", handleCleared);
+      window.clearInterval(timer);
+    };
   }, [pathname, loadUnread]);
+
 
   return (
     <header className="sticky top-0 z-30 hidden min-h-16 items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-6 py-3 backdrop-blur lg:flex">

@@ -53,11 +53,28 @@ export default function AdminSidebar() {
   const staff = getCurrentStaff();
 
   useEffect(() => {
-    const load = () => dashboardRequest<{ unreadCount: number }>("/api/v1/notifications?unreadOnly=true").then((result) => setUnread(result.unreadCount)).catch(() => setUnread(0));
-    load();
-    const timer = window.setInterval(load, 45_000);
-    return () => window.clearInterval(timer);
+    if (pathname === "/notifications") {
+      setUnread(0);
+    } else {
+      dashboardRequest<{ unreadCount: number }>("/api/v1/notifications?unreadOnly=true")
+        .then((result) => setUnread(result.unreadCount))
+        .catch(() => setUnread(0));
+    }
+    const handleCleared = () => setUnread(0);
+    window.addEventListener("notifications_cleared", handleCleared);
+    const timer = window.setInterval(() => {
+      if (pathname !== "/notifications") {
+        dashboardRequest<{ unreadCount: number }>("/api/v1/notifications?unreadOnly=true")
+          .then((result) => setUnread(result.unreadCount))
+          .catch(() => setUnread(0));
+      }
+    }, 45_000);
+    return () => {
+      window.removeEventListener("notifications_cleared", handleCleared);
+      window.clearInterval(timer);
+    };
   }, [pathname]);
+
 
   return <>
     <aside className="hidden h-screen w-64 shrink-0 bg-[#00102e] lg:sticky lg:top-0 lg:block"><SidebarBody pathname={pathname}/></aside>

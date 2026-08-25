@@ -15,11 +15,16 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function load() {
+  async function load(autoMarkRead = true) {
     setLoading(true);
     try {
       const result = await frontendApi.notifications();
       setItems(result.items);
+      if (autoMarkRead && result.unreadCount > 0) {
+        await apiRequest("/api/v1/notifications/read-all", { method: "PATCH", body: JSON.stringify({}) });
+        setItems((current) => current.map((item) => ({ ...item, readAt: item.readAt || new Date().toISOString() })));
+        window.dispatchEvent(new Event("notifications_cleared"));
+      }
     } catch (caught) {
       setError(caught instanceof ApiClientError && caught.status === 401 ? "سجل الدخول لعرض الإشعارات." : caught instanceof Error ? caught.message : "تعذر تحميل الإشعارات");
     } finally {
@@ -27,17 +32,20 @@ export default function NotificationsPage() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(true); }, []);
 
   async function readAll() {
     await apiRequest("/api/v1/notifications/read-all", { method: "PATCH", body: JSON.stringify({}) });
     setItems((current) => current.map((item) => ({ ...item, readAt: item.readAt || new Date().toISOString() })));
+    window.dispatchEvent(new Event("notifications_cleared"));
   }
 
   async function markRead(id: number) {
     await apiRequest(`/api/v1/notifications/${id}/read`, { method: "PATCH", body: JSON.stringify({}) });
     setItems((current) => current.map((item) => item.id === id ? { ...item, readAt: item.readAt || new Date().toISOString() } : item));
+    window.dispatchEvent(new Event("notifications_cleared"));
   }
+
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f8fafc]">
