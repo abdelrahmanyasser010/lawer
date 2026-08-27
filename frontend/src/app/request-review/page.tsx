@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, CheckCircle2, Clock3, FileText, Loader2, MessageCircle, Phone, Scale, Upload, Video, X } from "lucide-react";
+import { Calendar, CheckCircle2, Clock3, FileText, Loader2, MessageCircle, Phone, Receipt, Scale, Trash2, Upload, Video, WalletCards, X } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { apiRequest, ApiClientError, frontendApi } from "@/lib/apiClient";
@@ -11,11 +11,20 @@ import { usePublicCatalog } from "@/hooks/usePublicCatalog";
 import type { CommunicationChannel } from "@/types/customer";
 import { normalizePhoneInput, phoneValidationError } from "@/lib/inputValidation";
 import { usePaymentAccess } from "@/hooks/usePaymentAccess";
+import { formatFileSize } from "@/lib/labels";
+
+const MAX_MAIN_CONTRACT_FILES = 5;
+const MAX_SUPPORTING_FILES = 30;
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
 
 const channels: Array<{ key: CommunicationChannel; label: string; icon: typeof Video }> = [
   { key: "zoom", label: "Zoom", icon: Video },
   { key: "whatsapp", label: "WhatsApp", icon: Phone },
 ];
+
+function isPreviewableImage(file: File) {
+  return file.type.startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(file.name);
+}
 
 export default function RequestReviewPage() {
   const router = useRouter();
@@ -34,6 +43,7 @@ export default function RequestReviewPage() {
   const [dayMenuOpen, setDayMenuOpen] = useState(false);
 
   const [phone, setPhone] = useState("");
+  const [senderWalletPhone, setSenderWalletPhone] = useState("");
 
   const [mainContracts, setMainContracts] = useState<File[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -85,15 +95,21 @@ export default function RequestReviewPage() {
     setPreparing(true); setError("");
     try {
       const incoming = Array.from(files);
-      const remainingSlots = Math.max(0, 5 - mainContracts.length);
+      const remainingSlots = Math.max(0, MAX_MAIN_CONTRACT_FILES - mainContracts.length);
       if (remainingSlots <= 0) {
-        setError("الحد الأقصى للعقود الأساسية هو 5 ملفات.");
+        setError(`الحد الأقصى للعقود الأساسية هو ${MAX_MAIN_CONTRACT_FILES} ملفات.`);
         return;
       }
       const compressed = await compressMultipleFiles(incoming.slice(0, remainingSlots));
-      setMainContracts((current) => [...current, ...compressed.map(c => c.file)]);
+      const prepared = compressed.map(c => c.file);
+      const tooLarge = prepared.find((file) => file.size > MAX_FILE_BYTES);
+      if (tooLarge) {
+        setError(`الملف ${tooLarge.name} أكبر من الحد المسموح 20MB.`);
+        return;
+      }
+      setMainContracts((current) => [...current, ...prepared]);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر تجهيز ملفات العقد.");
+      setError(caught instanceof Error ? caught.message : "تعذر قراءة ملفات العقد.");
     } finally {
       setPreparing(false);
     }
@@ -104,15 +120,21 @@ export default function RequestReviewPage() {
     setPreparing(true); setError("");
     try {
       const incoming = Array.from(files);
-      const remainingSlots = Math.max(0, 30 - attachments.length);
+      const remainingSlots = Math.max(0, MAX_SUPPORTING_FILES - attachments.length);
       if (remainingSlots <= 0) {
-        setError("الحد الأقصى للمستندات المساعدة هو 30 ملفًا.");
+        setError(`الحد الأقصى للمستندات المساعدة هو ${MAX_SUPPORTING_FILES} ملفًا.`);
         return;
       }
       const compressed = await compressMultipleFiles(incoming.slice(0, remainingSlots));
-      setAttachments((current) => [...current, ...compressed.map(c => c.file)]);
+      const prepared = compressed.map(c => c.file);
+      const tooLarge = prepared.find((file) => file.size > MAX_FILE_BYTES);
+      if (tooLarge) {
+        setError(`الملف ${tooLarge.name} أكبر من الحد المسموح 20MB.`);
+        return;
+      }
+      setAttachments((current) => [...current, ...prepared]);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر تجهيز المستندات.");
+      setError(caught instanceof Error ? caught.message : "تعذر قراءة المستندات.");
     } finally {
       setPreparing(false);
     }
@@ -123,9 +145,13 @@ export default function RequestReviewPage() {
     setPreparing(true); setError("");
     try {
       const compressed = await compressUploadFile(file);
+      if (compressed.file.size > MAX_FILE_BYTES) {
+        setError("إثبات الدفع أكبر من الحد المسموح 20MB.");
+        return;
+      }
       setReceipt(compressed.file);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر تجهيز إثبات الدفع.");
+      setError(caught instanceof Error ? caught.message : "تعذر قراءة إثبات الدفع.");
     } finally {
       setPreparing(false);
     }
@@ -157,6 +183,11 @@ export default function RequestReviewPage() {
     }
     if (reviewDeposit > 0 && !cashNumber) {
       setError("بيانات الدفع غير متاحة حاليًا.");
+      return;
+    }
+    const senderPhoneError = reviewDeposit > 0 ? phoneValidationError(senderWalletPhone, true) : "";
+    if (senderPhoneError) {
+      setError(`رقم المحفظة التي تم التحويل منها: ${senderPhoneError}`);
       return;
     }
     if (reviewDeposit > 0 && !receipt) {
@@ -191,6 +222,7 @@ export default function RequestReviewPage() {
           paymentRequired: reviewDeposit > 0,
           clientContactSnapshot: {
             phone: normalizePhoneInput(phone),
+            paymentSenderPhone: normalizePhoneInput(senderWalletPhone),
             preferredDate: selectedDate,
             preferredSlotStart: selectedSlot?.start || null,
             preferredPeriodLabel: selectedSlot ? `${selectedDay?.label || selectedDate} — ${selectedSlot.label}` : null,
@@ -205,7 +237,7 @@ export default function RequestReviewPage() {
         const receiptAttachment = await apiRequest<{ id: number }>("/api/v1/attachments", { method: "POST", body: receiptBody });
         await apiRequest("/api/v1/payments/receipts", {
           method: "POST",
-          body: JSON.stringify({ serviceRequestId: request.id, amountEgp: reviewDeposit, senderPhone: normalizePhoneInput(phone), attachmentId: receiptAttachment.id }),
+          body: JSON.stringify({ serviceRequestId: request.id, amountEgp: reviewDeposit, senderPhone: normalizePhoneInput(senderWalletPhone), attachmentId: receiptAttachment.id }),
         });
       }
       router.push(`/requests/${request.id}`);
@@ -353,10 +385,10 @@ export default function RequestReviewPage() {
                   {!availabilityLoading && !availabilityError && availabilityDays.length === 0 && <div className="mt-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2 py-1.5 text-[10px] font-bold text-amber-200">لا توجد مواعيد متاحة حاليًا. تواصل مع المكتب.</div>}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="grid gap-3 pt-1 sm:grid-cols-2">
                   {/* Main Contract Upload (Required) */}
                   <div>
-                    <div className="flex justify-between gap-2 text-[10px] font-bold text-slate-300 mb-1"><span>العقد الأساسي <span className="text-red-400">*</span></span><span>{mainContracts.length}/5</span></div>
+                    <div className="flex justify-between gap-2 text-[10px] font-bold text-slate-300 mb-1"><span>العقد الأساسي <span className="text-red-400">*</span></span><span>{mainContracts.length}/{MAX_MAIN_CONTRACT_FILES}</span></div>
                     <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#986410]/50 bg-[#986410]/10 p-3 text-center transition hover:bg-[#986410]/20 min-h-[70px]">
                       <input type="file" multiple accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.webp" className="hidden" disabled={preparing} onChange={(event) => void addMainContracts(event.target.files)} />
                       {preparing ? <Loader2 className="h-4 w-4 animate-spin text-[#d9a84e]" /> : <Upload className="h-4 w-4 text-[#d9a84e]" />}
@@ -366,7 +398,7 @@ export default function RequestReviewPage() {
 
                   {/* Supporting Documents (Optional) */}
                   <div>
-                    <div className="flex justify-between gap-2 text-[10px] font-bold text-slate-300 mb-1"><span>مستندات مساعدة</span><span>{attachments.length}/30</span></div>
+                    <div className="flex justify-between gap-2 text-[10px] font-bold text-slate-300 mb-1"><span>مستندات مساعدة</span><span>{attachments.length}/{MAX_SUPPORTING_FILES}</span></div>
                     <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-600 bg-slate-900 p-3 text-center transition hover:bg-slate-800 min-h-[70px]">
                       <input type="file" multiple accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.webp" className="hidden" disabled={preparing} onChange={(event) => void addSupportingFiles(event.target.files)} />
                       {preparing ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" /> : <Upload className="h-4 w-4 text-slate-400" />}
@@ -377,16 +409,21 @@ export default function RequestReviewPage() {
 
                 {/* Selected Files List */}
                 {(mainContracts.length > 0 || attachments.length > 0) && (
-                  <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto pt-1">
-                    {mainContracts.map((file, index) => <span key={`main-${index}`} className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-[#986410]/30 bg-[#986410]/20 px-2 py-1 text-[9px] text-[#d9a84e]"><span className="max-w-[100px] truncate">{file.name}</span><button type="button" onClick={() => setMainContracts((items) => items.filter((_, i) => i !== index))}><X className="h-3 w-3 text-[#d9a84e] hover:text-red-300" /></button></span>)}
-                    {attachments.map((file, index) => <span key={`supp-${index}`} className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-slate-800 px-2 py-1 text-[9px] text-slate-300"><span className="max-w-[100px] truncate">{file.name}</span><button type="button" onClick={() => setAttachments((items) => items.filter((_, i) => i !== index))}><X className="h-3 w-3 text-red-300" /></button></span>)}
+                  <div className="grid max-h-80 gap-2 overflow-y-auto pt-1 sm:grid-cols-2">
+                    {mainContracts.map((file, index) => (
+                      <ReviewUploadCard key={`main-${file.name}-${index}`} file={file} label="العقد الأساسي" tone="gold" onRemove={() => setMainContracts((items) => items.filter((_, i) => i !== index))} />
+                    ))}
+                    {attachments.map((file, index) => (
+                      <ReviewUploadCard key={`supp-${file.name}-${index}`} file={file} label="مستند مساعد" tone="slate" onRemove={() => setAttachments((items) => items.filter((_, i) => i !== index))} />
+                    ))}
                   </div>
                 )}
 
                 {reviewDeposit > 0 && !paymentVerified && <button type="button" onClick={() => void requireVerified()} className="w-full rounded-xl border border-[#986410]/30 bg-[#986410]/10 px-4 py-3 text-xs font-black text-[#d9a84e]">{paymentAccess === "unverified" ? "أكد بريدك الإلكتروني لعرض تعليمات الدفع" : "سجّل الدخول وأكد بريدك لعرض تعليمات الدفع"}</button>}
               {reviewDeposit > 0 && paymentVerified && <>
-                  <div className="rounded-xl border border-white/10 bg-slate-900/90 px-3.5 py-2.5 flex items-center justify-between mt-3">
-                    <span className="text-[11px] font-bold text-slate-300">حوّل العربون إلى رقم فودافون كاش:</span>
+                  <div className="rounded-xl border border-white/10 bg-slate-900/90 p-3.5 mt-3">
+                    <div className="flex items-center justify-between gap-3">
+                    <span className="inline-flex items-center gap-2 text-[11px] font-bold text-slate-300"><WalletCards className="h-4 w-4 text-[#d9a84e]" /> حوّل العربون إلى رقم فودافون كاش:</span>
                     {catalogLoading ? (
                       <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-400"><Loader2 className="h-3 w-3 animate-spin" /> جاري التحميل...</span>
                     ) : paymentVerified && cashNumber ? (
@@ -394,13 +431,20 @@ export default function RequestReviewPage() {
                     ) : (
                       <span className="text-[10px] font-bold text-red-300">غير متاح مؤقتًا.</span>
                     )}
+                    </div>
+                    <label className="mt-3 block text-[10px] font-bold text-slate-300">
+                      رقم المحفظة التي تم التحويل منها
+                      <input value={senderWalletPhone} onChange={(event) => setSenderWalletPhone(normalizePhoneInput(event.target.value))} dir="ltr" placeholder="01XXXXXXXXX" className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-left text-[12px] text-white placeholder:text-slate-500 focus:border-[#986410] outline-none font-mono" />
+                      <span className="mt-1 block text-[9px] leading-4 text-slate-500">يساعدنا الرقم على مطابقة التحويل ورد المبلغ عند حدوث مشكلة.</span>
+                    </label>
                   </div>
 
                   <label className={`block rounded-xl border border-dashed border-[#986410]/50 bg-[#986410]/10 p-3 text-center transition hover:bg-[#986410]/20 ${catalogLoading || !cashNumber || !paymentVerified ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
                     <input type="file" accept="image/*,.pdf" className="hidden" disabled={catalogLoading || !cashNumber || !paymentVerified} onChange={(event) => void selectReceipt(event.target.files?.[0] || null)} />
                     <Upload className="mx-auto h-4 w-4 text-[#d9a84e]" />
-                    <span className="mt-1.5 block text-[10px] font-black text-white">{receipt?.name || `رفع إثبات دفع عربون المراجعة — ${reviewDeposit.toLocaleString("ar-EG")} ج.م`}</span>
+                    <span className="mt-1.5 block text-[10px] font-black text-white">{receipt ? "تغيير إثبات دفع العربون" : `رفع إثبات دفع عربون المراجعة — ${reviewDeposit.toLocaleString("ar-EG")} ج.م`}</span>
                   </label>
+                  {receipt && <ReviewUploadCard file={receipt} label="إثبات دفع العربون" tone="gold" onRemove={() => setReceipt(null)} />}
                 </>}
 
                 {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-2.5 text-[11px] font-bold text-red-300">{error}</div>}
@@ -417,5 +461,49 @@ export default function RequestReviewPage() {
 
       <Footer />
     </div>
+  );
+}
+
+function ReviewUploadCard({ file, label, tone, onRemove }: { file: File; label: string; tone: "gold" | "slate"; onRemove: () => void }) {
+  const canPreview = isPreviewableImage(file);
+  const previewUrl = useMemo(() => {
+    if (!canPreview || typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return "";
+    return URL.createObjectURL(file);
+  }, [canPreview, file]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const isPaymentProof = label.includes("إثبات");
+  const borderClass = tone === "gold" ? "border-[#986410]/35 bg-[#986410]/10" : "border-slate-700 bg-slate-900";
+  const labelClass = tone === "gold" ? "text-[#d9a84e]" : "text-slate-400";
+
+  return (
+    <article className={`rounded-xl border p-2 ${borderClass}`}>
+      <div
+        className="flex h-24 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-slate-950 bg-cover bg-center"
+        style={previewUrl ? { backgroundImage: `url("${previewUrl}")` } : undefined}
+      >
+        {!previewUrl && (
+          <div className="flex flex-col items-center gap-1 text-slate-500">
+            {isPaymentProof ? <Receipt className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
+            <span className="text-[10px] font-bold">ملف مرفوع</span>
+          </div>
+        )}
+      </div>
+      <div className="mt-2 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <span className={`block text-[9px] font-black ${labelClass}`}>{label}</span>
+          <p className="truncate text-[10px] font-black text-white" title={file.name}>{file.name}</p>
+          <p className="mt-0.5 text-[9px] font-bold text-slate-500">{formatFileSize(file.size)}</p>
+        </div>
+        <button type="button" onClick={onRemove} aria-label={`حذف ${file.name}`} className="shrink-0 rounded-lg p-1.5 text-red-300 hover:bg-red-500/10">
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </article>
   );
 }

@@ -12,11 +12,14 @@ import {
   Home,
   Loader2,
   Phone,
+  Receipt,
   Scale,
   Search,
+  Trash2,
   Upload,
   User,
   Video,
+  WalletCards,
   X,
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -29,6 +32,7 @@ import { useWizardStore } from "@/store/wizardStore";
 import type { ContractSlug } from "@/types/zdraft";
 import { normalizePhoneInput, phoneValidationError } from "@/lib/inputValidation";
 import { usePaymentAccess } from "@/hooks/usePaymentAccess";
+import { formatFileSize } from "@/lib/labels";
 
 const MAX_FILES = 30;
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -61,6 +65,79 @@ const channels: Array<{ key: CommunicationChannel; label: string; icon: typeof V
   { key: "whatsapp", label: "WhatsApp", icon: Phone },
   { key: "zoom", label: "Zoom", icon: Video },
 ];
+
+const lawyerDocumentGuides: Record<string, string[]> = {
+  residential_lease: [
+    "بطاقة المؤجر - وجه",
+    "بطاقة المؤجر - ظهر",
+    "بطاقة المستأجر - وجه",
+    "بطاقة المستأجر - ظهر",
+    "سند الملكية أو ما يثبت حق التأجير",
+    "آخر إيصال مرافق إن وجد",
+  ],
+  commercial_lease: [
+    "بطاقة المؤجر - وجه",
+    "بطاقة المؤجر - ظهر",
+    "بطاقة المستأجر أو ممثل الشركة - وجه",
+    "بطاقة المستأجر أو ممثل الشركة - ظهر",
+    "سند الملكية أو ما يثبت حق التأجير",
+    "السجل التجاري أو البطاقة الضريبية إن وجدت",
+  ],
+  administrative_lease: [
+    "بطاقة المؤجر - وجه",
+    "بطاقة المؤجر - ظهر",
+    "بطاقة المستأجر أو ممثل الجهة - وجه",
+    "بطاقة المستأجر أو ممثل الجهة - ظهر",
+    "سند الملكية أو ما يثبت حق التأجير",
+    "مستندات النشاط أو الجهة إن وجدت",
+  ],
+  preliminary_sale: [
+    "بطاقة البائع - وجه",
+    "بطاقة البائع - ظهر",
+    "بطاقة المشتري - وجه",
+    "بطاقة المشتري - ظهر",
+    "عقد البيع أو تسلسل الملكية",
+    "آخر إيصالات مرافق متاحة",
+  ],
+  registrable_sale: [
+    "بطاقة البائع - وجه",
+    "بطاقة البائع - ظهر",
+    "بطاقة المشتري - وجه",
+    "بطاقة المشتري - ظهر",
+    "سند الملكية القابل للتسجيل",
+    "بيانات التسجيل أو الشهر العقاري إن وجدت",
+  ],
+  inherited_sale: [
+    "بطاقة البائع أو الورثة - وجه",
+    "بطاقة البائع أو الورثة - ظهر",
+    "بطاقة المشتري - وجه",
+    "بطاقة المشتري - ظهر",
+    "إعلام الوراثة",
+    "توكيلات أو موافقات الورثة إن وجدت",
+  ],
+  visual_identity_design: [
+    "بيانات الطرفين",
+    "وصف الهوية المطلوبة",
+    "قائمة المخرجات المتفق عليها",
+    "مراجع بصرية أو ملفات العلامة الحالية إن وجدت",
+  ],
+  website_development: [
+    "بيانات الطرفين",
+    "وصف المشروع ونطاق الصفحات",
+    "أي تصميمات أو مراجع مطلوبة",
+    "بيانات الاستضافة أو الدومين إن وجدت",
+  ],
+  social_media_management: [
+    "بيانات الطرفين",
+    "روابط الحسابات المطلوب إدارتها",
+    "نطاق الإدارة وخطة المحتوى",
+    "صلاحيات الإعلانات أو مدير الأعمال إن وجدت",
+  ],
+};
+
+function isPreviewableImage(file: File) {
+  return file.type.startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(file.name);
+}
 
 function CreateContractContent() {
   const router = useRouter();
@@ -312,6 +389,7 @@ function LawyerRequestModal({ selected, catalog, onClose }: { selected: Selected
   const { paymentAccess, paymentVerified, paymentCashNumber, requireVerified } = usePaymentAccess("/create-contract?mode=lawyer_assisted");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [senderWalletPhone, setSenderWalletPhone] = useState("");
   const [channel, setChannel] = useState<CommunicationChannel>("whatsapp");
   const [notes, setNotes] = useState("");
   const [documents, setDocuments] = useState<File[]>([]);
@@ -321,6 +399,7 @@ function LawyerRequestModal({ selected, catalog, onClose }: { selected: Selected
   const [error, setError] = useState("");
 
   const enabledChannels = useMemo(() => channels.filter((item) => catalog.policies.communicationChannels.includes(item.key)), [catalog.policies.communicationChannels]);
+  const documentGuide = lawyerDocumentGuides[variant.key] ?? [];
   const total = variant.lawyerAssistedPriceEgp;
   const deposit = Math.min(variant.lawyerDepositEgp, total);
   const remaining = Math.max(0, total - deposit);
@@ -335,10 +414,10 @@ function LawyerRequestModal({ selected, catalog, onClose }: { selected: Selected
       const results = await compressMultipleFiles(picked);
       const compressed = results.map((item) => item.file);
       const tooLarge = compressed.find((file) => file.size > MAX_FILE_BYTES);
-      if (tooLarge) return setError(`الملف ${tooLarge.name} أكبر من 20MB بعد التجهيز.`);
+      if (tooLarge) return setError(`الملف ${tooLarge.name} أكبر من الحد المسموح 20MB.`);
       setDocuments((current) => [...current, ...compressed]);
     } catch {
-      setError("تعذر تجهيز بعض الملفات. حاول مرة أخرى.");
+      setError("تعذر قراءة بعض الملفات. حاول مرة أخرى.");
     } finally { setPreparing(false); }
   }
 
@@ -361,6 +440,8 @@ function LawyerRequestModal({ selected, catalog, onClose }: { selected: Selected
     if (!documents.length) return setError("ارفع مستندًا واحدًا على الأقل ليستطيع المحامي بدء مراجعة الطلب.");
     if (!enabledChannels.some((item) => item.key === channel)) return setError("اختر وسيلة تواصل متاحة.");
     if (deposit > 0 && !cashNumber) return setError("بيانات الدفع غير متاحة حاليًا من إدارة المكتب.");
+    const senderPhoneError = deposit > 0 ? phoneValidationError(senderWalletPhone, true) : "";
+    if (senderPhoneError) return setError(`رقم المحفظة التي تم التحويل منها: ${senderPhoneError}`);
     if (deposit > 0 && !receipt) return setError("ارفع إثبات دفع العربون المطلوب الآن.");
 
     setSubmitting(true);
@@ -376,21 +457,21 @@ function LawyerRequestModal({ selected, catalog, onClose }: { selected: Selected
         method: "POST",
         body: JSON.stringify({
           requestType: "contract_drafting",
-          title: `إعداد ${variant.nameAr} بواسطة محامي المكتب`,
-          description: notes.trim() || `أرغب في أن يتولى محامي المكتب إعداد ${variant.nameAr}.`,
+          title: `إعداد ${variant.nameAr} بواسطة محامٍ مختص`,
+          description: notes.trim() || `أرغب في أن يتولى محامٍ مختص إعداد ${variant.nameAr}.`,
           communicationChannel: channel,
           attachmentIds,
           templateSlug: template.slug,
           variantKey: variant.key,
           paymentRequired: deposit > 0,
-          clientContactSnapshot: { fullName: fullName.trim(), phone: normalizePhoneInput(phone), lawyerTotalPriceEgp: total, lawyerDepositEgp: deposit, lawyerRemainingEgp: remaining },
+          clientContactSnapshot: { fullName: fullName.trim(), phone: normalizePhoneInput(phone), paymentSenderPhone: normalizePhoneInput(senderWalletPhone), lawyerTotalPriceEgp: total, lawyerDepositEgp: deposit, lawyerRemainingEgp: remaining },
         }),
       });
       requestId = request.id;
       if (request.paymentAmountEgp > 0 && receipt) {
         const body = new FormData(); body.append("file", receipt);
         const uploadedReceipt = await apiRequest<{ id: number }>("/api/v1/attachments", { method: "POST", body });
-        await apiRequest("/api/v1/payments/receipts", { method: "POST", body: JSON.stringify({ serviceRequestId: request.id, amountEgp: request.paymentAmountEgp, senderPhone: normalizePhoneInput(phone), attachmentId: uploadedReceipt.id }) });
+        await apiRequest("/api/v1/payments/receipts", { method: "POST", body: JSON.stringify({ serviceRequestId: request.id, amountEgp: request.paymentAmountEgp, senderPhone: normalizePhoneInput(senderWalletPhone), attachmentId: uploadedReceipt.id }) });
       }
       router.push(`/requests/${request.id}`);
     } catch (caught) {
@@ -407,9 +488,9 @@ function LawyerRequestModal({ selected, catalog, onClose }: { selected: Selected
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#00102e]/80 p-3 backdrop-blur-sm" dir="rtl">
       <form onSubmit={submit} className="relative max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-7">
         <button type="button" onClick={onClose} aria-label="إغلاق" className="absolute left-4 top-4 rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
-        <span className="text-xs font-black text-[#986410]">إعداد بواسطة محامي المكتب</span>
+        <span className="text-xs font-black text-[#986410]">إعداد بواسطة محامٍ مختص</span>
         <h2 className="mt-2 pr-0 text-xl font-black text-[#00102e] sm:text-2xl">{variant.nameAr}</h2>
-        <p className="mt-2 max-w-2xl text-xs leading-6 text-slate-500">ارفع المستندات المتاحة المرتبطة بالعقد. في مرحلة مراجعة القوالب سنحدد قائمة المستندات الإلزامية الخاصة بكل نوع عقد بدقة.</p>
+        <p className="mt-2 max-w-2xl text-xs leading-6 text-slate-500">ارفع المستندات المتاحة المرتبطة بالعقد، ثم ارفع إثبات العربون ليبدأ المحامي مراجعة الطلب بعد اعتماد الدفع.</p>
 
         <div className="mt-5 grid gap-3 rounded-2xl border border-[#986410]/20 bg-[#986410]/5 p-4 sm:grid-cols-3">
           <PriceStat label="السعر الكامل" value={total} strong />
@@ -427,16 +508,57 @@ function LawyerRequestModal({ selected, catalog, onClose }: { selected: Selected
         <label className="mt-5 block text-xs font-black text-slate-600">ملاحظات للمحامي <span className="font-normal text-slate-400">(اختياري)</span><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="اكتب أي تفاصيل تساعد المحامي على فهم المطلوب." className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-[#986410]" /></label>
 
         <div className="mt-5 rounded-2xl border border-slate-200 p-4">
-          <div className="flex items-center justify-between gap-3"><div><h3 className="text-sm font-black text-[#00102e]">مستندات العقد</h3><p className="mt-1 text-[10px] text-slate-500">إلزامي حاليًا ملف واحد على الأقل · حد أقصى {MAX_FILES} ملفًا · 20MB للملف · الصور تُضغط تلقائيًا.</p></div><span className="text-xs font-black text-slate-500">{documents.length}/{MAX_FILES}</span></div>
+          <div className="flex items-start justify-between gap-3"><div><h3 className="text-sm font-black text-[#00102e]">مستندات العقد</h3><p className="mt-1 text-[10px] leading-5 text-slate-500">ارفع ملفًا واحدًا على الأقل الآن. يمكن إضافة ملفات أخرى بعد فتح الطلب من صفحة المتابعة.</p></div><span className="shrink-0 text-xs font-black text-slate-500">{documents.length}/{MAX_FILES}</span></div>
+          {documentGuide.length > 0 && (
+            <div className="mt-3 rounded-xl bg-slate-50 p-3">
+              <p className="text-[10px] font-black text-[#00102e]">يفضل تجهيز هذه المستندات</p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {documentGuide.map((item) => (
+                  <div key={item} className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-xs font-black text-slate-600"><input type="file" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" className="hidden" disabled={preparing} onChange={(e) => void addDocuments(e.target.files)} />{preparing ? <Loader2 className="h-4 w-4 animate-spin text-[#986410]" /> : <Upload className="h-4 w-4 text-[#986410]" />}اختيار المستندات</label>
-          {documents.length > 0 && <div className="mt-3 flex max-h-32 flex-wrap gap-2 overflow-y-auto">{documents.map((file, index) => <span key={`${file.name}-${index}`} className="inline-flex max-w-full items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-[10px] font-bold text-slate-600"><span className="max-w-44 truncate">{file.name}</span><button type="button" onClick={() => setDocuments((current) => current.filter((_, i) => i !== index))}><X className="h-3 w-3 text-red-500" /></button></span>)}</div>}
+          {documents.length > 0 && <div className="mt-3 grid max-h-72 gap-3 overflow-y-auto sm:grid-cols-2">{documents.map((file, index) => <UploadedFileCard key={`${file.name}-${index}`} file={file} onRemove={() => setDocuments((current) => current.filter((_, i) => i !== index))} />)}</div>}
         </div>
 
         {deposit > 0 && !paymentVerified && <button type="button" onClick={() => void requireVerified().then((ok) => { if (!ok) onClose(); })} className="mt-5 w-full rounded-2xl border border-[#986410]/20 bg-[#986410]/5 p-4 text-xs font-black text-[#986410]">{paymentAccess === "unverified" ? "أكد بريدك الإلكتروني لعرض تعليمات دفع العربون" : "سجّل الدخول وأكد بريدك لعرض تعليمات دفع العربون"}</button>}
-        {deposit > 0 && paymentVerified && <div className="mt-5 rounded-2xl border border-[#986410]/20 bg-[#986410]/5 p-4"><h3 className="text-sm font-black text-[#00102e]">إثبات دفع العربون</h3><p className="mt-1 text-[10px] leading-5 text-slate-500">حوّل {deposit.toLocaleString("ar-EG")} ج.م إلى رقم الدفع الظاهر في المنصة، ثم ارفع صورة أو PDF للإثبات.</p>{cashNumber && <div dir="ltr" className="mt-2 w-fit rounded-lg bg-white px-3 py-2 font-mono text-sm font-black text-[#00102e]">{cashNumber}</div>}<label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#986410]/30 bg-white p-4 text-xs font-black text-[#986410]"><input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={(e) => void chooseReceipt(e.target.files?.[0] || null)} /><Upload className="h-4 w-4" />{receipt ? receipt.name : "رفع إثبات العربون"}</label></div>}
+        {deposit > 0 && paymentVerified && (
+          <div className="mt-5 rounded-2xl border border-[#986410]/20 bg-[#986410]/5 p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#986410]"><WalletCards className="h-5 w-5" /></div>
+              <div>
+                <h3 className="text-sm font-black text-[#00102e]">إثبات دفع العربون</h3>
+                <p className="mt-1 text-[10px] leading-5 text-slate-500">حوّل {deposit.toLocaleString("ar-EG")} ج.م إلى رقم الدفع، ثم اكتب رقم المحفظة التي تم التحويل منها وارفع صورة واضحة للإثبات.</p>
+              </div>
+            </div>
+            {cashNumber && <div dir="ltr" className="mt-3 w-fit rounded-lg bg-white px-3 py-2 font-mono text-sm font-black text-[#00102e]">{cashNumber}</div>}
+            <label className="mt-3 block text-xs font-black text-slate-600">
+              رقم المحفظة التي تم التحويل منها
+              <div className="relative mt-2">
+                <Phone className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
+                <input
+                  dir="ltr"
+                  type="tel"
+                  value={senderWalletPhone}
+                  onChange={(e) => setSenderWalletPhone(normalizePhoneInput(e.target.value))}
+                  placeholder="01XXXXXXXXX"
+                  className="w-full rounded-xl border border-slate-200 py-3 pr-10 pl-3 text-left text-sm outline-none focus:border-[#986410]"
+                />
+              </div>
+              <span className="mt-1 block text-[10px] font-bold leading-5 text-slate-500">هذا الرقم يساعدنا على مطابقة التحويل ورد المبلغ عند حدوث مشكلة.</span>
+            </label>
+            <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#986410]/30 bg-white p-4 text-xs font-black text-[#986410]"><input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={(e) => void chooseReceipt(e.target.files?.[0] || null)} /><Upload className="h-4 w-4" />{receipt ? "تغيير إثبات العربون" : "رفع إثبات العربون"}</label>
+            {receipt && <div className="mt-3"><UploadedFileCard file={receipt} label="إثبات العربون" onRemove={() => setReceipt(null)} /></div>}
+          </div>
+        )}
 
         {error && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">{error}</div>}
-        <button type="submit" disabled={submitting || preparing || total <= 0} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-5 py-3.5 text-sm font-black text-white disabled:opacity-50">{submitting ? <><Loader2 className="h-4 w-4 animate-spin" />جاري رفع المستندات وإرسال الطلب...</> : <><CheckCircle2 className="h-4 w-4" />إرسال الطلب للمكتب</>}</button>
+        <button type="submit" disabled={submitting || preparing || total <= 0} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-5 py-3.5 text-sm font-black text-white disabled:opacity-50">{submitting ? <><Loader2 className="h-4 w-4 animate-spin" />جاري رفع المستندات وإرسال الطلب...</> : <><CheckCircle2 className="h-4 w-4" />إرسال الطلب للمراجعة</>}</button>
       </form>
     </div>
   );
@@ -444,6 +566,46 @@ function LawyerRequestModal({ selected, catalog, onClose }: { selected: Selected
 
 function PriceStat({ label, value, strong = false }: { label: string; value: number; strong?: boolean }) {
   return <div><span className="block text-[10px] font-bold text-slate-500">{label}</span><strong className={`mt-1 block font-black ${strong ? "text-xl text-[#00102e]" : "text-base text-[#986410]"}`}>{value.toLocaleString("ar-EG")} ج.م</strong></div>;
+}
+
+function UploadedFileCard({ file, onRemove, label }: { file: File; onRemove: () => void; label?: string }) {
+  const canPreview = isPreviewableImage(file);
+  const previewUrl = useMemo(() => {
+    if (!canPreview || typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return "";
+    return URL.createObjectURL(file);
+  }, [canPreview, file]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  return (
+    <article className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+      <div
+        className="flex h-24 items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-slate-50 bg-cover bg-center"
+        style={previewUrl ? { backgroundImage: `url("${previewUrl}")` } : undefined}
+      >
+        {!previewUrl && (
+          <div className="flex flex-col items-center gap-1 text-slate-400">
+            {label ? <Receipt className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
+            <span className="text-[10px] font-bold">ملف مرفوع</span>
+          </div>
+        )}
+      </div>
+      <div className="mt-2 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          {label && <span className="block text-[10px] font-black text-[#986410]">{label}</span>}
+          <p className="truncate text-[10px] font-black text-[#00102e]" title={file.name}>{file.name}</p>
+          <p className="mt-0.5 text-[10px] font-bold text-slate-400">{formatFileSize(file.size)}</p>
+        </div>
+        <button type="button" onClick={onRemove} aria-label={`حذف ${file.name}`} className="shrink-0 rounded-lg p-1.5 text-red-500 hover:bg-red-50">
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </article>
+  );
 }
 
 

@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Clock3, Copy, Loader2, Upload, X } from "lucide-react";
+import { CheckCircle2, Clock3, Copy, FileText, Loader2, Receipt, Trash2, Upload, X } from "lucide-react";
 import { apiRequest, ApiClientError, frontendApi } from "@/lib/apiClient";
 import { compressUploadFile } from "@/lib/compression";
 import { usePublicCatalog } from "@/hooks/usePublicCatalog";
 import { normalizePhoneInput, phoneValidationError } from "@/lib/inputValidation";
 import { usePaymentAccess } from "@/hooks/usePaymentAccess";
+import { formatFileSize } from "@/lib/labels";
+
+const MAX_PAYMENT_FILE_BYTES = 20 * 1024 * 1024;
+
+function isPreviewableImage(file: File) {
+  return file.type.startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(file.name);
+}
 
 interface Props {
   isOpen: boolean;
@@ -72,6 +79,10 @@ export default function VodafoneCashModal({
     setPreparing(true);
     try {
       const result = await compressUploadFile(file);
+      if (result.file.size > MAX_PAYMENT_FILE_BYTES) {
+        setError("إثبات التحويل أكبر من الحد المسموح 20MB.");
+        return;
+      }
       setReceipt(result.file);
     } catch {
       setReceipt(file);
@@ -189,8 +200,9 @@ export default function VodafoneCashModal({
             <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-600 bg-slate-900 p-5 text-center">
               <input type="file" accept="image/*,.pdf" className="hidden" disabled={preparing} onChange={(event) => void chooseReceipt(event.target.files?.[0] || null)} />
               {preparing ? <Loader2 className="h-6 w-6 animate-spin text-emerald-400" /> : receipt ? <CheckCircle2 className="h-6 w-6 text-emerald-400" /> : <Upload className="h-6 w-6 text-emerald-400" />}
-              <span className="mt-2 text-xs font-black text-white">{receipt?.name || "اختيار إثبات التحويل"}</span>
+              <span className="mt-2 text-xs font-black text-white">{receipt ? "تغيير إثبات التحويل" : "اختيار إثبات التحويل"}</span>
             </label>
+            {receipt && <PaymentReceiptPreview file={receipt} onRemove={() => setReceipt(null)} />}
 
             {contractId && <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] leading-6 text-amber-100"><Clock3 className="mt-1 h-4 w-4 shrink-0" /> يبدأ احتساب مهلة تعديل البيانات غير الأساسية لمدة {editHours} ساعة بعد اعتماد الدفع، وليس بمجرد رفع الإيصال.</div>}
             {error && <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs font-bold text-red-300">{error}</div>}
@@ -200,5 +212,44 @@ export default function VodafoneCashModal({
         )}
       </section>
     </div>
+  );
+}
+
+function PaymentReceiptPreview({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const canPreview = isPreviewableImage(file);
+  const previewUrl = useMemo(() => {
+    if (!canPreview || typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return "";
+    return URL.createObjectURL(file);
+  }, [canPreview, file]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  return (
+    <article className="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-2">
+      <div
+        className="flex h-28 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-slate-900 bg-cover bg-center"
+        style={previewUrl ? { backgroundImage: `url("${previewUrl}")` } : undefined}
+      >
+        {!previewUrl && (
+          <div className="flex flex-col items-center gap-1 text-slate-500">
+            {file.type.includes("pdf") ? <FileText className="h-7 w-7" /> : <Receipt className="h-7 w-7" />}
+            <span className="text-[10px] font-bold">إثبات التحويل</span>
+          </div>
+        )}
+      </div>
+      <div className="mt-2 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-black text-white" title={file.name}>{file.name}</p>
+          <p className="mt-0.5 text-[10px] font-bold text-slate-500">{formatFileSize(file.size)}</p>
+        </div>
+        <button type="button" onClick={onRemove} aria-label={`حذف ${file.name}`} className="shrink-0 rounded-lg p-1.5 text-red-300 hover:bg-red-500/10">
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+    </article>
   );
 }
