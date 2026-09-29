@@ -168,6 +168,18 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/templates/categories"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/templates/categories"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/templates/categories/{categoryId}"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/templates/versions/{versionId}"
     },
     {
@@ -187,6 +199,10 @@
       "path": "/api/v1/admin/templates/versions/{versionId}/clauses/{clauseKey}"
     },
     {
+      "method": "PATCH",
+      "path": "/api/v1/admin/templates/versions/{versionId}/clauses/{clauseKey}/guidance"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/templates/versions/{versionId}/fields"
     },
@@ -197,6 +213,10 @@
     {
       "method": "PATCH",
       "path": "/api/v1/admin/templates/versions/{versionId}/fields/{fieldKey}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/templates/versions/{versionId}/fields/{fieldKey}/help"
     },
     {
       "method": "POST",
