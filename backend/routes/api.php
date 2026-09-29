@@ -165,6 +165,9 @@ $register = static function (string $prefix = 'v1'): void {
             });
              Route::prefix('templates')->middleware('permission:templates.view,templates.edit,templates.manage,pricing.manage')->group(function (): void {
                  Route::get('',[TemplateController::class,'adminIndex']);
+                 Route::get('categories',[TemplateController::class,'adminCategories']);
+                 Route::post('categories',[TemplateController::class,'adminCreateCategory'])->middleware('permission:templates.manage');
+                 Route::patch('categories/{categoryId}',[TemplateController::class,'adminUpdateCategory'])->whereNumber('categoryId')->middleware('permission:templates.manage');
                  Route::get('versions/{versionId}',[TemplateController::class,'adminVersion'])->whereNumber('versionId');
                  Route::get('versions/{versionId}/validation',[TemplateController::class,'adminValidation'])->whereNumber('versionId');
                  Route::post('',[TemplateController::class,'adminCreate'])->middleware('permission:templates.manage');

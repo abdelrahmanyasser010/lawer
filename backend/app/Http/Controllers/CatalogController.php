@@ -11,7 +11,7 @@ final class CatalogController extends Controller
     public function __construct(private ContractPricingService $pricing){}
     public function __invoke(Request $request)
     {
-        $templateRows = DB::select('SELECT ct.id,ct.slug,ct.name_ar AS "nameAr",ct.description,0::float AS "priceEgp",tv.version_number AS version,tv.definition_json AS definition FROM contract_templates ct JOIN template_versions tv ON tv.id=ct.current_published_version_id WHERE ct.is_active=TRUE AND tv.status=\'published\' ORDER BY ct.id');
+        $templateRows = DB::select('SELECT ct.id,ct.slug,ct.name_ar AS "nameAr",ct.description,0::float AS "priceEgp",tv.version_number AS version,tv.definition_json AS definition,cat.slug AS "categorySlug",cat.name_ar AS "categoryNameAr",cat.description AS "categoryDescription" FROM contract_templates ct LEFT JOIN contract_template_categories cat ON cat.id=ct.category_id JOIN template_versions tv ON tv.id=ct.current_published_version_id WHERE ct.is_active=TRUE AND tv.status=\'published\' ORDER BY COALESCE(cat.sort_order,0),ct.id');
         $keys = [
             'contracts.self_service_edit_hours','customer_portal.communication_channels','customer_portal.chat_enabled',
             'services.contract_review.fee_egp','services.contract_review.deposit_egp','services.contract_drafting.deposit_egp',
@@ -40,7 +40,7 @@ final class CatalogController extends Controller
                     'selfServicePriceEgp'=>(float)$price['selfServicePriceEgp'],'lawyerAssistedPriceEgp'=>(float)$price['lawyerAssistedPriceEgp'],'lawyerDepositEgp'=>$draftingDeposit,
                 ];
             }
-            $templates[]=['id'=>(int)$row->id,'slug'=>(string)$row->slug,'nameAr'=>(string)$row->nameAr,'description'=>(string)$row->description,'priceEgp'=>0.0,'version'=>(int)$row->version,'variants'=>$variants];
+            $templates[]=['id'=>(int)$row->id,'slug'=>(string)$row->slug,'nameAr'=>(string)$row->nameAr,'description'=>(string)$row->description,'priceEgp'=>0.0,'version'=>(int)$row->version,'categorySlug'=>$row->categorySlug?(string)$row->categorySlug:null,'categoryNameAr'=>$row->categoryNameAr?(string)$row->categoryNameAr:null,'categoryDescription'=>$row->categoryDescription?(string)$row->categoryDescription:null,'variants'=>$variants];
         }
 
         return $this->ok($request, [

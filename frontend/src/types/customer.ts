@@ -217,6 +217,9 @@ export interface PublicCatalog {
     description: string;
     priceEgp: number;
     version: number;
+    categorySlug?: string | null;
+    categoryNameAr?: string | null;
+    categoryDescription?: string | null;
     variants: Array<{
       key: string;
       nameAr: string;

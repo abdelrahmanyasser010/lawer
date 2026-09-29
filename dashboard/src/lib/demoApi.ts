@@ -97,6 +97,10 @@ const templates = Object.values(localTemplateRegistry).map((definition, index) =
   ],
 }));
 
+const templateCategories = [
+  { id: 1, slug: "general", nameAr: "عقود عامة", description: "التصنيف الافتراضي للقوالب الحالية.", isActive: true, sortOrder: 0, templatesCount: templates.length },
+];
+
 const team = [
   { id: 1, publicId: "STF-SUPERADMIN", name: "Z draft Super Admin", email: "admin.demo@zdraft.local", phone: "01023817658", status: "active", staffStatus: "active", jobTitle: "مالك النظام", lastLoginAt: iso(-1), roles: ["super_admin"] },
   { id: 2, publicId: "STF-LAWYER", name: "أ. مريم سامي", email: "lawyer.demo@zdraft.local", phone: "01000000001", status: "active", staffStatus: "active", jobTitle: "محامية عقود", lastLoginAt: iso(-4), roles: ["lawyer"] },
@@ -190,6 +194,7 @@ export async function demoDashboardRequest<T>(path: string, init: RequestInit = 
   if (pathname === "/api/v1/admin/team/invite") return { userId: 9, temporaryPassword: "DemoPass123!" } as T;
   if (pathname.startsWith("/api/v1/admin/team/")) return { ok: true } as T;
   if (pathname === "/api/v1/admin/templates") return templates as T;
+  if (pathname === "/api/v1/admin/templates/categories") return templateCategories as T;
   if (pathname.match(/^\/api\/v1\/admin\/templates\/versions\/\d+$/)) return templateVersion(Number(pathname.split("/").pop())) as T;
   if (pathname.match(/^\/api\/v1\/admin\/templates\/versions\/\d+\/validation$/)) return templateInspection() as T;
   if (pathname.match(/^\/api\/v1\/admin\/templates\/versions\/\d+\/preview$/)) return templatePreview() as T;
@@ -381,12 +386,13 @@ function demoReports(periodValue: string | null) {
 
 function demoRequestDetails(id: number) {
   const row = requests.find((item) => item.id === id) || requests[0];
+  const meeting = row as typeof row & { meetingUrl?: string };
   return {
     ...row,
     description: "طلب تجريبي يعرض دورة العمل الكاملة بين العميل ومكتب المحاماة.",
     templateSlug: "apartment_sale",
     communicationChannel: "whatsapp",
-    preferredContactAt: iso(12), meetingAt: row.dueAt ?? null, meetingProvider: (row as any).meetingUrl ? "zoom" : null, meetingUrl: (row as any).meetingUrl ?? null,
+    preferredContactAt: iso(12), meetingAt: row.dueAt ?? null, meetingProvider: meeting.meetingUrl ? "zoom" : null, meetingUrl: meeting.meetingUrl ?? null,
     meetingLocation: null, assignedLawyerId: row.assignedLawyerName ? 2 : null, clientUserId: 1,
     clientWhatsappNumber: row.clientPhone, dueAt: row.dueAt, linkedContractId: null, linkedContractSerial: null,
     linkedContractTitle: null, paymentStatus: row.status === "awaiting_payment" ? "pending_verification" : "approved",

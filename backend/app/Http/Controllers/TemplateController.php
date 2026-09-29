@@ -17,7 +17,7 @@ final class TemplateController extends Controller
 
     public function index(Request $request)
     {
-        $rows = DB::select("SELECT ct.id,ct.slug,ct.name_ar AS \"nameAr\",ct.description,0::float AS \"priceEgp\",tv.version_number AS version,jsonb_array_length(COALESCE(tv.definition_json->'variants','[]'::jsonb)) AS \"variantsCount\" FROM contract_templates ct LEFT JOIN template_versions tv ON tv.id=ct.current_published_version_id WHERE ct.is_active=TRUE AND tv.status='published' ORDER BY ct.id");
+        $rows = DB::select("SELECT ct.id,ct.slug,ct.name_ar AS \"nameAr\",ct.description,0::float AS \"priceEgp\",tv.version_number AS version,jsonb_array_length(COALESCE(tv.definition_json->'variants','[]'::jsonb)) AS \"variantsCount\",cat.slug AS \"categorySlug\",cat.name_ar AS \"categoryNameAr\",cat.description AS \"categoryDescription\" FROM contract_templates ct LEFT JOIN contract_template_categories cat ON cat.id=ct.category_id LEFT JOIN template_versions tv ON tv.id=ct.current_published_version_id WHERE ct.is_active=TRUE AND tv.status='published' ORDER BY COALESCE(cat.sort_order,0),ct.id");
         return $this->ok($request, $rows);
     }
 
@@ -33,7 +33,7 @@ final class TemplateController extends Controller
 
     public function adminIndex(Request $request)
     {
-        $rows = DB::select("SELECT ct.id,ct.slug,ct.name_ar AS \"nameAr\",ct.description,ct.is_active AS \"isActive\",ct.current_published_version_id AS \"currentPublishedVersionId\" FROM contract_templates ct ORDER BY ct.id");
+        $rows = DB::select("SELECT ct.id,ct.slug,ct.name_ar AS \"nameAr\",ct.description,ct.is_active AS \"isActive\",ct.current_published_version_id AS \"currentPublishedVersionId\",ct.category_id AS \"categoryId\",cat.slug AS \"categorySlug\",cat.name_ar AS \"categoryNameAr\",cat.description AS \"categoryDescription\" FROM contract_templates ct LEFT JOIN contract_template_categories cat ON cat.id=ct.category_id ORDER BY COALESCE(cat.sort_order,0),ct.id");
         $payload=[];
         foreach($rows as$row){
             $versions=DB::select('SELECT id,version_number AS "versionNumber",status,change_summary AS "changeSummary",legal_reference AS "legalReference",created_at AS "createdAt",published_at AS "publishedAt" FROM template_versions WHERE template_id=? ORDER BY version_number DESC',[$row->id]);
@@ -41,21 +41,60 @@ final class TemplateController extends Controller
             $definition=$published?(is_string($published->definition_json)?json_decode($published->definition_json,true):(array)$published->definition_json):[];
             $pricing=$this->pricing->forDefinition((string)$row->slug,$definition);
             $variants=[];foreach($definition['variants']??[] as$variant){$key=(string)($variant['key']??'');if($key==='')continue;$p=$pricing[$key]??['selfServicePriceEgp'=>0.0,'lawyerAssistedPriceEgp'=>0.0];$variants[]=['key'=>$key,'nameAr'=>(string)($variant['nameAr']??$key),'description'=>(string)($variant['description']??''),'selfServicePriceEgp'=>(float)$p['selfServicePriceEgp'],'lawyerAssistedPriceEgp'=>(float)$p['lawyerAssistedPriceEgp']];}
-            $payload[]=['id'=>(int)$row->id,'slug'=>(string)$row->slug,'nameAr'=>(string)$row->nameAr,'description'=>(string)$row->description,'priceEgp'=>0.0,'isActive'=>(bool)$row->isActive,'currentPublishedVersionId'=>$row->currentPublishedVersionId?(int)$row->currentPublishedVersionId:null,'version'=>$definition?(int)($definition['version']??($versions[0]->versionNumber??0)):0,'variantsCount'=>count($variants),'variants'=>$variants,'versions'=>$versions];
+            $payload[]=['id'=>(int)$row->id,'slug'=>(string)$row->slug,'nameAr'=>(string)$row->nameAr,'description'=>(string)$row->description,'priceEgp'=>0.0,'isActive'=>(bool)$row->isActive,'categoryId'=>$row->categoryId?(int)$row->categoryId:null,'categorySlug'=>$row->categorySlug?(string)$row->categorySlug:null,'categoryNameAr'=>$row->categoryNameAr?(string)$row->categoryNameAr:null,'categoryDescription'=>$row->categoryDescription?(string)$row->categoryDescription:null,'currentPublishedVersionId'=>$row->currentPublishedVersionId?(int)$row->currentPublishedVersionId:null,'version'=>$definition?(int)($definition['version']??($versions[0]->versionNumber??0)):0,'variantsCount'=>count($variants),'variants'=>$variants,'versions'=>$versions];
         }
         return $this->ok($request,$payload);
     }
 
+    public function adminCategories(Request $request)
+    {
+        $rows = DB::select('SELECT c.id,c.slug,c.name_ar AS "nameAr",c.description,c.is_active AS "isActive",c.sort_order AS "sortOrder",COUNT(ct.id)::int AS "templatesCount" FROM contract_template_categories c LEFT JOIN contract_templates ct ON ct.category_id=c.id GROUP BY c.id ORDER BY c.sort_order,c.id');
+        return $this->ok($request, $rows);
+    }
+
+    public function adminCreateCategory(Request $request)
+    {
+        $data=$request->validate(['slug'=>['required','string','max:80','regex:/^[a-z0-9_]+$/'],'nameAr'=>['required','string','max:150'],'description'=>['nullable','string','max:2000'],'sortOrder'=>['nullable','integer','min:0','max:100000']]);
+        if(DB::table('contract_template_categories')->where('slug',$data['slug'])->exists())throw new ApiException(409,'رمز التصنيف مستخدم بالفعل','TEMPLATE_CATEGORY_SLUG_EXISTS');
+        $id=(int)DB::table('contract_template_categories')->insertGetId(['slug'=>$data['slug'],'name_ar'=>$data['nameAr'],'description'=>$data['description']??'','sort_order'=>$data['sortOrder']??0,'is_active'=>true,'created_at'=>now(),'updated_at'=>now()]);
+        $this->audit->write($request,'template.category_created','contract_template_category',$id,null,$data);
+        return $this->created($request,['id'=>$id,'slug'=>$data['slug'],'nameAr'=>$data['nameAr']],'تم إنشاء تصنيف العقود');
+    }
+
+    public function adminUpdateCategory(Request $request,int $categoryId)
+    {
+        $data=$request->validate(['slug'=>['sometimes','string','max:80','regex:/^[a-z0-9_]+$/'],'nameAr'=>['sometimes','string','max:150'],'description'=>['sometimes','string','max:2000'],'sortOrder'=>['sometimes','integer','min:0','max:100000'],'isActive'=>['sometimes','boolean']]);
+        $category=DB::table('contract_template_categories')->where('id',$categoryId)->first();
+        if(!$category)throw new ApiException(404,'تصنيف العقود غير موجود');
+        if(isset($data['slug'])&&DB::table('contract_template_categories')->where('slug',$data['slug'])->where('id','<>',$categoryId)->exists())throw new ApiException(409,'رمز التصنيف مستخدم بالفعل','TEMPLATE_CATEGORY_SLUG_EXISTS');
+        $updates=[];foreach(['slug'=>'slug','nameAr'=>'name_ar','description'=>'description','sortOrder'=>'sort_order','isActive'=>'is_active'] as $input=>$column)if(array_key_exists($input,$data))$updates[$column]=$data[$input];
+        if($updates){$updates['updated_at']=now();DB::table('contract_template_categories')->where('id',$categoryId)->update($updates);$this->audit->write($request,'template.category_updated','contract_template_category',$categoryId,null,$data);}
+        return $this->ok($request,['id'=>$categoryId]+$data,'تم تحديث تصنيف العقود');
+    }
+
     public function adminCreate(Request $request)
     {
-        $data=$request->validate(['slug'=>['required','string','max:80','regex:/^[a-z0-9_]+$/'],'nameAr'=>['required','string','max:150'],'description'=>['nullable','string','max:2000'],'priceEgp'=>['nullable','numeric','min:0','max:1000000']]);
+        $data=$request->validate(['slug'=>['required','string','max:80','regex:/^[a-z0-9_]+$/'],'nameAr'=>['required','string','max:150'],'description'=>['nullable','string','max:2000'],'priceEgp'=>['nullable','numeric','min:0','max:1000000'],'categoryId'=>['nullable','integer','exists:contract_template_categories,id'],'sourceTemplateId'=>['nullable','integer','exists:contract_templates,id'],'sourceVersionId'=>['nullable','integer']]);
         $actor=(int)($request->attributes->get('auth_user')['id']??0);
         $result=DB::transaction(function()use($request,$data,$actor){
             if(DB::table('contract_templates')->where('slug',$data['slug'])->exists())throw new ApiException(409,'رمز القالب مستخدم بالفعل','TEMPLATE_SLUG_EXISTS');
+            $source=null;
+            if(!empty($data['sourceTemplateId'])){
+                $sourceId=(int)$data['sourceTemplateId'];
+                $sourceVersionId=$data['sourceVersionId']??null;
+                $source=$sourceVersionId
+                    ? DB::selectOne('SELECT tv.* FROM template_versions tv WHERE tv.id=? AND tv.template_id=?',[(int)$sourceVersionId,$sourceId])
+                    : DB::selectOne("SELECT tv.* FROM template_versions tv WHERE tv.template_id=? ORDER BY CASE WHEN tv.status='published' THEN 0 ELSE 1 END,tv.version_number DESC LIMIT 1",[$sourceId]);
+                if(!$source)throw new ApiException(404,'إصدار القالب المصدر غير موجود','SOURCE_TEMPLATE_VERSION_NOT_FOUND');
+            }
+            $sourceDefinition=$source?$this->definition($source->definition_json):[];
+            $categoryId=$data['categoryId']??($source?DB::table('contract_templates')->where('id',(int)$data['sourceTemplateId'])->value('category_id'):null);
             $templateId=(int)DB::table('contract_templates')->insertGetId(['name'=>$data['nameAr'],'name_ar'=>$data['nameAr'],'slug'=>$data['slug'],'description'=>$data['description']??'','price_egp'=>$data['priceEgp']??0,'is_active'=>true,'template_version'=>1,'updated_at'=>now()]);
-            $definition=['slug'=>$data['slug'],'version'=>1,'nameAr'=>$data['nameAr'],'description'=>$data['description']??'','priceEgp'=>0,'variants'=>[],'optionalClauses'=>[],'legalClauses'=>[]];
+            DB::table('contract_templates')->where('id',$templateId)->update(['category_id'=>$categoryId]);
+            $definition=$sourceDefinition?:['slug'=>$data['slug'],'version'=>1,'nameAr'=>$data['nameAr'],'description'=>$data['description']??'','priceEgp'=>0,'variants'=>[],'optionalClauses'=>[],'legalClauses'=>[]];
+            $definition['slug']=$data['slug'];$definition['version']=1;$definition['nameAr']=$data['nameAr'];$definition['description']=$data['description']??($definition['description']??'');$definition['priceEgp']=0;
             $versionId=(int)DB::table('template_versions')->insertGetId(['template_id'=>$templateId,'version_number'=>1,'status'=>'draft','definition_json'=>json_encode($definition,JSON_UNESCAPED_UNICODE),'change_summary'=>'إنشاء قالب جديد','created_by'=>$actor,'created_at'=>now(),'updated_at'=>now()]);
-            $this->audit->write($request,'template.created','contract_template',$templateId,null,['versionId'=>$versionId,'slug'=>$data['slug']]);
+            $this->audit->write($request,'template.created','contract_template',$templateId,null,['versionId'=>$versionId,'slug'=>$data['slug'],'categoryId'=>$categoryId,'sourceTemplateId'=>$data['sourceTemplateId']??null,'sourceVersionId'=>$source?((int)$source->id):null]);
             return ['id'=>$templateId,'versionId'=>$versionId,'status'=>'draft'];
         });
         return $this->created($request,$result,'تم إنشاء مسودة القالب');
@@ -106,6 +145,7 @@ final class TemplateController extends Controller
             'variantPrices'=>['sometimes','array','max:50'],'variantPrices.*.variantKey'=>['required_with:variantPrices','string','max:140'],
             'variantPrices.*.selfServicePriceEgp'=>['required_with:variantPrices','numeric','min:0','max:1000000'],
             'variantPrices.*.lawyerAssistedPriceEgp'=>['required_with:variantPrices','numeric','min:0','max:1000000'],
+            'categoryId'=>['sometimes','nullable','integer','exists:contract_template_categories,id'],
         ]);
         if(!$data)throw new ApiException(422,'لا يوجد تعديل للحفظ');
         $old=DB::selectOne("SELECT ct.id,ct.slug,tv.definition_json FROM contract_templates ct LEFT JOIN template_versions tv ON tv.id=ct.current_published_version_id WHERE ct.id=?",[$templateId]);
@@ -113,7 +153,8 @@ final class TemplateController extends Controller
         $definition=is_string($old->definition_json)?json_decode($old->definition_json,true):(array)($old->definition_json??[]);
         DB::transaction(function()use($request,$templateId,$old,$definition,$data){
             if(isset($data['variantPrices']))$this->pricing->save((string)$old->slug,$definition,$data['variantPrices'],(int)$request->attributes->get('auth_user')['id']);
-            $this->audit->write($request,'template.variant_pricing_updated','contract_template',$templateId,null,$data);
+            if(array_key_exists('categoryId',$data))DB::table('contract_templates')->where('id',$templateId)->update(['category_id'=>$data['categoryId'],'updated_at'=>now()]);
+            $this->audit->write($request,array_key_exists('categoryId',$data)?'template.metadata_updated':'template.variant_pricing_updated','contract_template',$templateId,null,$data);
         });
         return $this->ok($request,['id'=>$templateId]+$data,'تم تحديث أسعار العقود');
     }

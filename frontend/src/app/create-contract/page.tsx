@@ -41,8 +41,8 @@ type CatalogMode = "self_service" | "lawyer_assisted";
 type CatalogTemplate = PublicCatalog["templates"][number];
 type CatalogVariant = CatalogTemplate["variants"][number];
 type SelectedVariant = { template: CatalogTemplate; variant: CatalogVariant };
+type CatalogGroup = { key: string; nameAr: string; description: string; templates: Array<{ template: CatalogTemplate; variants: CatalogVariant[] }> };
 
-const categoryOrder = ["rental", "apartment_sale", "freelancer"];
 const categoryMeta: Record<string, { title: string; subtitle: string; icon: typeof Home }> = {
   rental: { title: "عقود الإيجار", subtitle: "اختر صيغة الإيجار المناسبة لطبيعة استخدام الوحدة.", icon: Home },
   apartment_sale: { title: "عقود البيع", subtitle: "اختر الصيغة الأقرب لمصدر ملكية الوحدة وطريقة التصرف.", icon: Building2 },
@@ -162,18 +162,23 @@ function CreateContractContent() {
     }).catch(() => {/* ignore, user might not be logged in */});
   }, []);
 
-  const grouped = useMemo(() => {
+  const grouped = useMemo<CatalogGroup[]>(() => {
     const q = query.trim().toLowerCase();
-    return categoryOrder.map((slug) => {
-      const template = catalog.templates.find((item) => item.slug === slug);
-      if (!template) return null;
+    const groups = new Map<string, CatalogGroup>();
+    catalog.templates.forEach((template) => {
       const variants = template.variants.filter((variant) => {
         if (!q) return true;
         const meta = variantMeta[variant.key];
         return [variant.nameAr, variant.description, meta?.help, ...(meta?.tags || [])].filter(Boolean).join(" ").toLowerCase().includes(q);
       });
-      return variants.length ? { template, variants } : null;
-    }).filter(Boolean) as Array<{ template: CatalogTemplate; variants: CatalogVariant[] }>;
+      if (!variants.length) return;
+      const key = template.categorySlug || template.slug;
+      const fallback = categoryMeta[template.slug];
+      const group = groups.get(key) || { key, nameAr: template.categoryNameAr || fallback?.title || template.nameAr, description: template.categoryDescription || fallback?.subtitle || template.description, templates: [] };
+      group.templates.push({ template, variants });
+      groups.set(key, group);
+    });
+    return Array.from(groups.values());
   }, [catalog.templates, query]);
 
   function choose(template: CatalogTemplate, variant: CatalogVariant) {
@@ -279,13 +284,7 @@ function CreateContractContent() {
 
             <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-3.5">
               <div className="flex items-center gap-5 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide text-xs font-bold text-slate-500">
-                {categoryOrder.map(slug => {
-                  const m = categoryMeta[slug];
-                  if (!m) return null;
-                  return (
-                    <a key={slug} href={`#category-${slug}`} className="hover:text-[#00102e] whitespace-nowrap transition-colors">{m.title}</a>
-                  );
-                })}
+                {grouped.map((group) => <a key={group.key} href={`#category-${group.key}`} className="hover:text-[#00102e] whitespace-nowrap transition-colors">{group.nameAr}</a>)}
               </div>
 
               <div className="relative flex items-center shrink-0">
@@ -322,22 +321,13 @@ function CreateContractContent() {
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-xs font-bold text-amber-900">تعذر تحميل العقود والأسعار مؤقتًا. حاول مرة أخرى بعد قليل.</div>
           ) : grouped.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center"><Search className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-2 text-xs font-black text-slate-600">لا توجد عقود مطابقة للبحث.</p></div>
-          ) : grouped.map(({ template, variants }) => {
-            const meta = categoryMeta[template.slug] || { title: template.nameAr, subtitle: template.description, icon: FileText };
-            const Icon = meta.icon;
-            return (
-              <section key={template.slug} id={`category-${template.slug}`}>
-                <header className="mb-4 flex items-start gap-2.5">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#00102e] text-[#d9a84e]"><Icon className="h-3.5 w-3.5" /></div>
-                  <div><h2 className="text-base sm:text-lg font-black text-[#00102e]">{meta.title}</h2><p className="mt-0.5 text-[11px] leading-5 text-slate-500">{meta.subtitle}</p></div>
-                </header>
-                <div className="flex snap-x snap-mandatory overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3.5 hide-scrollbar after:content-[''] after:w-px after:shrink-0">
-                  {variants.map((variant) => (
-                    <VariantCard key={variant.key} mode={mode} template={template} variant={variant} onChoose={() => choose(template, variant)} />
-                  ))}
-                </div>
-              </section>
-            );
+          ) : grouped.map((group) => {
+            const iconMeta = categoryMeta[group.templates[0]?.template.slug] || { icon: FileText };
+            const Icon = iconMeta.icon;
+            return <section key={group.key} id={`category-${group.key}`}>
+              <header className="mb-5 flex items-start gap-2.5"><div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#00102e] text-[#d9a84e]"><Icon className="h-3.5 w-3.5" /></div><div><h2 className="text-base sm:text-lg font-black text-[#00102e]">{group.nameAr}</h2><p className="mt-0.5 text-[11px] leading-5 text-slate-500">{group.description}</p></div></header>
+              <div className="space-y-6">{group.templates.map(({ template, variants }) => <div key={template.slug}><h3 className="mb-2 text-sm font-black text-[#00102e]">{template.nameAr}</h3><div className="flex snap-x snap-mandatory overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3.5 hide-scrollbar after:content-[''] after:w-px after:shrink-0">{variants.map((variant) => <VariantCard key={variant.key} mode={mode} template={template} variant={variant} onChoose={() => choose(template, variant)} />)}</div></div>)}</div>
+            </section>;
           })}
         </section>
       </main>
