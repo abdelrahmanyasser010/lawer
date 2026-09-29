@@ -2,6 +2,7 @@
 namespace App\Services;
 
 use App\Exceptions\ApiException;
+use Illuminate\Support\Facades\DB;
 
 final class TemplateEngineService
 {
@@ -81,6 +82,9 @@ final class TemplateEngineService
             foreach ($step['fields'] ?? [] as $field) {
                 $key = (string)($field['key'] ?? '');
                 $value = ($field['type'] ?? null) === 'attachment' ? ($attachmentRefs[$key] ?? ($fieldValues[$key] ?? null)) : ($fieldValues[$key] ?? null);
+                if (($field['type'] ?? null) === 'attachment') {
+                    foreach ($this->validateAttachmentRules($key, $field, $value) as $attachmentIssue) $issues[] = $attachmentIssue;
+                }
                 if (($field['type'] ?? null) === 'repeater') {
                     $rows = is_array($value) ? array_values($value) : [];
                     $minRows = (int)($field['minRows'] ?? (($field['required'] ?? false) ? 1 : 0));
@@ -425,6 +429,10 @@ final class TemplateEngineService
         if($value==='أخرى'||$value==='other'){$other=$fieldValues[$key.'_other']??null;if($this->emptyValue($other)&&str_ends_with($key,'_payer')){$base=substr($key,0,-strlen('_payer'));$other=$fieldValues[$base.'_other']??null;}if(!$this->emptyValue($other))return trim((string)$other);}
         foreach($field['options']??[]as$option)if((string)($option['value']??'')===(string)$value)return(string)($option['labelAr']??$value);
         if(is_bool($value))return$value?'نعم':'لا';
+        if(($field['numberToWords']??false)&&is_numeric($value)){
+            $numeric=(float)$value;
+            if($numeric>=0)return(($field['type']??null)==='money'?$this->numberToEgyptianPoundsWords($numeric):$this->numberToArabicWordsBare($numeric))??(string)$value;
+        }
         if(is_array($value)){
             $parts=[];
             foreach($value as$item){
@@ -514,5 +522,21 @@ final class TemplateEngineService
         return array_values(array_unique($keys));
     }
 
+    private function validateAttachmentRules(string $key,array $field,mixed $value):array
+    {
+        $refs=is_array($value)?array_values(array_filter($value,fn($item)=>$item!==null&&$item!=='')):[];
+        $rules=is_array($field['attachmentRules']??null)?$field['attachmentRules']:[];
+        $label=(string)($field['labelAr']??$key);$issues=[];
+        if(isset($rules['maxFiles'])&&count($refs)>(int)$rules['maxFiles'])$issues[]="$label — الحد الأقصى {$rules['maxFiles']} ملف";
+        if(!$refs||!$rules)return $issues;
+        $ids=array_values(array_filter(array_map(fn($item)=>filter_var($item,FILTER_VALIDATE_INT)!==false?(int)$item:null,$refs),fn($item)=>$item!==null));
+        if(count($ids)!==count($refs))return array_merge($issues,["$label — يوجد مرفق غير صالح"]);
+        $rows=DB::table('document_attachments')->whereIn('id',$ids)->get(['id','file_type','file_size_bytes']);
+        if($rows->count()!==count(array_unique($ids)))return array_merge($issues,["$label — يوجد مرفق غير موجود أو غير مرتبط"]);
+        $accepted=array_values(array_filter(array_map('strtolower',(array)($rules['acceptedTypes']??[]))));
+        foreach($rows as$row){$mime=strtolower((string)$row->file_type);if($accepted&&!$this->attachmentTypeAllowed($mime,$accepted))$issues[]="$label — صيغة الملف غير مسموحة";if(isset($rules['maxBytes'])&&(int)$row->file_size_bytes>(int)$rules['maxBytes'])$issues[]="$label — حجم أحد الملفات أكبر من الحد المسموح";}
+        return array_values(array_unique($issues));
+    }
+    private function attachmentTypeAllowed(string $mime,array $accepted):bool{foreach($accepted as$token){if($token===$mime)return true;if(str_ends_with($token,'/*')&&str_starts_with($mime,rtrim($token,'*')))return true;}return false;}
     private function emptyValue(mixed $value):bool{return $value===null||$value===''||(is_array($value)&&count($value)===0);}
 }

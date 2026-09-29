@@ -138,6 +138,14 @@ function formatClauseVariable(
   const option = field?.options?.find((item) => String(item.value) === String(value));
   if (option) return option.labelAr;
   if (typeof value === "boolean") return value ? "نعم" : "لا";
+  if (field?.numberToWords) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric >= 0) {
+      return field.type === "money"
+        ? numberToEgyptianPoundsWords(numeric)
+        : numberToArabicWordsBare(numeric) ?? String(value);
+    }
+  }
   if (typeof value === "number") return value.toLocaleString("ar-EG");
   if (Array.isArray(value)) {
     return value.map((item) => {

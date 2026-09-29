@@ -19,6 +19,7 @@ import { useWizardStore } from "@/store/wizardStore";
 import VariantSelector from "@/features/contracts/wizard/VariantSelector";
 import OptionalClauseSelector from "@/features/contracts/wizard/OptionalClauseSelector";
 import DynamicOptionalStep from "@/features/contracts/wizard/DynamicOptionalStep";
+import ReadinessGate from "@/features/contracts/wizard/ReadinessGate";
 import { validateDynamicDefinition } from "@/features/contracts/validation/validateDraft";
 import { saveDraftSnapshot } from "@/features/contracts/data/draftRepository";
 import { usePublicCatalog } from "@/hooks/usePublicCatalog";
@@ -61,8 +62,10 @@ export default function WizardPage() {
   const requestedVariantKey = searchParams.get("variant")?.trim() || "";
 
   const contractSlug: ContractSlug = slug;
-  const { definition: templateDefinition, loading: templateLoading, error: templateError } =
+  const { definition: latestTemplateDefinition, loading: templateLoading, error: templateError } =
     useTemplateDefinition(contractSlug);
+  const [historicalTemplateDefinition, setHistoricalTemplateDefinition] = useState<typeof latestTemplateDefinition>(null);
+  const templateDefinition = historicalTemplateDefinition ?? latestTemplateDefinition;
   const { catalog } = usePublicCatalog();
   const editHours = catalog.policies.selfServiceEditHours;
 
@@ -85,7 +88,16 @@ export default function WizardPage() {
   const [autoSaveStatus, setAutoSaveStatus] = useState("محفوظ مؤقتًا في هذه الجلسة");
   const [backendContract, setBackendContract] = useState<ContractDetails | null>(null);
   const [checkoutContract, setCheckoutContract] = useState<{ id: number; serialNumber: string } | null>(null);
+  const [readinessAccepted, setReadinessAccepted] = useState(requestedContractId > 0);
   const loadedContractId = useRef<number | null>(null);
+
+  useEffect(() => {
+    setReadinessAccepted(requestedContractId > 0);
+  }, [requestedContractId]);
+
+  useEffect(() => {
+    setHistoricalTemplateDefinition(null);
+  }, [contractSlug]);
 
   useEffect(() => {
     if (!templateDefinition) return;
@@ -116,7 +128,9 @@ export default function WizardPage() {
     apiRequest<ContractDetails>(`/api/v1/contracts/${requestedContractId}`)
       .then((contract) => {
         if (contract.template_slug !== contractSlug) throw new Error("العقد لا يتبع هذا القالب");
-        const selectedVariant = templateDefinition.variants.find((variant) => variant.key === contract.variant_key);
+        if (contract.template_definition) setHistoricalTemplateDefinition(contract.template_definition);
+        const contractDefinition = contract.template_definition ?? templateDefinition;
+        const selectedVariant = contractDefinition.variants.find((variant) => variant.key === contract.variant_key);
         hydrateBackendDraft(contractSlug, {
           id: contract.id,
           versionId: contract.current_version_id,
@@ -193,6 +207,7 @@ export default function WizardPage() {
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Privacy migration: old browser-persistent caches may contain identity data.
@@ -402,7 +417,7 @@ export default function WizardPage() {
       message: "تغيير نوع العقد سيبدأ مسودة جديدة لهذا القالب. هل تريد المتابعة؟",
       confirmOnly: false,
       confirmLabel: "بدء مسودة جديدة",
-      onConfirm: () => { resetWizard(contractSlug); setActionDialog(null); },
+      onConfirm: () => { resetWizard(contractSlug); setReadinessAccepted(false); setActionDialog(null); },
     });
   };
 
@@ -572,6 +587,26 @@ export default function WizardPage() {
     return saved;
   };
 
+  const uploadFieldFiles = async (fieldKey: string, files: File[]) => {
+    if (!files.length) return;
+    setUploadingField(fieldKey);
+    try {
+      const uploaded: string[] = [];
+      for (const file of files) {
+        const body = new FormData();
+        body.append("file", file);
+        const result = await apiRequest<{ id: number }>("/api/v1/attachments", { method: "POST", body });
+        uploaded.push(String(result.id));
+      }
+      setStoredAttachmentRefs(contractSlug, fieldKey, [...(draft?.attachmentRefs[fieldKey] ?? []), ...uploaded]);
+      setAutoSaveStatus("تم رفع المرفق ✓");
+    } catch (caught) {
+      showNotice(caught instanceof Error ? caught.message : "تعذر رفع المرفق");
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
   const openCheckoutIfReady = async () => {
     if (!isContractReadyForPayment) {
       showNotice(["يرجى استكمال البيانات المطلوبة قبل الدفع:", ...dynamicValidationIssues.map((item) => `- ${item.labelAr}`)].join("\n"));
@@ -709,11 +744,23 @@ export default function WizardPage() {
                 variant.steps[0]?.key ?? `${contractSlug}_start`,
                 variant.defaultFieldValues,
               );
+              setReadinessAccepted(false);
             }}
           />
         </main>
         <Footer />
       </div>
+    );
+  }
+
+  if (!readinessAccepted && requestedContractId <= 0 && selectedVariantDefinition && draft?.variantKey) {
+    return (
+      <ReadinessGate
+        variant={selectedVariantDefinition}
+        fieldValues={formData}
+        attachmentRefs={draft.attachmentRefs}
+        onContinue={() => setReadinessAccepted(true)}
+      />
     );
   }
 
@@ -845,6 +892,8 @@ export default function WizardPage() {
                   setPreviewTab("document");
                   setActivePreviewField({ key: fieldKey, labelAr });
                 }}
+              onFilesSelected={uploadFieldFiles}
+              uploadingField={uploadingField}
               />
             )}
             {/* Rental fields are rendered directly from the reviewed template schema.

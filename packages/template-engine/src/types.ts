@@ -32,6 +32,17 @@ export interface FieldValidationDefinition {
   expectedDigits?: number;
 }
 
+export interface AttachmentRulesDefinition {
+  /** Accepted MIME types or extension tokens (for example image/*, application/pdf). */
+  acceptedTypes?: string[];
+  /** Maximum number of files the customer may attach to this field. */
+  maxFiles?: number;
+  /** Maximum size per file in bytes. */
+  maxBytes?: number;
+  /** Optional identity-document guidance for front/back images. */
+  requireFrontBack?: boolean;
+}
+
 export type ConditionOperator =
   | "equals"
   | "not_equals"
@@ -76,6 +87,8 @@ export interface WizardFieldDefinition {
   labelAr: string;
   placeholder?: string;
   helpText?: string;
+  /** Optional stable reference for admin-managed field help content. */
+  helpRef?: string;
   required?: boolean;
   /** Becomes required only when the condition is true. The field may still be visible while optional. */
   requiredWhen?: ConditionDefinition;
@@ -83,10 +96,21 @@ export interface WizardFieldDefinition {
   visibleWhen?: ConditionDefinition;
   /** UI/control-only fields can opt out of the generated contract data table. */
   printInDocument?: boolean;
+  /** Where the value belongs in the contract data model. */
+  dataScope?: "organization" | "counterparty" | "transaction" | "contract" | "user" | "system";
+  /** Optional profile/catalog/system source used to prefill the field. */
+  dataSource?: string;
+  /** Whether a prefilled value can be changed by the customer. */
+  editable?: boolean;
+  /** Mapping key used by the document renderer. */
+  documentMapping?: string;
+  /** Convert number/money output to Arabic words when the clause supports it. */
+  numberToWords?: boolean;
   /** For blank manual annexes, print an unticked box beside a free-text line. */
   manualCheckbox?: boolean;
   options?: FieldOptionDefinition[];
   validation?: FieldValidationDefinition;
+  attachmentRules?: AttachmentRulesDefinition;
   columns?: RepeaterColumnDefinition[];
   minRows?: number;
   /** Number of blank rows to print for a manual-fill annex repeater. */
@@ -115,6 +139,35 @@ export interface ContractVariantDefinition {
   requiredClauseKeys: string[];
   allowedOptionalClauseKeys: string[];
   defaultFieldValues?: Record<string, ContractFieldValue>;
+  /** Customer-facing preparation page configuration for this contract variant. */
+  readiness?: ReadinessDefinition;
+}
+
+export interface ReadinessItemDefinition {
+  key: string;
+  labelAr: string;
+  description?: string;
+  type?: "requirement" | "field" | "document";
+  fieldKey?: string;
+  required?: boolean;
+  visibleWhen?: ConditionDefinition;
+  helpText?: string;
+  attachmentRules?: AttachmentRulesDefinition;
+}
+
+export interface ReadinessSectionDefinition {
+  key: string;
+  titleAr: string;
+  description?: string;
+  required?: boolean;
+  visibleWhen?: ConditionDefinition;
+  items: ReadinessItemDefinition[];
+}
+
+export interface ReadinessDefinition {
+  titleAr?: string;
+  description?: string;
+  sections: ReadinessSectionDefinition[];
 }
 
 export interface OptionalClauseDefinition {
@@ -138,6 +191,8 @@ export interface LegalClauseDefinition {
   key: string;
   titleAr: string;
   bodyAr: string;
+  /** Customer-facing explanation shown beside the clause/help icon; never printed in the contract. */
+  guidance?: string;
   variables?: string[];
   enabled?: boolean;
   visibleWhen?: ConditionDefinition;

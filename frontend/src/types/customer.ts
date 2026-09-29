@@ -1,3 +1,5 @@
+import type { ContractTemplateDefinition } from "@zdraft/template-engine";
+
 export interface AuthUser {
   id: number;
   publicId: string;
@@ -50,6 +52,8 @@ export interface ContractDetails {
   version_number?: number;
   current_version_id?: number;
   template_version?: number;
+  /** The immutable template definition captured by this contract version. */
+  template_definition?: ContractTemplateDefinition;
   current_step_key?: string;
   attachment_refs_json?: Record<string, string[]>;
   field_values_json: Record<string, string | number | boolean | null>;

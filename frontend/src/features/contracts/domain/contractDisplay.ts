@@ -3,6 +3,7 @@ import type {
   FieldOptionDefinition,
   WizardFieldDefinition,
 } from "./contractTemplate.types";
+import { numberToArabicWordsBare, numberToEgyptianPoundsWords } from "@zdraft/template-engine";
 
 const fallbackValueLabels: Record<string, string> = {
   individual: "فرد",
@@ -141,6 +142,14 @@ export function formatWizardFieldValue(
       : undefined;
     const otherValue = !isEmpty(directOther) ? directOther : payerOther;
     if (!isEmpty(otherValue)) return String(otherValue);
+  }
+  if (field.numberToWords && !Array.isArray(value) && !isEmpty(value)) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric >= 0) {
+      return field.type === "money"
+        ? numberToEgyptianPoundsWords(numeric)
+        : numberToArabicWordsBare(numeric) ?? String(value);
+    }
   }
   return formatContractFieldValue(field.key, value, field.options ?? [], field.type);
 }

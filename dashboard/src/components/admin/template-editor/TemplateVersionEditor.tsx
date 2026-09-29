@@ -38,6 +38,7 @@ import { dashboardRequest } from "@/lib/apiClient";
 import { hasBackendPermission } from "@/lib/adminAccess";
 import { PageError, PageLoading, StatusBadge } from "@/components/admin/PageFeedback";
 import { useAdminConfirm } from "@/components/admin/AdminDialog";
+import ReadinessEditor from "@/components/admin/template-editor/ReadinessEditor";
 
 type Version = {
   id: number;
@@ -61,11 +62,13 @@ type ModalState =
   | { kind: "variant"; value?: ContractVariantDefinition }
   | { kind: "step"; variantKey: string; value?: WizardStepDefinition }
   | { kind: "field"; variantKey: string; stepKey: string; value?: WizardFieldDefinition }
+  | { kind: "fieldHelp"; variantKey: string; stepKey: string; value: WizardFieldDefinition }
   | { kind: "clause"; value?: LegalClauseDefinition }
+  | { kind: "clauseGuidance"; value: LegalClauseDefinition }
   | { kind: "optional"; value?: OptionalClauseDefinition }
   | null;
 
-type TabKey = "structure" | "clauses" | "optional" | "preview" | "validation";
+type TabKey = "structure" | "readiness" | "clauses" | "optional" | "preview" | "validation";
 
 const fieldTypeLabels: Record<WizardFieldDefinition["type"], string> = {
   text: "نص قصير",
@@ -214,8 +217,8 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
-  const [canEdit, setCanEdit] = useState(false);
-  const [canPublish, setCanPublish] = useState(false);
+  const [canEdit] = useState(() => hasBackendPermission("templates.edit", "templates.manage"));
+  const [canPublish] = useState(() => hasBackendPermission("templates.publish", "templates.manage"));
   const [clauseSearch, setClauseSearch] = useState("");
   const [previewVariant, setPreviewVariant] = useState("");
   const [previewOptionals, setPreviewOptionals] = useState<string[]>([]);
@@ -241,12 +244,13 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
   }, [versionId]);
 
   useEffect(() => {
-    setCanEdit(hasBackendPermission("templates.edit", "templates.manage"));
-    setCanPublish(hasBackendPermission("templates.publish", "templates.manage"));
+    // Load remote editor state once the version id is available.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
   const readOnly = version?.status !== "draft" || !canEdit;
+  const canEditGuidance = Boolean(canEdit && version?.status !== "archived");
   const allFieldKeys = useMemo(() => {
     if (!version) return [];
     return [...new Set(version.definition.variants.flatMap((variant) => variant.steps.flatMap((step) => step.fields.map((field) => field.key))))].sort();
@@ -281,6 +285,23 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
         effectiveFrom: form.get("effectiveFrom") || undefined,
       }),
     }, "تم حفظ بيانات المراجعة");
+  }
+
+  async function saveReadiness(variantKey: string, readiness: NonNullable<ContractVariantDefinition["readiness"]>) {
+    if (!version) return;
+    const definition: ContractTemplateDefinition = {
+      ...version.definition,
+      variants: version.definition.variants.map((variant) => variant.key === variantKey ? { ...variant, readiness } : variant),
+    };
+    await mutate(`/api/v1/admin/templates/versions/${version.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        definition,
+        changeSummary: version.changeSummary,
+        legalReference: version.legalReference,
+        effectiveFrom: version.effectiveFrom || undefined,
+      }),
+    }, "تم حفظ صفحة أنت جاهز؟");
   }
 
   async function submitForReview() {
@@ -360,6 +381,15 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
         placeholder: optionalText(form.get("placeholder")),
         helpText: optionalText(form.get("helpText")),
         required: form.get("required") === "on",
+        ...(form.get("numberToWords") === "on" ? { numberToWords: true } : {}),
+        ...(type === "attachment" ? {
+          attachmentRules: {
+            acceptedTypes: splitCsv(form.get("acceptedTypes")),
+            ...(Number(form.get("maxFiles") || 0) > 0 ? { maxFiles: Number(form.get("maxFiles")) } : {}),
+            ...(Number(form.get("maxBytes") || 0) > 0 ? { maxBytes: Number(form.get("maxBytes")) } : {}),
+            ...(form.get("requireFrontBack") === "on" ? { requireFrontBack: true } : {}),
+          },
+        } : {}),
         ...(options.length ? { options } : {}),
         ...(type === "repeater" ? { columns: parseJson(form.get("columns"), value?.columns ?? [], "أعمدة الجدول"), minRows: Number(form.get("minRows") || 0) || undefined } : {}),
         validation: {
@@ -385,6 +415,16 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
     }
   }
 
+  async function submitFieldHelp(event: FormEvent<HTMLFormElement>, variantKey: string, stepKey: string, value: WizardFieldDefinition) {
+    event.preventDefault();
+    if (!version) return;
+    const form = new FormData(event.currentTarget);
+    await mutate(`/api/v1/admin/templates/versions/${version.id}/fields/${encodeURIComponent(value.key)}/help`, {
+      method: "PATCH",
+      body: JSON.stringify({ variantKey, stepKey, helpText: optionalText(form.get("helpText")) ?? null, helpRef: optionalText(form.get("helpRef")) ?? null }),
+    }, "تم تحديث مساعدة الحقل دون إنشاء Version جديدة");
+  }
+
   async function submitClause(event: FormEvent<HTMLFormElement>, value?: LegalClauseDefinition) {
     event.preventDefault();
     if (!version) return;
@@ -393,6 +433,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
       key: value?.key ?? String(form.get("key") || "").trim(),
       titleAr: String(form.get("titleAr") || "").trim(),
       bodyAr: String(form.get("bodyAr") || "").trim(),
+      guidance: optionalText(form.get("guidance")),
       enabled: form.get("enabled") === "on",
       variables: splitCsv(form.get("variables")),
       visibleWhen: buildCondition(form),
@@ -405,6 +446,16 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
       { method: value ? "PATCH" : "POST", body: JSON.stringify({ clause }) },
       value ? "تم تعديل البند" : "تمت إضافة البند",
     );
+  }
+
+  async function submitClauseGuidance(event: FormEvent<HTMLFormElement>, value: LegalClauseDefinition) {
+    event.preventDefault();
+    if (!version) return;
+    const form = new FormData(event.currentTarget);
+    await mutate(`/api/v1/admin/templates/versions/${version.id}/clauses/${encodeURIComponent(value.key)}/guidance`, {
+      method: "PATCH",
+      body: JSON.stringify({ guidance: optionalText(form.get("guidance")) ?? null }),
+    }, "تم تحديث الإرشاد دون إنشاء Version جديدة");
   }
 
   async function submitOptional(event: FormEvent<HTMLFormElement>, value?: OptionalClauseDefinition) {
@@ -462,6 +513,17 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
     }, "تم تغيير ترتيب الخطوة");
   }
 
+  async function moveClause(clause: LegalClauseDefinition, index: number, direction: -1 | 1) {
+    if (!version) return;
+    const clauses = version.definition.legalClauses ?? [];
+    const target = index + direction;
+    if (target < 0 || target >= clauses.length) return;
+    await mutate(`/api/v1/admin/templates/versions/${version.id}/clauses/${encodeURIComponent(clause.key)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ clause: { moveToIndex: target } }),
+    }, "تم تغيير ترتيب البند القانوني");
+  }
+
   async function generatePreview() {
     if (!version || !previewVariant) return;
     setBusy(true);
@@ -486,6 +548,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
   const filteredClauses = (version.definition.legalClauses ?? []).filter((clause) => `${clause.titleAr} ${clause.key} ${clause.bodyAr}`.toLowerCase().includes(clauseSearch.toLowerCase()));
   const tabs: Array<[TabKey, string, ReactNode]> = [
     ["structure", "الأنواع والأسئلة", <Layers3 className="h-4 w-4" key="i" />],
+    ["readiness", "صفحة أنت جاهز؟", <ClipboardCheck className="h-4 w-4" key="i" />],
     ["clauses", "البنود القانونية", <FilePlus2 className="h-4 w-4" key="i" />],
     ["optional", "الإضافات والملاحق", <Braces className="h-4 w-4" key="i" />],
     ["preview", "معاينة تجريبية", <Eye className="h-4 w-4" key="i" />],
@@ -598,7 +661,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
                           {step.fields.map((field) => (
                             <div key={field.key} className="flex flex-col gap-3 border-b border-slate-100 p-3 last:border-b-0 md:flex-row md:items-center md:justify-between">
                               <div className="min-w-0"><div className="text-sm font-black text-slate-800">{field.labelAr}</div><div className="mt-1 break-all font-mono text-[9px] text-slate-400">{field.key}</div>{field.helpText && <p className="mt-1 text-[11px] text-slate-500">{field.helpText}</p>}</div>
-                              <div className="flex flex-wrap items-center gap-2"><FieldBadge field={field} />{!readOnly && <><button type="button" onClick={() => setModal({ kind: "field", variantKey: variant.key, stepKey: step.key, value: field })} className="rounded-lg border border-slate-200 p-2 text-slate-600"><Pencil className="h-3.5 w-3.5" /></button><button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/fields/${encodeURIComponent(field.key)}`, "تم حذف الحقل", `حذف السؤال «${field.labelAr}»؟`, { variantKey: variant.key, stepKey: step.key })} className="rounded-lg border border-red-200 p-2 text-red-700"><Trash2 className="h-3.5 w-3.5" /></button></>}</div>
+                              <div className="flex flex-wrap items-center gap-2"><FieldBadge field={field} />{canEditGuidance && <button type="button" onClick={() => setModal({ kind: "fieldHelp", variantKey: variant.key, stepKey: step.key, value: field })} className="rounded-lg border border-amber-200 px-2.5 py-1.5 text-[10px] font-black text-amber-800">مساعدة (!)</button>}{!readOnly && <><button type="button" onClick={() => setModal({ kind: "field", variantKey: variant.key, stepKey: step.key, value: field })} className="rounded-lg border border-slate-200 p-2 text-slate-600"><Pencil className="h-3.5 w-3.5" /></button><button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/fields/${encodeURIComponent(field.key)}`, "تم حذف الحقل", `حذف السؤال «${field.labelAr}»؟`, { variantKey: variant.key, stepKey: step.key })} className="rounded-lg border border-red-200 p-2 text-red-700"><Trash2 className="h-3.5 w-3.5" /></button></>}</div>
                             </div>
                           ))}
                           {!step.fields.length && <div className="p-4 text-center text-xs font-bold text-slate-400">لا توجد أسئلة في هذه الخطوة.</div>}
@@ -615,11 +678,20 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
         </section>
       )}
 
+      {activeTab === "readiness" && (
+        <ReadinessEditor
+          variants={version.definition.variants}
+          readOnly={readOnly}
+          busy={busy}
+          onSave={(variantKey, readiness) => void saveReadiness(variantKey, readiness)}
+        />
+      )}
+
       {activeTab === "clauses" && (
         <section className="space-y-4">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h2 className="text-xl font-black text-[#00102e]">البنود القانونية</h2><p className="mt-1 text-xs font-semibold text-slate-500">النص المنشور لا يتغير بأثر رجعي. استخدم المتغيرات بالشكل {"{{field_key}}"}.</p></div>{!readOnly && <button type="button" onClick={() => setModal({ kind: "clause" })} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-3 text-xs font-black text-white"><Plus className="h-4 w-4" />إضافة بند</button>}</div>
           <input value={clauseSearch} onChange={(event: ChangeEvent<HTMLInputElement>) => setClauseSearch(event.target.value)} placeholder="ابحث باسم المادة أو مفتاحها أو جزء من النص" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#986410]" />
-          <div className="space-y-3">{filteredClauses.map((clause) => <article key={clause.key} className={`rounded-2xl border bg-white p-5 ${clause.enabled === false ? "border-slate-200 opacity-60" : "border-slate-200"}`}><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-black text-[#00102e]">{clause.titleAr}</h3><span className={`rounded-full px-2 py-1 text-[10px] font-black ${clause.enabled === false ? "bg-slate-100 text-slate-600" : "bg-emerald-100 text-emerald-700"}`}>{clause.enabled === false ? "معطّل" : "مفعّل"}</span></div><div className="mt-1 font-mono text-[9px] text-slate-400">{clause.key}</div>{clause.sourceDocumentName && <div className="mt-1 text-[10px] font-bold text-slate-500">المصدر: {clause.sourceDocumentName}{clause.sourcePageStart ? ` — ص ${clause.sourcePageStart}${clause.sourcePageEnd && clause.sourcePageEnd !== clause.sourcePageStart ? ` إلى ${clause.sourcePageEnd}` : ""}` : ""}</div>}</div>{!readOnly && <div className="flex gap-2"><button type="button" onClick={() => setModal({ kind: "clause", value: clause })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-[11px] font-black"><Pencil className="h-3.5 w-3.5" />تعديل</button>{clause.enabled !== false && <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/clauses/${encodeURIComponent(clause.key)}`, "تم تعطيل البند", `تعطيل البند «${clause.titleAr}» في هذه المسودة؟`)} className="rounded-lg border border-red-200 px-3 py-2 text-[11px] font-black text-red-700">تعطيل</button>}</div>}</div><p className="mt-4 whitespace-pre-wrap text-sm leading-8 text-slate-700">{clause.bodyAr}</p></article>)}{!filteredClauses.length && <div className="rounded-2xl bg-slate-50 p-8 text-center text-xs font-bold text-slate-500">لا توجد بنود مطابقة.</div>}</div>
+          <div className="space-y-3">{filteredClauses.map((clause) => { const clauseIndex = (version.definition.legalClauses ?? []).findIndex((item) => item.key === clause.key); return <article key={clause.key} className={`rounded-2xl border bg-white p-5 ${clause.enabled === false ? "border-slate-200 opacity-60" : "border-slate-200"}`}><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-black text-[#00102e]">{clause.titleAr}</h3><span className={`rounded-full px-2 py-1 text-[10px] font-black ${clause.enabled === false ? "bg-slate-100 text-slate-600" : "bg-emerald-100 text-emerald-700"}`}>{clause.enabled === false ? "معطّل" : "مفعّل"}</span></div><div className="mt-1 font-mono text-[9px] text-slate-400">{clause.key}</div>{clause.sourceDocumentName && <div className="mt-1 text-[10px] font-bold text-slate-500">المصدر: {clause.sourceDocumentName}{clause.sourcePageStart ? ` — ص ${clause.sourcePageStart}${clause.sourcePageEnd && clause.sourcePageEnd !== clause.sourcePageStart ? ` إلى ${clause.sourcePageEnd}` : ""}` : ""}</div>}</div>{!readOnly && <div className="flex flex-wrap gap-2"><button type="button" disabled={clauseIndex <= 0 || busy} onClick={() => void moveClause(clause, clauseIndex, -1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأعلى"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" disabled={clauseIndex < 0 || clauseIndex >= (version.definition.legalClauses?.length ?? 1) - 1 || busy} onClick={() => void moveClause(clause, clauseIndex, 1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأسفل"><ArrowDown className="h-3.5 w-3.5" /></button><button type="button" onClick={() => setModal({ kind: "clause", value: clause })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-[11px] font-black"><Pencil className="h-3.5 w-3.5" />تعديل</button>{clause.enabled !== false && <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/clauses/${encodeURIComponent(clause.key)}`, "تم تعطيل البند", `تعطيل البند «${clause.titleAr}» في هذه المسودة؟`)} className="rounded-lg border border-red-200 px-3 py-2 text-[11px] font-black text-red-700">تعطيل</button>}</div>}</div>{clause.guidance && <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-900"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">!</span><span>{clause.guidance}</span></div>}{canEditGuidance && <button type="button" onClick={() => setModal({ kind: "clauseGuidance", value: clause })} className="mt-3 rounded-lg border border-amber-200 px-3 py-2 text-[11px] font-black text-amber-800">{clause.guidance ? "تعديل الإرشاد" : "إضافة إرشاد (!)"}</button>}<p className="mt-4 whitespace-pre-wrap text-sm leading-8 text-slate-700">{clause.bodyAr}</p></article> })}{!filteredClauses.length && <div className="rounded-2xl bg-slate-50 p-8 text-center text-xs font-bold text-slate-500">لا توجد بنود مطابقة.</div>}</div>
         </section>
       )}
 
@@ -667,11 +739,14 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
 
       {modal?.kind === "step" && <ModalShell title={modal.value ? "تعديل الخطوة" : "إضافة خطوة"} onClose={() => setModal(null)}><form onSubmit={(event: FormEvent<HTMLFormElement>) => void submitStep(event, modal.variantKey, modal.value)} className="space-y-4 p-6"><div className="grid gap-4 sm:grid-cols-2"><label className="text-xs font-black">مفتاح الخطوة<input name="key" required disabled={Boolean(modal.value)} defaultValue={modal.value?.key} pattern="[a-z0-9_.-]+" className="mt-2 w-full rounded-xl border p-3 font-mono font-normal disabled:bg-slate-100" /></label><label className="text-xs font-black">عنوان الخطوة<input name="titleAr" required defaultValue={modal.value?.titleAr} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="text-xs font-black">نطاق المواد<input name="articleRange" defaultValue={modal.value?.articleRange} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="text-xs font-black">مفتاح البند المصدر<input name="sourceClauseKey" defaultValue={modal.value?.sourceClauseKey} className="mt-2 w-full rounded-xl border p-3 font-mono font-normal" /></label></div><label className="block text-xs font-black">وصف الخطوة<textarea name="description" rows={3} defaultValue={modal.value?.description} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><ConditionFields value={modal.value?.visibleWhen} fieldKeys={allFieldKeys} /><FormActions busy={busy} onCancel={() => setModal(null)} /></form></ModalShell>}
 
-      {modal?.kind === "field" && <ModalShell title={modal.value ? "تعديل السؤال" : "إضافة سؤال"} onClose={() => setModal(null)}><form onSubmit={(event: FormEvent<HTMLFormElement>) => void submitField(event, modal.variantKey, modal.stepKey, modal.value)} className="space-y-5 p-6"><div className="grid gap-4 sm:grid-cols-2"><label className="text-xs font-black">مفتاح الحقل<input name="key" required disabled={Boolean(modal.value)} defaultValue={modal.value?.key} pattern="[a-z0-9_.-]+" className="mt-2 w-full rounded-xl border p-3 font-mono font-normal disabled:bg-slate-100" /></label><label className="text-xs font-black">اسم السؤال<input name="labelAr" required defaultValue={modal.value?.labelAr} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="text-xs font-black">نوع الحقل<select name="type" defaultValue={modal.value?.type ?? "text"} className="mt-2 w-full rounded-xl border p-3 font-normal">{Object.entries(fieldTypeLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label className="flex items-end gap-2 rounded-xl border p-3 text-xs font-black"><input name="required" type="checkbox" defaultChecked={modal.value?.required} />حقل إجباري</label><label className="text-xs font-black">نص داخل الحقل<input name="placeholder" defaultValue={modal.value?.placeholder} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="text-xs font-black">مساعدة للمستخدم<input name="helpText" defaultValue={modal.value?.helpText} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label></div><label className="block text-xs font-black">خيارات القائمة أو الاختيار — كل خيار في سطر بالشكل value|الاسم<textarea name="options" rows={5} dir="ltr" defaultValue={optionsText(modal.value)} className="mt-2 w-full rounded-xl border p-3 font-mono text-xs font-normal" /></label><div className="rounded-2xl bg-slate-50 p-4"><div className="mb-3 text-xs font-black text-slate-700">قواعد التحقق</div><div className="grid gap-3 sm:grid-cols-3"><label className="text-[11px] font-bold">أقل قيمة<input name="min" type="number" defaultValue={modal.value?.validation?.min} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="text-[11px] font-bold">أكبر قيمة<input name="max" type="number" defaultValue={modal.value?.validation?.max} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="text-[11px] font-bold">عدد الأرقام المتوقع<input name="expectedDigits" type="number" defaultValue={modal.value?.validation?.expectedDigits} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="text-[11px] font-bold">أقل طول<input name="minLength" type="number" defaultValue={modal.value?.validation?.minLength} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="text-[11px] font-bold">أكبر طول<input name="maxLength" type="number" defaultValue={modal.value?.validation?.maxLength} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="text-[11px] font-bold">نمط التحقق<input name="pattern" dir="ltr" defaultValue={modal.value?.validation?.pattern} className="mt-1 w-full rounded-lg border p-2 font-mono font-normal" /></label></div></div><ConditionFields value={modal.value?.visibleWhen} fieldKeys={allFieldKeys} /><div className="rounded-2xl border border-slate-200 p-4"><div className="text-xs font-black">إعداد الجدول المتكرر فقط</div><label className="mt-3 block text-[11px] font-bold">الحد الأدنى للصفوف<input name="minRows" type="number" min="0" defaultValue={modal.value?.minRows} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="mt-3 block text-[11px] font-bold">تعريف الأعمدة بصيغة JSON<textarea name="columns" rows={6} dir="ltr" defaultValue={JSON.stringify(modal.value?.columns ?? [], null, 2)} className="mt-1 w-full rounded-lg border p-3 font-mono text-xs font-normal" /></label></div><FormActions busy={busy} onCancel={() => setModal(null)} /></form></ModalShell>}
+      {modal?.kind === "field" && <ModalShell title={modal.value ? "تعديل السؤال" : "إضافة سؤال"} onClose={() => setModal(null)}><form onSubmit={(event: FormEvent<HTMLFormElement>) => void submitField(event, modal.variantKey, modal.stepKey, modal.value)} className="space-y-5 p-6"><div className="grid gap-4 sm:grid-cols-2"><label className="text-xs font-black">مفتاح الحقل<input name="key" required disabled={Boolean(modal.value)} defaultValue={modal.value?.key} pattern="[a-z0-9_.-]+" className="mt-2 w-full rounded-xl border p-3 font-mono font-normal disabled:bg-slate-100" /></label><label className="text-xs font-black">اسم السؤال<input name="labelAr" required defaultValue={modal.value?.labelAr} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="text-xs font-black">نوع الحقل<select name="type" defaultValue={modal.value?.type ?? "text"} className="mt-2 w-full rounded-xl border p-3 font-normal">{Object.entries(fieldTypeLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label className="flex items-end gap-2 rounded-xl border p-3 text-xs font-black"><input name="required" type="checkbox" defaultChecked={modal.value?.required} />حقل إجباري</label><label className="text-xs font-black">نص داخل الحقل<input name="placeholder" defaultValue={modal.value?.placeholder} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="text-xs font-black">مساعدة للمستخدم<input name="helpText" defaultValue={modal.value?.helpText} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="flex items-end gap-2 rounded-xl border p-3 text-xs font-black"><input name="numberToWords" type="checkbox" defaultChecked={modal.value?.numberToWords} />تحويل الرقم إلى كتابة عربية</label></div><label className="block text-xs font-black">خيارات القائمة أو الاختيار — كل خيار في سطر بالشكل value|الاسم<textarea name="options" rows={5} dir="ltr" defaultValue={optionsText(modal.value)} className="mt-2 w-full rounded-xl border p-3 font-mono text-xs font-normal" /></label><div className="rounded-2xl border border-sky-200 bg-sky-50 p-4"><div className="mb-3 text-xs font-black text-sky-900">قيود رفع الملفات</div><div className="grid gap-3 sm:grid-cols-2"><label className="text-[11px] font-bold">الأنواع المسموحة<input name="acceptedTypes" defaultValue={modal.value?.attachmentRules?.acceptedTypes?.join(", ")} placeholder="image/*, application/pdf" className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="text-[11px] font-bold">أقصى عدد ملفات<input name="maxFiles" type="number" min="1" defaultValue={modal.value?.attachmentRules?.maxFiles} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="text-[11px] font-bold">أقصى حجم للملف بالبايت<input name="maxBytes" type="number" min="1" defaultValue={modal.value?.attachmentRules?.maxBytes} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="flex items-end gap-2 rounded-lg border border-sky-200 bg-white p-2 text-[11px] font-bold"><input name="requireFrontBack" type="checkbox" defaultChecked={modal.value?.attachmentRules?.requireFrontBack} />يشترط وجه وظهر للمستند</label></div><p className="mt-2 text-[10px] font-semibold text-sky-800">تُطبق هذه الإعدادات عندما يكون نوع الحقل «رفع ملف».</p></div><div className="rounded-2xl bg-slate-50 p-4"><div className="mb-3 text-xs font-black text-slate-700">قواعد التحقق</div><div className="grid gap-3 sm:grid-cols-3"><label className="text-[11px] font-bold">أقل قيمة<input name="min" type="number" defaultValue={modal.value?.validation?.min} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="text-[11px] font-bold">أكبر قيمة<input name="max" type="number" defaultValue={modal.value?.validation?.max} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="text-[11px] font-bold">عدد الأرقام المتوقع<input name="expectedDigits" type="number" defaultValue={modal.value?.validation?.expectedDigits} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="text-[11px] font-bold">أقل طول<input name="minLength" type="number" defaultValue={modal.value?.validation?.minLength} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="text-[11px] font-bold">أكبر طول<input name="maxLength" type="number" defaultValue={modal.value?.validation?.maxLength} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="text-[11px] font-bold">نمط التحقق<input name="pattern" dir="ltr" defaultValue={modal.value?.validation?.pattern} className="mt-1 w-full rounded-lg border p-2 font-mono font-normal" /></label></div></div><ConditionFields value={modal.value?.visibleWhen} fieldKeys={allFieldKeys} /><div className="rounded-2xl border border-slate-200 p-4"><div className="text-xs font-black">إعداد الجدول المتكرر فقط</div><label className="mt-3 block text-[11px] font-bold">الحد الأدنى للصفوف<input name="minRows" type="number" min="0" defaultValue={modal.value?.minRows} className="mt-1 w-full rounded-lg border p-2 font-normal" /></label><label className="mt-3 block text-[11px] font-bold">تعريف الأعمدة بصيغة JSON<textarea name="columns" rows={6} dir="ltr" defaultValue={JSON.stringify(modal.value?.columns ?? [], null, 2)} className="mt-1 w-full rounded-lg border p-3 font-mono text-xs font-normal" /></label></div><FormActions busy={busy} onCancel={() => setModal(null)} /></form></ModalShell>}
 
-      {modal?.kind === "clause" && <ModalShell title={modal.value ? "تعديل البند القانوني" : "إضافة بند قانوني"} onClose={() => setModal(null)}><form onSubmit={(event: FormEvent<HTMLFormElement>) => void submitClause(event, modal.value)} className="space-y-4 p-6"><div className="grid gap-4 sm:grid-cols-2"><label className="text-xs font-black">مفتاح البند<input name="key" required disabled={Boolean(modal.value)} defaultValue={modal.value?.key} pattern="[a-z0-9_.-]+" className="mt-2 w-full rounded-xl border p-3 font-mono font-normal disabled:bg-slate-100" /></label><label className="text-xs font-black">عنوان المادة<input name="titleAr" required defaultValue={modal.value?.titleAr} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label></div><label className="block text-xs font-black">النص القانوني<textarea name="bodyAr" required rows={14} defaultValue={modal.value?.bodyAr} className="mt-2 w-full rounded-xl border p-4 text-sm leading-8 font-normal" /></label><label className="flex items-center gap-2 text-xs font-black"><input name="enabled" type="checkbox" defaultChecked={modal.value?.enabled !== false} />البند مفعّل في هذا الإصدار</label><label className="block text-xs font-black">المتغيرات — يفصل بينها فاصلة<input name="variables" dir="ltr" defaultValue={modal.value?.variables?.join(", ")} className="mt-2 w-full rounded-xl border p-3 font-mono font-normal" /></label><div className="grid gap-4 sm:grid-cols-3"><label className="text-xs font-black">ملف المصدر<input name="sourceDocumentName" defaultValue={modal.value?.sourceDocumentName} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="text-xs font-black">من صفحة<input name="sourcePageStart" type="number" min="1" defaultValue={modal.value?.sourcePageStart} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="text-xs font-black">إلى صفحة<input name="sourcePageEnd" type="number" min="1" defaultValue={modal.value?.sourcePageEnd} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label></div><ConditionFields value={modal.value?.visibleWhen} fieldKeys={allFieldKeys} /><FormActions busy={busy} onCancel={() => setModal(null)} /></form></ModalShell>}
+      {modal?.kind === "clause" && <ModalShell title={modal.value ? "تعديل البند القانوني" : "إضافة بند قانوني"} onClose={() => setModal(null)}><form onSubmit={(event: FormEvent<HTMLFormElement>) => void submitClause(event, modal.value)} className="space-y-4 p-6"><div className="grid gap-4 sm:grid-cols-2"><label className="text-xs font-black">مفتاح البند<input name="key" required disabled={Boolean(modal.value)} defaultValue={modal.value?.key} pattern="[a-z0-9_.-]+" className="mt-2 w-full rounded-xl border p-3 font-mono font-normal disabled:bg-slate-100" /></label><label className="text-xs font-black">عنوان المادة<input name="titleAr" required defaultValue={modal.value?.titleAr} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label></div><label className="block text-xs font-black">النص القانوني<textarea name="bodyAr" required rows={14} defaultValue={modal.value?.bodyAr} className="mt-2 w-full rounded-xl border p-4 text-sm leading-8 font-normal" /></label><label className="block text-xs font-black">إرشاد يظهر للمستخدم بجانب علامة (!) <textarea name="guidance" rows={3} defaultValue={modal.value?.guidance} className="mt-2 w-full rounded-xl border p-3 text-sm leading-6 font-normal" placeholder="اشرح للمستخدم ما المقصود بهذا البند دون أن يظهر الشرح داخل العقد" /></label><label className="flex items-center gap-2 text-xs font-black"><input name="enabled" type="checkbox" defaultChecked={modal.value?.enabled !== false} />البند مفعّل في هذا الإصدار</label><label className="block text-xs font-black">المتغيرات — يفصل بينها فاصلة<input name="variables" dir="ltr" defaultValue={modal.value?.variables?.join(", ")} className="mt-2 w-full rounded-xl border p-3 font-mono font-normal" /></label><div className="grid gap-4 sm:grid-cols-3"><label className="text-xs font-black">ملف المصدر<input name="sourceDocumentName" defaultValue={modal.value?.sourceDocumentName} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="text-xs font-black">من صفحة<input name="sourcePageStart" type="number" min="1" defaultValue={modal.value?.sourcePageStart} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="text-xs font-black">إلى صفحة<input name="sourcePageEnd" type="number" min="1" defaultValue={modal.value?.sourcePageEnd} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label></div><ConditionFields value={modal.value?.visibleWhen} fieldKeys={allFieldKeys} /><FormActions busy={busy} onCancel={() => setModal(null)} /></form></ModalShell>}
+
+      {modal?.kind === "clauseGuidance" && <ModalShell title="تعديل إرشاد البند بدون إصدار Version جديد" onClose={() => setModal(null)}><form onSubmit={(event: FormEvent<HTMLFormElement>) => void submitClauseGuidance(event, modal.value)} className="space-y-4 p-6"><p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-6 text-amber-900">هذا التعديل يغيّر الشرح الظاهر للمستخدم فقط، ولا يغيّر النص القانوني أو العقود الصادرة.</p><label className="block text-xs font-black">الإرشاد بجانب علامة (!) <textarea name="guidance" rows={5} defaultValue={modal.value.guidance} className="mt-2 w-full rounded-xl border p-3 text-sm leading-6 font-normal" placeholder="اكتب شرحًا مبسطًا للمستخدم" /></label><FormActions busy={busy} onCancel={() => setModal(null)} /></form></ModalShell>}
 
       {modal?.kind === "optional" && <ModalShell title={modal.value ? "تعديل الإضافة أو الملحق" : "إضافة ملحق أو خيار"} onClose={() => setModal(null)}><form onSubmit={(event: FormEvent<HTMLFormElement>) => void submitOptional(event, modal.value)} className="space-y-4 p-6"><div className="grid gap-4 sm:grid-cols-2"><label className="text-xs font-black">مفتاح الإضافة<input name="key" required disabled={Boolean(modal.value)} defaultValue={modal.value?.key} pattern="[a-z0-9_.-]+" className="mt-2 w-full rounded-xl border p-3 font-mono font-normal disabled:bg-slate-100" /></label><label className="text-xs font-black">الاسم الظاهر<input name="nameAr" required defaultValue={modal.value?.nameAr} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="text-xs font-black">طريقة الإصدار<select name="outputMode" defaultValue={modal.value?.outputMode ?? "inline"} className="mt-2 w-full rounded-xl border p-3 font-normal"><option value="inline">داخل العقد</option><option value="separate_annex">مستند مستقل</option></select></label><label className="text-xs font-black">نقطة الإدراج قبل خطوة<input name="insertBeforeStepKey" defaultValue={modal.value?.insertBeforeStepKey} className="mt-2 w-full rounded-xl border p-3 font-mono font-normal" /></label><label className="text-xs font-black">عنوان المستند<input name="documentTitleAr" defaultValue={modal.value?.documentTitleAr} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><label className="text-xs font-black">ملف المصدر<input name="sourceDocumentName" defaultValue={modal.value?.sourceDocumentName} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label></div><label className="block text-xs font-black">الوصف<textarea name="description" rows={3} defaultValue={modal.value?.description} className="mt-2 w-full rounded-xl border p-3 font-normal" /></label><div><div className="text-xs font-black">أنواع العقد التي تقبل الإضافة</div><div className="mt-2 grid gap-2 sm:grid-cols-2">{version.definition.variants.map((variant) => <label key={variant.key} className="flex items-center gap-2 rounded-xl border p-3 text-xs font-bold"><input type="checkbox" name="applicableVariantKeys" value={variant.key} defaultChecked={modal.value?.applicableVariantKeys.includes(variant.key)} />{variant.nameAr}</label>)}</div></div><label className="block text-xs font-black">مفاتيح البنود القانونية<input name="legalClauseKeys" defaultValue={modal.value?.legalClauseKeys.join(", ")} className="mt-2 w-full rounded-xl border p-3 font-mono text-xs font-normal" /></label><div className="rounded-2xl border border-slate-200 p-4"><div className="text-xs font-black">إعداد متقدم للخطوات والحقول داخل الإضافة</div><p className="mt-1 text-[11px] leading-5 text-slate-500">يمكن استخدامه للملاحق المعقدة. احتفظ بالمفاتيح الإنجليزية ولا تغيّرها بعد نشر الإصدار.</p><textarea name="insertedSteps" rows={10} dir="ltr" defaultValue={JSON.stringify(modal.value?.insertedSteps ?? [], null, 2)} className="mt-3 w-full rounded-xl border p-3 font-mono text-xs font-normal" /></div><label className="block text-xs font-black">القيم الافتراضية — JSON<textarea name="defaultFieldValues" rows={5} dir="ltr" defaultValue={JSON.stringify(modal.value?.defaultFieldValues ?? {}, null, 2)} className="mt-2 w-full rounded-xl border p-3 font-mono text-xs font-normal" /></label><FormActions busy={busy} onCancel={() => setModal(null)} /></form></ModalShell>}
+      {modal?.kind === "fieldHelp" && <ModalShell title="تعديل مساعدة الحقل بدون إصدار Version جديد" onClose={() => setModal(null)}><form onSubmit={(event: FormEvent<HTMLFormElement>) => void submitFieldHelp(event, modal.variantKey, modal.stepKey, modal.value)} className="space-y-4 p-6"><p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-6 text-amber-900">هذا التعديل يغيّر الإرشاد الظاهر بجانب السؤال فقط، ولا يغيّر الحقل أو العقود الصادرة.</p><label className="block text-xs font-black">نص المساعدة / علامة (!) <textarea name="helpText" rows={5} defaultValue={modal.value.helpText} className="mt-2 w-full rounded-xl border p-3 text-sm leading-6 font-normal" placeholder="اكتب شرحًا مبسطًا لما يجب إدخاله" /></label><label className="block text-xs font-black">مرجع المساعدة الاختياري<input name="helpRef" defaultValue={modal.value.helpRef} className="mt-2 w-full rounded-xl border p-3 font-mono text-xs font-normal" /></label><FormActions busy={busy} onCancel={() => setModal(null)} /></form></ModalShell>}
     </div>
   );
 }

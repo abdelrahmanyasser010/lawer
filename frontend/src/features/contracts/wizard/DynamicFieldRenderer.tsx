@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useRef } from "react";
-import { AlertCircle, Calendar, Check, HelpCircle, Trash2 } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { AlertCircle, Calendar, Check, HelpCircle, Trash2, Upload } from "lucide-react";
 import type { ChangeEvent } from "react";
-import { evaluateCondition, numberToEgyptianPoundsWords } from "@zdraft/template-engine";
+import { evaluateCondition, numberToArabicWordsBare, numberToEgyptianPoundsWords } from "@zdraft/template-engine";
 import type {
   ContractFieldValue,
   PrimitiveFieldValue,
@@ -342,6 +342,14 @@ function RepeaterRenderer({
   );
 }
 
+function matchesAcceptedType(file: File, token: string): boolean {
+  const normalized = token.trim().toLowerCase();
+  if (!normalized) return true;
+  if (normalized.endsWith("/*")) return file.type.toLowerCase().startsWith(normalized.slice(0, -1));
+  if (normalized.startsWith(".")) return file.name.toLowerCase().endsWith(normalized);
+  return file.type.toLowerCase() === normalized;
+}
+
 export default function DynamicFieldRenderer({
   field,
   value,
@@ -350,8 +358,11 @@ export default function DynamicFieldRenderer({
   touched,
   onChange,
   onFocus,
+  onFilesSelected,
+  uploading,
 }: DynamicFieldRendererProps) {
   const hasError = Boolean(errorMessage);
+  const [attachmentError, setAttachmentError] = useState<string>("");
 
   if (field.type === "repeater") {
     const listValue = Array.isArray(value) ? (value as RepeaterRowValue[]) : [];
@@ -364,6 +375,48 @@ export default function DynamicFieldRenderer({
             <span>{errorMessage}</span>
           </p>
         )}
+      </div>
+    );
+  }
+
+  if (field.type === "attachment") {
+    const attachmentLabel = resolveWizardFieldLabel(field, allFormValues);
+    const rules = field.attachmentRules ?? {};
+    const acceptedTypes = rules.acceptedTypes?.length ? rules.acceptedTypes : ["image/*", "application/pdf"];
+    const maxFiles = rules.maxFiles ?? 30;
+    const maxBytes = rules.maxBytes ?? 20 * 1024 * 1024;
+    return (
+      <div className="space-y-1.5" onFocusCapture={onFocus}>
+        <label className={`block text-xs font-bold ${hasError || attachmentError ? "text-rose-700" : "text-[#00102e]"}`}>
+          {attachmentLabel} {field.required && <span className="text-[#c66b22]">*</span>}
+        </label>
+        <label className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border-2 border-dashed p-4 transition ${hasError || attachmentError ? "border-rose-300 bg-rose-50/30" : "border-slate-300 bg-slate-50 hover:border-[#986410]"}`}>
+          <span className="flex items-center gap-2 text-xs font-bold text-slate-600"><Upload className="h-4 w-4 text-[#986410]" />{uploading ? "جاري رفع الملفات..." : "اختر الملفات"}</span>
+          <span className="text-[10px] font-semibold text-slate-400">حتى {maxFiles} ملف · {acceptedTypes.join("، ")}</span>
+          <input
+            type="file"
+            accept={acceptedTypes.join(",")}
+            multiple={maxFiles !== 1}
+            disabled={uploading}
+            className="sr-only"
+            onChange={(event) => {
+              const incoming = Array.from(event.target.files ?? []);
+              const tooMany = incoming.length > maxFiles;
+              const invalidType = incoming.find((file) => !acceptedTypes.some((token) => matchesAcceptedType(file, token)));
+              const oversized = incoming.find((file) => file.size > maxBytes);
+              if (tooMany) setAttachmentError(`الحد الأقصى ${maxFiles} ملف`);
+              else if (invalidType) setAttachmentError(`نوع الملف غير مسموح: ${invalidType.name}`);
+              else if (oversized) setAttachmentError(`حجم الملف أكبر من الحد المسموح (${Math.round(maxBytes / 1024 / 1024)} ميجابايت)`);
+              else {
+                setAttachmentError("");
+                void onFilesSelected?.(incoming);
+              }
+              event.target.value = "";
+            }}
+          />
+        </label>
+        <p className="text-[10px] font-semibold text-slate-400">{field.helpText ?? "يمكنك رفع الصور أو ملفات PDF حسب المطلوب."}</p>
+        {(attachmentError || hasError) && <p className="flex items-center gap-1.5 text-[11px] font-bold text-rose-600"><AlertCircle className="h-3.5 w-3.5" />{attachmentError || errorMessage}</p>}
       </div>
     );
   }
@@ -397,6 +450,9 @@ export default function DynamicFieldRenderer({
     labelAr: label,
     placeholder: placeholder || field.placeholder,
   };
+  const numberWords = field.numberToWords && (field.type === "number" || field.type === "money") && scalarValue(value) !== ""
+    ? (field.type === "money" ? numberToEgyptianPoundsWords(scalarValue(value)) : numberToArabicWordsBare(scalarValue(value)))
+    : undefined;
 
   return (
     <div className="space-y-1.5" onFocusCapture={onFocus}>
@@ -408,6 +464,7 @@ export default function DynamicFieldRenderer({
         </div>
       )}
       {renderScalarControl(effectiveField, scalarValue(value), (next) => onChange(next), hasError)}
+      {numberWords && <p className="text-[10px] font-bold text-[#986410]">بالكتابة: {numberWords}</p>}
       {hasError && (
         <p className="flex items-center gap-1.5 text-[11px] font-bold text-rose-600 animate-fadeIn">
           <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
