@@ -46,6 +46,7 @@ function MoneyFieldInput({
   max,
   placeholder,
   hasError,
+  disabled,
 }: {
   value: PrimitiveFieldValue;
   onChange: (value: PrimitiveFieldValue) => void;
@@ -53,6 +54,7 @@ function MoneyFieldInput({
   max?: string | number;
   placeholder?: string;
   hasError?: boolean;
+  disabled?: boolean;
 }) {
   const raw = String(value ?? "");
 
@@ -66,6 +68,7 @@ function MoneyFieldInput({
         min={min}
         max={max}
         step="0.01"
+        disabled={disabled}
         className={`${getInputClass(hasError)} pl-14`}
         dir="ltr"
       />
@@ -81,12 +84,14 @@ function DateFieldInput({
   min,
   max,
   hasError,
+  disabled,
 }: {
   value: string;
   onChange: (val: string) => void;
   min?: string | number;
   max?: string | number;
   hasError?: boolean;
+  disabled?: boolean;
 }) {
   const hiddenInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -95,6 +100,7 @@ function DateFieldInput({
     : value;
 
   const handleClick = () => {
+    if (disabled) return;
     const el = hiddenInputRef.current;
     if (!el) return;
     try {
@@ -110,11 +116,12 @@ function DateFieldInput({
   };
 
   return (
-    <div onClick={handleClick} className="relative flex items-center cursor-pointer">
+    <div onClick={handleClick} className={`relative flex items-center ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}>
       <input
         type="text"
         readOnly
         value={displayDate || ""}
+        disabled={disabled}
         placeholder="اختر التاريخ"
         className={`${getInputClass(hasError)} cursor-pointer pr-4 pl-10`}
       />
@@ -126,6 +133,7 @@ function DateFieldInput({
         onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
         min={min ? String(min) : undefined}
         max={max ? String(max) : undefined}
+        disabled={disabled}
         className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
         tabIndex={-1}
       />
@@ -139,12 +147,15 @@ function renderScalarControl(
   onChange: (value: PrimitiveFieldValue) => void,
   hasError?: boolean,
 ) {
+  const disabled = field.editable === false;
+
   if (field.type === "textarea") {
     return (
       <textarea
         value={String(value ?? "")}
         onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value)}
         placeholder={field.placeholder}
+        disabled={disabled}
         className={`${getInputClass(hasError)} min-h-24 resize-y`}
       />
     );
@@ -161,6 +172,7 @@ function renderScalarControl(
               type="button"
               aria-pressed={selected}
               onClick={() => onChange(option.value)}
+              disabled={disabled}
               className={`min-h-9 rounded-lg border px-2.5 py-1.5 text-right text-[11px] font-bold leading-5 transition ${
                 selected
                   ? "border-[#986410] bg-[#986410]/8 text-[#00102e] shadow-[inset_0_0_0_1px_rgba(152,100,16,0.12)]"
@@ -177,7 +189,7 @@ function renderScalarControl(
 
   if (field.type === "select") {
     return (
-      <select value={String(value ?? "")} onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value)} className={getInputClass(hasError)}>
+      <select value={String(value ?? "")} onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value)} disabled={disabled} className={getInputClass(hasError)}>
         <option value="">اختر...</option>
         {field.options?.map((option) => (
           <option key={option.value} value={option.value}>
@@ -190,11 +202,12 @@ function renderScalarControl(
 
   if (field.type === "checkbox") {
     return (
-      <label className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 ${hasError ? "border-rose-400 bg-rose-50/20" : "border-slate-200 bg-slate-50"}`}>
+      <label className={`flex items-start gap-2.5 rounded-lg border p-2.5 ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"} ${hasError ? "border-rose-400 bg-rose-50/20" : "border-slate-200 bg-slate-50"}`}>
         <input
           type="checkbox"
           checked={Boolean(value)}
           onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.checked)}
+          disabled={disabled}
           className="mt-0.5 h-4 w-4 accent-[#986410]"
         />
         <span className={`text-[11px] font-bold leading-5 ${field.required ? (hasError ? "text-rose-700" : "text-[#c66b22]") : "text-slate-700"}`}>
@@ -213,6 +226,7 @@ function renderScalarControl(
         max={field.validation?.max}
         placeholder={field.placeholder}
         hasError={hasError}
+        disabled={disabled}
       />
     );
   }
@@ -225,6 +239,7 @@ function renderScalarControl(
         min={field.validation?.min}
         max={field.validation?.max}
         hasError={hasError}
+        disabled={disabled}
       />
     );
   }
@@ -238,6 +253,7 @@ function renderScalarControl(
       placeholder={field.placeholder}
       min={field.validation?.min}
       max={field.validation?.max}
+      disabled={disabled}
       className={getInputClass(hasError)}
     />
   );
@@ -248,11 +264,13 @@ function RepeaterRenderer({
   value,
   onChange,
   hasError,
+  disabled,
 }: {
   field: WizardFieldDefinition;
   value: RepeaterRowValue[];
   onChange: (value: RepeaterRowValue[]) => void;
   hasError?: boolean;
+  disabled?: boolean;
 }) {
   const rows = Array.isArray(value) && value.length > 0 ? value : [{}];
 
@@ -274,7 +292,7 @@ function RepeaterRenderer({
             <button
               type="button"
               onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}
-              disabled={rows.length <= Math.max(1, field.minRows ?? 1)}
+              disabled={disabled || rows.length <= Math.max(1, field.minRows ?? 1)}
               className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2 py-1 text-[10px] font-black text-rose-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Trash2 className="h-3 w-3" /> حذف
@@ -294,6 +312,7 @@ function RepeaterRenderer({
                       <select
                         value={String(row[column.key] ?? "")}
                         onChange={(event: ChangeEvent<HTMLSelectElement>) => updateRow(index, column.key, event.target.value)}
+                        disabled={disabled}
                         className={getInputClass(false)}
                       >
                         <option value="">اختر...</option>
@@ -307,6 +326,7 @@ function RepeaterRenderer({
                       <DateFieldInput
                         value={String(row[column.key] ?? "")}
                         onChange={(val) => updateRow(index, column.key, val)}
+                        disabled={disabled}
                       />
                     ) : column.type === "money" ? (
                       <MoneyFieldInput
@@ -315,6 +335,7 @@ function RepeaterRenderer({
                         min={column.validation?.min}
                         max={column.validation?.max}
                         placeholder={column.placeholder}
+                        disabled={disabled}
                       />
                     ) : (
                       <input
@@ -322,6 +343,7 @@ function RepeaterRenderer({
                         value={String(row[column.key] ?? "")}
                         onChange={(event: ChangeEvent<HTMLInputElement>) => updateRow(index, column.key, event.target.value)}
                         placeholder={column.placeholder}
+                        disabled={disabled}
                         className={getInputClass(false)}
                       />
                     )}
@@ -334,6 +356,7 @@ function RepeaterRenderer({
       <button
         type="button"
         onClick={() => onChange([...rows, {}])}
+        disabled={disabled}
         className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[#986410]/40 bg-[#986410]/5 px-3 py-1.5 text-[11px] font-bold text-[#986410] hover:bg-[#986410]/10"
       >
         <span className="text-sm">+</span> إضافة بند جديد
@@ -368,7 +391,7 @@ export default function DynamicFieldRenderer({
     const listValue = Array.isArray(value) ? (value as RepeaterRowValue[]) : [];
     return (
       <div onFocusCapture={onFocus} className="space-y-1.5">
-        <RepeaterRenderer field={field} value={listValue} onChange={onChange} hasError={hasError} />
+        <RepeaterRenderer field={field} value={listValue} onChange={onChange} hasError={hasError} disabled={field.editable === false} />
         {hasError && (
           <p className="flex items-center gap-1.5 text-[11px] font-bold text-rose-600 animate-fadeIn">
             <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
@@ -390,14 +413,14 @@ export default function DynamicFieldRenderer({
         <label className={`block text-xs font-bold ${hasError || attachmentError ? "text-rose-700" : "text-[#00102e]"}`}>
           {attachmentLabel} {field.required && <span className="text-[#c66b22]">*</span>}
         </label>
-        <label className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border-2 border-dashed p-4 transition ${hasError || attachmentError ? "border-rose-300 bg-rose-50/30" : "border-slate-300 bg-slate-50 hover:border-[#986410]"}`}>
+        <label className={`flex items-center justify-between gap-3 rounded-xl border-2 border-dashed p-4 transition ${field.editable === false ? "cursor-not-allowed opacity-70" : "cursor-pointer"} ${hasError || attachmentError ? "border-rose-300 bg-rose-50/30" : "border-slate-300 bg-slate-50 hover:border-[#986410]"}`}>
           <span className="flex items-center gap-2 text-xs font-bold text-slate-600"><Upload className="h-4 w-4 text-[#986410]" />{uploading ? "جاري رفع الملفات..." : "اختر الملفات"}</span>
           <span className="text-[10px] font-semibold text-slate-400">حتى {maxFiles} ملف · {acceptedTypes.join("، ")}</span>
           <input
             type="file"
             accept={acceptedTypes.join(",")}
             multiple={maxFiles !== 1}
-            disabled={uploading}
+            disabled={uploading || field.editable === false}
             className="sr-only"
             onChange={(event) => {
               const incoming = Array.from(event.target.files ?? []);
