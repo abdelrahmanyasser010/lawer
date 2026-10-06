@@ -41,8 +41,8 @@ export default function VodafoneCashModal({
   const router = useRouter();
   const { catalog, loading: catalogLoading, loadError: catalogLoadError } = usePublicCatalog();
   const targetPath = contractId ? `/contract/${contractId}` : serviceRequestId ? `/requests/${serviceRequestId}` : "/";
-  const { paymentAccess, paymentVerified, paymentCashNumber, requireVerified } = usePaymentAccess(targetPath);
-  const cashNumber = paymentCashNumber;
+  const { paymentAccess, paymentVerified, requireVerified } = usePaymentAccess(targetPath);
+  const cashNumber = catalog.office.supportPhone || "";
   const editHours = catalog.policies.selfServiceEditHours;
   const [receipt, setReceipt] = useState<File | null>(null);
   const [senderPhone, setSenderPhone] = useState("");

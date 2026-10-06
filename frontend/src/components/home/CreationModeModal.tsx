@@ -24,7 +24,7 @@ const channelOptions: Array<{ key: CommunicationChannel; label: string; icon: ty
 export default function CreationModeModal({ template: initialTemplate, isOpen, onClose }: Props) {
   const router = useRouter();
   const { catalog } = usePublicCatalog();
-  const { paymentVerified, paymentCashNumber, requireVerified } = usePaymentAccess("/#templates");
+  const { paymentVerified, requireVerified } = usePaymentAccess("/#templates");
   const resetWizard = useWizardStore((state) => state.resetWizard);
   const [step, setStep] = useState<"select" | "lawyer" | "success">("select");
   const [fullName, setFullName] = useState("");
@@ -38,7 +38,7 @@ export default function CreationModeModal({ template: initialTemplate, isOpen, o
   const [createdRequestId, setCreatedRequestId] = useState<number | null>(null);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   const draftingDeposit = catalog.services.contractDraftingDepositEgp;
-  const cashNumber = paymentCashNumber;
+  const cashNumber = catalog.office.supportPhone || "";
   const editHours = catalog.policies.selfServiceEditHours;
   const enabledChannels = useMemo(() => channelOptions.filter((option) => catalog.policies.communicationChannels.includes(option.key)), [catalog.policies.communicationChannels]);
   useEffect(() => { if (enabledChannels.length && !enabledChannels.some((option) => option.key === channel)) setChannel(enabledChannels[0].key); }, [channel, enabledChannels]);
