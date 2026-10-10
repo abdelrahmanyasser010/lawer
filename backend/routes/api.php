@@ -5,11 +5,14 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ConsultationScheduleController;
+use App\Http\Controllers\CustomerDashboardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeatureDisabledController;
+use App\Http\Controllers\LegalContentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SavedPartyController;
 use App\Http\Controllers\ServiceRequestController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SystemController;
@@ -37,9 +40,12 @@ $register = static function (string $prefix = 'v1'): void {
             Route::delete('sessions/{id}',[AuthController::class,'revokeSession'])->whereNumber('id')->middleware('auth.session');
         });
         Route::get('catalog',CatalogController::class);
+        Route::get('public/legal-content/{key}',[LegalContentController::class,'publicShow']);
+        Route::post('legal-acceptances',[LegalContentController::class,'accept'])->middleware('auth.session');
         Route::get('templates',[TemplateController::class,'index']);
         Route::get('templates/{slug}/definition',[TemplateController::class,'publicDefinition']);
         Route::get('review-availability',[ConsultationScheduleController::class,'availability']);
+        Route::get('customer/dashboard',CustomerDashboardController::class)->middleware('auth.session');
 
         Route::prefix('contracts')->group(function (): void {
             Route::get('shared/{token}',[ContractController::class,'sharedInfo']);
@@ -67,6 +73,7 @@ $register = static function (string $prefix = 'v1'): void {
             Route::get('my',[ServiceRequestController::class,'my']);
             Route::get('{id}',[ServiceRequestController::class,'show'])->whereNumber('id');
             Route::post('{id}/attachments',[ServiceRequestController::class,'appendAttachments'])->whereNumber('id');
+            Route::post('{id}/cancel',[ServiceRequestController::class,'cancel'])->whereNumber('id');
             Route::post('{id}/revision-request',[ServiceRequestController::class,'requestRevision'])->whereNumber('id');
             Route::post('{id}/confirm-receipt',[ServiceRequestController::class,'confirmReceipt'])->whereNumber('id');
             Route::post('{id}/rebook',[ServiceRequestController::class,'rebook'])->whereNumber('id');
@@ -74,9 +81,13 @@ $register = static function (string $prefix = 'v1'): void {
 
         Route::prefix('payments')->middleware('auth.session')->group(function (): void {
             Route::get('instructions',[PaymentController::class,'instructions']);
+            Route::post('checkout',[PaymentController::class,'createCheckout']);
+            Route::get('attempts/{id}',[PaymentController::class,'attempt'])->whereNumber('id');
             Route::post('receipts',[PaymentController::class,'createReceipt']);
             Route::get('my',[PaymentController::class,'my']);
         });
+        Route::post('payments/webhooks/{provider}',[PaymentController::class,'webhook'])
+            ->where('provider','paymob|kashier');
         Route::prefix('attachments')->middleware('auth.session')->group(function (): void {
             Route::post('',[AttachmentController::class,'upload']);
             Route::get('{id}',[AttachmentController::class,'show'])->whereNumber('id');
@@ -88,6 +99,12 @@ $register = static function (string $prefix = 'v1'): void {
         Route::prefix('users')->middleware('auth.session')->group(function (): void {
             Route::get('profile',[UserController::class,'profile']);
             Route::patch('profile',[UserController::class,'updateProfile']);
+        });
+        Route::prefix('saved-parties')->middleware('auth.session')->group(function (): void {
+            Route::get('',[SavedPartyController::class,'index']);
+            Route::get('{id}',[SavedPartyController::class,'show'])->whereNumber('id');
+            Route::patch('{id}',[SavedPartyController::class,'update'])->whereNumber('id');
+            Route::delete('{id}',[SavedPartyController::class,'delete'])->whereNumber('id');
         });
         Route::prefix('notifications')->middleware('auth.session')->group(function (): void {
             Route::get('',[NotificationController::class,'index']);
@@ -130,8 +147,10 @@ $register = static function (string $prefix = 'v1'): void {
                 Route::post('{id}/approve',[PaymentController::class,'approve'])->whereNumber('id');
                 Route::post('{id}/reject',[PaymentController::class,'reject'])->whereNumber('id');
                 Route::post('{id}/clarification',[PaymentController::class,'requestClarification'])->whereNumber('id');
+                Route::post('{id}/refund',[PaymentController::class,'refund'])->whereNumber('id');
                 Route::post('manual',[PaymentController::class,'recordManual']);
             });
+            Route::post('service-requests/{id}/record-remaining-payment',[PaymentController::class,'recordRemainingPayment'])->whereNumber('id')->middleware('permission:payments.review');
             Route::prefix('users')->middleware('permission:clients.view')->group(function (): void {
                 Route::get('',[UserController::class,'adminIndex']);
                 Route::get('{id}',[UserController::class,'adminShow'])->whereNumber('id');
@@ -142,6 +161,11 @@ $register = static function (string $prefix = 'v1'): void {
             Route::prefix('settings')->middleware('permission:settings.manage')->group(function (): void {
                 Route::get('',[SettingsController::class,'index']);
                 Route::patch('',[SettingsController::class,'update']);
+                Route::post('test-email',[SettingsController::class,'testEmail']);
+            });
+            Route::prefix('legal-content')->middleware('permission:settings.manage')->group(function (): void {
+                Route::get('',[LegalContentController::class,'adminIndex']);
+                Route::put('{key}',[LegalContentController::class,'adminUpdate']);
             });
             Route::prefix('review-schedule')->middleware('permission:settings.manage')->group(function (): void {
                 Route::get('',[ConsultationScheduleController::class,'adminIndex']);
@@ -156,7 +180,7 @@ $register = static function (string $prefix = 'v1'): void {
 
             // Retained compatibility endpoints for currently hidden capabilities.
             Route::prefix('team')->group(function (): void {
-                Route::get('assignable-lawyers',FeatureDisabledController::class);
+                Route::get('assignable-lawyers',[UserController::class,'assignableLawyers'])->middleware('permission:requests.assign,contracts.assign');
                 Route::get('',FeatureDisabledController::class);
                 Route::get('roles',FeatureDisabledController::class);
                 Route::post('invite',FeatureDisabledController::class);

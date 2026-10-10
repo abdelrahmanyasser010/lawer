@@ -6,14 +6,15 @@ const footerLinks = {
   services: [
     { label: "صياغة عقد بنفسي", href: "/create-contract?mode=self_service" },
     { label: "صياغة بواسطة محام", href: "/create-contract?mode=lawyer_assisted" },
-    { label: "مراجعة عقد قائم", href: "/request-review" },
+    { label: "راجع عقدك أو اسأل محامي", href: "/request-review" },
     { label: "Z Draft Vault", href: "/contracts" },
   ],
   legal: [
     { label: "الأسعار", href: "/pricing" },
-    { label: "إقرار الاستخدام", href: "/declaration" },
-    { label: "سياسة الخصوصية", href: "/privacy" },
+    { label: "من نحن", href: "/about" },
     { label: "الشروط والأحكام", href: "/terms" },
+    { label: "سياسة الخصوصية", href: "/privacy" },
+    { label: "سياسة الإلغاء والاسترداد", href: "/refund-policy" },
   ],
 };
 

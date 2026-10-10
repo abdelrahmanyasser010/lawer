@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { AlertCircle, ArrowLeft, CheckCircle2, FileText, HelpCircle, Upload } from "lucide-react";
 import { evaluateCondition } from "@zdraft/template-engine";
 import type {
@@ -16,6 +17,9 @@ type Props = {
   fieldValues: Record<string, ContractFieldValue>;
   attachmentRefs: Record<string, string[]>;
   onContinue: () => void;
+  requireAuth?: boolean;
+  authLoading?: boolean;
+  authNextUrl?: string;
 };
 
 function fallbackReadiness(variant: ContractVariantDefinition): ReadinessDefinition {
@@ -59,20 +63,32 @@ function fieldForItem(item: ReadinessItemDefinition, variant: ContractVariantDef
   return variant.steps.flatMap((step) => step.fields).find((field) => field.key === item.fieldKey);
 }
 
+function acceptedTypesLabel(types?: string[]): string | null {
+  if (!types?.length) return null;
+  const normalized = [...types].sort().join(",");
+  if (normalized === ["application/pdf", "image/*"].sort().join(",")) return "صور أو PDF";
+  if (normalized === "image/*") return "صور فقط";
+  if (normalized === "application/pdf") return "PDF فقط";
+  return "صيغ ملفات محددة";
+}
+
 function attachmentDescription(item: ReadinessItemDefinition): string | null {
   const rules = item.attachmentRules;
   if (!rules) return null;
   const parts: string[] = [];
-  if (rules.acceptedTypes?.length) parts.push(`الصيغ: ${rules.acceptedTypes.join("، ")}`);
+  const typeLabel = acceptedTypesLabel(rules.acceptedTypes);
+  if (typeLabel) parts.push(`الصيغ: ${typeLabel}`);
   if (rules.maxFiles) parts.push(`حتى ${rules.maxFiles} ملف`);
   if (rules.maxBytes) parts.push(`حجم الملف حتى ${Math.round(rules.maxBytes / 1024 / 1024)} ميجابايت`);
   if (rules.requireFrontBack) parts.push("وجه وظهر عند الحاجة");
   return parts.length ? parts.join(" · ") : null;
 }
 
-export default function ReadinessGate({ variant, fieldValues, attachmentRefs, onContinue }: Props) {
+export default function ReadinessGate({ variant, fieldValues, attachmentRefs, onContinue, requireAuth = false, authLoading = false, authNextUrl = "/contracts" }: Props) {
   const readiness = variant.readiness ?? fallbackReadiness(variant);
   const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const encodedNext = encodeURIComponent(authNextUrl);
   const visibleSections = useMemo(() => readiness.sections.filter((section) => !section.visibleWhen || evaluateCondition(section.visibleWhen, fieldValues)), [fieldValues, readiness.sections]);
   const visibleItems = visibleSections.flatMap((section) => section.items.filter((item) => !item.visibleWhen || evaluateCondition(item.visibleWhen, fieldValues)));
   const requiredItems = visibleItems.filter((item) => item.required);
@@ -127,8 +143,33 @@ export default function ReadinessGate({ variant, fieldValues, attachmentRefs, on
         </div>
 
         {incompleteRequired.length > 0 && <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-900">راجع المتطلبات المعلّمة «مطلوب» قبل المتابعة. يمكنك تأكيد جاهزيتك من خلال العلامة بجانب كل متطلب.</div>}
-        <button type="button" onClick={onContinue} disabled={incompleteRequired.length > 0} className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-sm font-black text-[#d5a84c] shadow-sm disabled:cursor-not-allowed disabled:opacity-40">ابدأ تعبئة العقد الآن <ArrowLeft className="h-4 w-4" /></button>
+        <button
+          type="button"
+          onClick={() => {
+            if (requireAuth) { setShowAuthPrompt(true); return; }
+            onContinue();
+          }}
+          disabled={incompleteRequired.length > 0 || authLoading}
+          className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-sm font-black text-[#d5a84c] shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {authLoading ? "جاري التحقق من الحساب..." : "ابدأ تعبئة العقد الآن"} <ArrowLeft className="h-4 w-4" />
+        </button>
       </main>
+
+      {showAuthPrompt && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#00102e]/65 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 text-right shadow-2xl">
+            <span className="inline-flex rounded-full bg-[#986410]/10 px-3 py-1 text-[10px] font-black text-[#986410]">قبل إدخال البيانات</span>
+            <h2 className="mt-4 text-lg font-black text-[#00102e]">خلّينا نحفظ شغلك الأول</h2>
+            <p className="mt-2 text-sm font-semibold leading-7 text-slate-600">سجل دخول أو اعمل حساب علشان عقدك يتحفظ تلقائيًا وتقدر ترجع تكمله في أي وقت.</p>
+            <div className="mt-6 grid gap-2 sm:grid-cols-2">
+              <Link href={`/register?next=${encodedNext}`} className="rounded-xl bg-[#00102e] px-4 py-3 text-center text-xs font-black text-white">اعمل حساب</Link>
+              <Link href={`/login?next=${encodedNext}`} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-xs font-black text-[#00102e]">عندي حساب</Link>
+            </div>
+            <button type="button" onClick={() => setShowAuthPrompt(false)} className="mt-2 w-full rounded-xl px-4 py-2.5 text-xs font-black text-slate-500 hover:bg-slate-50">رجوع</button>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

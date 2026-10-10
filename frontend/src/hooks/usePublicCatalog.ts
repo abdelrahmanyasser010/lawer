@@ -20,11 +20,6 @@ const fallback: PublicCatalog = {
     supportPhone: "",
     supportEmail: "",
   },
-  payment: {
-    // Payment destination must come from the backend catalog so the dashboard
-    // remains the single source of truth. Never hard-code a wallet in the client.
-    vodafoneCashNumber: "",
-  },
   policies: {
     selfServiceEditHours: 24,
     communicationChannels: ["zoom", "whatsapp"],

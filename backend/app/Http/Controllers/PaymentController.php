@@ -5,8 +5,10 @@ use App\Exceptions\ApiException;
 use App\Services\AuditService;
 use App\Services\ConsultationScheduleService;
 use App\Services\NotificationService;
+use App\Services\PaymentGatewayService;
 use App\Services\ServiceRequestWorkflow;
 use App\Services\TemplateEngineService;
+use App\Services\SelfServiceLawyerReviewService;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -22,7 +24,50 @@ final class PaymentController extends Controller
         private TemplateEngineService $engine,
         private ConsultationScheduleService $schedule,
         private ServiceRequestWorkflow $workflow,
+        private SelfServiceLawyerReviewService $lawyerReview,
+        private PaymentGatewayService $gateways,
     ) {}
+
+    public function createCheckout(Request $request)
+    {
+        $auth = $request->attributes->get('auth_user');
+        if (!($auth['emailVerified'] ?? false)) {
+            throw new ApiException(403, 'يجب تأكيد البريد الإلكتروني أولًا', 'EMAIL_NOT_VERIFIED');
+        }
+        $data = $request->validate([
+            'contractId' => ['nullable', 'integer', 'min:1'],
+            'serviceRequestId' => ['nullable', 'integer', 'min:1'],
+            'provider' => ['nullable', 'in:paymob,kashier'],
+            'purpose' => ['nullable', 'string', 'max:100'],
+            'amountEgp' => ['nullable', 'numeric', 'min:0'],
+            'lineItems' => ['nullable', 'array', 'max:20'],
+            'returnUrl' => ['nullable', 'string', 'max:2000'],
+            'metadata' => ['nullable', 'array'],
+            'metadata.lawyerReviewEnabled' => ['nullable', 'boolean'],
+            'metadata.lawyerReviewNote' => ['nullable', 'string', 'max:5000'],
+        ]);
+        $result = $this->gateways->createCheckout(
+            $request,
+            $auth,
+            $data['contractId'] ?? null,
+            $data['serviceRequestId'] ?? null,
+            $data['provider'] ?? null,
+            $data,
+        );
+        return $this->created($request, $result, 'تم إنشاء جلسة الدفع');
+    }
+
+    public function attempt(Request $request, int $id)
+    {
+        $auth = $request->attributes->get('auth_user');
+        return $this->ok($request, $this->gateways->attemptStatus($auth, $id));
+    }
+
+    public function webhook(Request $request, string $provider)
+    {
+        $result = $this->gateways->handleWebhook($request, $provider);
+        return $this->ok($request, $result, 'تم استلام إشعار الدفع');
+    }
 
     public function createReceipt(Request $request)
     {
@@ -48,7 +93,7 @@ final class PaymentController extends Controller
                     $validation=$this->engine->validateDraft($this->json($c->template_definition),(string)$c->variant_key,$this->jsonList($c->selected_optional_clause_keys),$this->json($c->field_values_json),$this->json($c->attachment_refs_json));
                     if($validation['issues'])throw new ApiException(422,'أكمل بيانات العقد المطلوبة قبل إرسال الدفع','DRAFT_INCOMPLETE',$validation['issues']);
                 }
-                $expected=(float)$c->original_price_egp;
+                $expected=(float)$c->original_price_egp+((bool)($c->lawyer_review_add_on_selected??false)?(float)($c->lawyer_review_add_on_price_egp??0):0);
                 if(abs($amount-$expected)>0.009)throw new ApiException(400,"المبلغ المطلوب لهذا العقد هو {$expected} ج.م",'PAYMENT_AMOUNT_MISMATCH');
             }
             if($serviceRequestId){
@@ -101,13 +146,13 @@ final class PaymentController extends Controller
 
     public function my(Request $request)
     {
-        $rows=DB::select('SELECT id,serial_number AS "serialNumber",amount_egp::float AS "amountEgp",status,payment_method AS "paymentMethod",contract_id AS "contractId",service_request_id AS "serviceRequestId",admin_notes AS "adminNotes",created_at AS "createdAt",reviewed_at AS "reviewedAt" FROM payments WHERE user_id=? ORDER BY created_at DESC',[$request->attributes->get('auth_user')['id']]);
+        $rows=DB::select('SELECT p.id,p.serial_number AS "serialNumber",p.amount_egp::float AS "amountEgp",CASE WHEN p.status=\'approved\' THEN \'paid\' ELSE p.status END AS status,p.payment_method AS "paymentMethod",p.source,p.payment_stage AS "paymentStage",p.provider,p.provider_reference AS "providerReference",p.transaction_reference AS "transactionReference",p.refunded_amount_egp::float AS "refundedAmountEgp",p.contract_id AS "contractId",p.service_request_id AS "serviceRequestId",p.admin_notes AS "adminNotes",p.created_at AS "createdAt",p.reviewed_at AS "reviewedAt",c.serial_number AS "contractSerial",sr.serial_number AS "serviceRequestSerial",sr.title AS "serviceRequestTitle" FROM payments p LEFT JOIN contracts c ON c.id=p.contract_id LEFT JOIN service_requests sr ON sr.id=p.service_request_id WHERE p.user_id=? ORDER BY p.created_at DESC',[$request->attributes->get('auth_user')['id']]);
         return$this->ok($request,$rows);
     }
 
     public function adminIndex(Request $request)
     {
-        $status=$request->filled('status')?$request->string('status')->toString():null;
+        $status=$request->filled('status')?$this->normalizeAdminPaymentStatus($request->string('status')->toString()):null;
         $search=trim($request->string('search','')->toString());
         $paginate=$request->boolean('paginate');
         $page=max(1,(int)$request->query('page',1));
@@ -118,12 +163,30 @@ final class PaymentController extends Controller
         if($search!==''){$where[]='(p.serial_number ILIKE ? OR u.name ILIKE ? OR u.email ILIKE ? OR u.phone ILIKE ? OR u.whatsapp_number ILIKE ? OR c.serial_number ILIKE ? OR sr.serial_number ILIKE ? OR sr.title ILIKE ?)';$like='%'.$search.'%';array_push($bindings,$like,$like,$like,$like,$like,$like,$like,$like);}
         $whereSql=implode(' AND ',$where);
         $from=' FROM payments p JOIN users u ON u.id=p.user_id LEFT JOIN users reviewer ON reviewer.id=p.reviewed_by_admin_id LEFT JOIN contracts c ON c.id=p.contract_id LEFT JOIN service_requests sr ON sr.id=p.service_request_id LEFT JOIN document_attachments a ON a.id=p.receipt_attachment_id WHERE '.$whereSql;
-        $select='SELECT p.id,p.serial_number AS "serialNumber",p.amount_egp::float AS "amountEgp",p.status,p.payment_method AS "paymentMethod",p.sender_phone AS "senderPhone",p.receipt_attachment_id AS "receiptAttachmentId",p.contract_id AS "contractId",p.service_request_id AS "serviceRequestId",p.admin_notes AS "adminNotes",p.reviewed_at AS "reviewedAt",p.created_at AS "createdAt",u.id AS "clientId",u.name AS "clientName",u.email AS "clientEmail",u.phone AS "clientPhone",u.whatsapp_number AS "clientWhatsappNumber",u.whatsapp_service_consent_at AS "clientWhatsappConsentAt",reviewer.name AS "reviewedByName",c.serial_number AS "contractSerial",sr.serial_number AS "serviceRequestSerial",sr.title AS "serviceRequestTitle",a.file_type AS "receiptMimeType",(a.thumbnail_storage_key IS NOT NULL OR a.thumbnail_file_path IS NOT NULL) AS "receiptThumbnailAvailable"';
+        $select='SELECT p.id,p.serial_number AS "serialNumber",p.amount_egp::float AS "amountEgp",CASE WHEN p.status=\'approved\' THEN \'paid\' ELSE p.status END AS status,p.payment_method AS "paymentMethod",p.source,p.payment_stage AS "paymentStage",p.provider,p.provider_reference AS "providerReference",p.transaction_reference AS "transactionReference",p.refunded_amount_egp::float AS "refundedAmountEgp",p.sender_phone AS "senderPhone",p.receipt_attachment_id AS "receiptAttachmentId",p.contract_id AS "contractId",p.service_request_id AS "serviceRequestId",p.admin_notes AS "adminNotes",p.reviewed_at AS "reviewedAt",p.created_at AS "createdAt",u.id AS "clientId",u.name AS "clientName",u.email AS "clientEmail",u.phone AS "clientPhone",u.whatsapp_number AS "clientWhatsappNumber",u.whatsapp_service_consent_at AS "clientWhatsappConsentAt",reviewer.name AS "reviewedByName",CASE WHEN p.source=\'admin_manual_collection\' THEN reviewer.name ELSE NULL END AS "recordedByName",c.serial_number AS "contractSerial",sr.serial_number AS "serviceRequestSerial",sr.title AS "serviceRequestTitle",a.file_type AS "receiptMimeType",(a.thumbnail_storage_key IS NOT NULL OR a.thumbnail_file_path IS NOT NULL) AS "receiptThumbnailAvailable"';
         if(!$paginate){$rows=DB::select($select.$from.' ORDER BY p.created_at DESC LIMIT 300',$bindings);return$this->ok($request,$rows);}
         $count=DB::selectOne('SELECT COUNT(*)::int AS total'.$from,$bindings);
         $rows=DB::select($select.$from.' ORDER BY p.created_at DESC LIMIT ? OFFSET ?',array_merge($bindings,[$perPage,$offset]));
         $total=(int)($count->total??0);
         return$this->ok($request,['items'=>$rows,'pagination'=>['page'=>$page,'perPage'=>$perPage,'total'=>$total,'pages'=>max(1,(int)ceil($total/$perPage))]]);
+    }
+
+    public function refund(Request $request, int $id)
+    {
+        $data = $request->validate([
+            'amountEgp' => ['required', 'numeric', 'min:0.01'],
+            'reason' => ['required', 'string', 'min:3', 'max:2000'],
+        ]);
+        $payment = DB::table('payments')->select('id','status','provider','source','amount_egp','refunded_amount_egp')->where('id', $id)->first();
+        if (!$payment) throw new ApiException(404, 'عملية الدفع غير موجودة', 'PAYMENT_NOT_FOUND');
+        throw new ApiException(501, 'استرداد بوابة الدفع غير مفعل بعد. لا يتم تغيير حالة العملية محليًا قبل تأكيد المزود.', 'REFUND_PROVIDER_NOT_CONFIGURED', [
+            'available' => false,
+            'paymentId' => $id,
+            'provider' => $payment->provider,
+            'source' => $payment->source,
+            'requestedAmountEgp' => (float) $data['amountEgp'],
+            'reason' => $data['reason'],
+        ]);
     }
 
     public function approve(Request $request,int $id)
@@ -134,9 +197,9 @@ final class PaymentController extends Controller
             if($row->contract_id){$contract=DB::selectOne('SELECT id,status,creation_mode,current_version_id FROM contracts WHERE id=? AND deleted_at IS NULL FOR UPDATE',[$row->contract_id]);if(!$contract||$contract->status!=='pending_payment')throw new ApiException(409,'حالة العقد تغيّرت بعد رفع الإيصال. لا يمكن اعتماد الدفع تلقائيًا؛ يلزم تسوية يدوية','PAYMENT_TARGET_STATE_CHANGED',['target'=>'contract','status'=>$contract->status??null]);}
             if($row->service_request_id){$sr=DB::selectOne('SELECT id,request_type,status,metadata_json FROM service_requests WHERE id=? FOR UPDATE',[$row->service_request_id]);if(!$sr||$sr->status!=='awaiting_payment')throw new ApiException(409,'حالة طلب الخدمة تغيّرت بعد رفع الإيصال. لا يمكن اعتماد الدفع تلقائيًا؛ يلزم تسوية يدوية','PAYMENT_TARGET_STATE_CHANGED',['target'=>'service_request','status'=>$sr->status??null]);$meta=$this->json($sr->metadata_json);$expected=(float)($meta['expectedPaymentEgp']??0);if($expected<=0||abs((float)$row->amount_egp-$expected)>0.009)throw new ApiException(409,'المبلغ المستحق على الطلب تغيّر بعد رفع الإيصال. راجع العملية يدويًا','PAYMENT_TARGET_AMOUNT_CHANGED',['expected'=>$expected,'receiptAmount'=>(float)$row->amount_egp]);}
             DB::table('payments')->where('id',$id)->update(['status'=>'approved','admin_notes'=>$data['notes']??null,'reviewed_by_admin_id'=>$admin,'reviewed_at'=>now()]);
-            if($contract){if($contract->creation_mode==='self_service'){$policy=DB::selectOne("SELECT LEAST(168,GREATEST(1,COALESCE((setting_value_json #>> '{}')::int,24))) AS edit_hours FROM platform_settings WHERE setting_key='contracts.self_service_edit_hours'");$editHours=(int)($policy->edit_hours??24);DB::statement("UPDATE contracts SET status='client_review',core_identity_locked=TRUE,edit_window_started_at=CURRENT_TIMESTAMP,edit_expires_at=CURRENT_TIMESTAMP + (?::text || ' hours')::interval,updated_at=CURRENT_TIMESTAMP WHERE id=?",[$editHours,$row->contract_id]);if($contract->current_version_id)DB::table('contract_versions')->where('id',$contract->current_version_id)->update(['status'=>'client_review']);}else DB::statement("UPDATE contracts SET status='pending_review',updated_at=CURRENT_TIMESTAMP WHERE id=?",[$row->contract_id]);}
+            if($contract){if($contract->creation_mode==='self_service'){$policy=DB::selectOne("SELECT LEAST(168,GREATEST(1,COALESCE((setting_value_json #>> '{}')::int,24))) AS edit_hours FROM platform_settings WHERE setting_key='contracts.self_service_edit_hours'");$editHours=(int)($policy->edit_hours??24);DB::statement("UPDATE contracts SET status='client_review',core_identity_locked=TRUE,edit_window_started_at=CURRENT_TIMESTAMP,edit_expires_at=CURRENT_TIMESTAMP + (?::text || ' hours')::interval,updated_at=CURRENT_TIMESTAMP WHERE id=?",[$editHours,$row->contract_id]);if($contract->current_version_id)DB::table('contract_versions')->where('id',$contract->current_version_id)->update(['status'=>'client_review']);$this->lawyerReview->activateAfterSettledPayment((int)$row->contract_id,(int)$row->user_id);}else DB::statement("UPDATE contracts SET status='pending_review',updated_at=CURRENT_TIMESTAMP WHERE id=?",[$row->contract_id]);}
             if($sr){$paidRow=DB::selectOne("SELECT COALESCE(SUM(amount_egp) FILTER (WHERE status='approved'),0)::float AS amount FROM payments WHERE service_request_id=?",[$row->service_request_id]);$state=$this->servicePaymentState($sr,(int)$row->service_request_id,(float)($paidRow->amount??0));DB::statement('UPDATE service_requests SET status=?,metadata_json=?::jsonb,completed_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?',[$state['status'],json_encode($state['meta'],JSON_UNESCAPED_UNICODE),$row->service_request_id]);if($this->workflow->supportsBooking((string)$sr->request_type)&&($state['previousStage']??'')!=='balance')$this->schedule->setBookingStatus((int)$row->service_request_id,'confirmed');}
-            $this->notifications->notify((int)$row->user_id,'payment_approved','تم اعتماد الدفع',$message,$row->contract_id?"/contract/{$row->contract_id}":"/requests/{$row->service_request_id}");
+            $this->notifications->notify((int)$row->user_id,'payment_approved','تم اعتماد الدفع','تم تأكيد عملية الدفع ويمكنك متابعة الخطوة التالية من حسابك',$row->contract_id?"/contract/{$row->contract_id}":"/requests/{$row->service_request_id}",[],'important');
             DB::statement("DELETE FROM dashboard_notifications WHERE notification_type = 'payment_receipt_uploaded' AND (payload_json->>'paymentId' = ? OR message LIKE ?)", [(string) $id, "%{$row->serial_number}%"]);
             $this->audit->write($request,'payment.approved','payment',$id,['status'=>$row->status],['status'=>'approved','notes'=>$data['notes']??null]);
             return['user_id'=>$row->user_id,'contract_id'=>$row->contract_id,'service_request_id'=>$row->service_request_id,'serial_number'=>$row->serial_number,'editHours'=>$editHours];
@@ -151,7 +214,7 @@ final class PaymentController extends Controller
             $row=DB::selectOne('SELECT * FROM payments WHERE id=? FOR UPDATE',[$id]);if(!$row)throw new ApiException(404,'عملية الدفع غير موجودة');if($row->status!=='pending_verification')throw new ApiException(409,'لا يمكن طلب توضيح لهذه العملية في حالتها الحالية');
             DB::table('payments')->where('id',$id)->update(['status'=>'needs_client_info','admin_notes'=>$data['message'],'reviewed_by_admin_id'=>$admin,'reviewed_at'=>now()]);
             if($row->service_request_id){$sr=DB::table('service_requests')->select('request_type','metadata_json')->where('id',$row->service_request_id)->first();$m=$sr?$this->json($sr->metadata_json):[];if($sr&&$this->workflow->supportsBooking((string)$sr->request_type)&&($m['paymentStage']??'')!=='balance')$this->schedule->setBookingStatus((int)$row->service_request_id,'needs_client_info');}
-            $this->notifications->notify((int)$row->user_id,'payment_clarification_requested','مطلوب توضيح بخصوص الدفع',$data['message'],$row->contract_id?"/contract/{$row->contract_id}":"/requests/{$row->service_request_id}");
+            $this->notifications->notify((int)$row->user_id,'payment_clarification_requested','مطلوب توضيح بخصوص الدفع',$data['message'],$row->contract_id?"/contract/{$row->contract_id}":"/requests/{$row->service_request_id}",[],'important');
             DB::statement("DELETE FROM dashboard_notifications WHERE notification_type = 'payment_receipt_uploaded' AND (payload_json->>'paymentId' = ? OR message LIKE ?)", [(string) $id, "%{$row->serial_number}%"]);
             $this->audit->write($request,'payment.clarification_requested','payment',$id,['status'=>$row->status],['status'=>'needs_client_info','message'=>$data['message']]);return$row;
         });
@@ -165,7 +228,7 @@ final class PaymentController extends Controller
             $row=DB::selectOne('SELECT * FROM payments WHERE id=? FOR UPDATE',[$id]);if(!$row)throw new ApiException(404,'عملية الدفع غير موجودة');if(!in_array($row->status,['pending_verification','needs_client_info'],true))throw new ApiException(409,'تمت مراجعة هذه العملية من قبل');
             DB::table('payments')->where('id',$id)->update(['status'=>'rejected','admin_notes'=>$data['reason'],'reviewed_by_admin_id'=>$admin,'reviewed_at'=>now()]);
             if($row->service_request_id){$sr=DB::table('service_requests')->select('request_type','metadata_json')->where('id',$row->service_request_id)->first();$m=$sr?$this->json($sr->metadata_json):[];if($sr&&$this->workflow->supportsBooking((string)$sr->request_type)&&($m['paymentStage']??'')!=='balance')$this->schedule->setBookingStatus((int)$row->service_request_id,'cancelled');}
-            $this->notifications->notify((int)$row->user_id,'payment_rejected','تعذر اعتماد الدفع',$data['reason'],$row->contract_id?"/contract/{$row->contract_id}":"/requests/{$row->service_request_id}");
+            $this->notifications->notify((int)$row->user_id,'payment_rejected','تعذر اعتماد الدفع',$data['reason'],$row->contract_id?"/contract/{$row->contract_id}":"/requests/{$row->service_request_id}",[],'important');
             DB::statement("DELETE FROM dashboard_notifications WHERE notification_type = 'payment_receipt_uploaded' AND (payload_json->>'paymentId' = ? OR message LIKE ?)", [(string) $id, "%{$row->serial_number}%"]);
             $this->audit->write($request,'payment.rejected','payment',$id,['status'=>$row->status],['status'=>'rejected','reason'=>$data['reason']]);
             return['user_id'=>$row->user_id,'contract_id'=>$row->contract_id,'service_request_id'=>$row->service_request_id,'serial_number'=>$row->serial_number];
@@ -183,7 +246,7 @@ final class PaymentController extends Controller
         $contractId=$data['contractId']??null;$serviceRequestId=$data['serviceRequestId']??null;if((bool)$contractId===(bool)$serviceRequestId)throw new ApiException(422,'حدد عقدًا واحدًا أو طلب خدمة واحدًا');
         $admin=(int)$request->attributes->get('auth_user')['id'];$serial='PAY-'.now()->year.'-'.strtoupper(substr(bin2hex(random_bytes(5)),0,8));
         $result=DB::transaction(function()use($request,$data,$contractId,$serviceRequestId,$admin,$serial){
-            $userId=null;
+            $userId=null;$paymentStage='full';
             if($contractId){
                 $c=DB::selectOne('SELECT id,user_id,client_user_id,source_channel,status,creation_mode,current_version_id,original_price_egp FROM contracts WHERE id=? AND deleted_at IS NULL FOR UPDATE',[$contractId]);if(!$c)throw new ApiException(404,'العقد غير موجود');
                 if(($c->source_channel??'customer')==='office'&&!$c->client_user_id)throw new ApiException(409,'اربط العقد بعميل مسجل قبل تسجيل تحصيل مالي باسمه','CLIENT_REQUIRED_FOR_PAYMENT');$userId=(int)($c->client_user_id?:$c->user_id);
@@ -197,16 +260,41 @@ final class PaymentController extends Controller
                 }
             }
             if($serviceRequestId){
-                $sr=DB::selectOne('SELECT id,client_user_id,request_type,status,metadata_json FROM service_requests WHERE id=? FOR UPDATE',[$serviceRequestId]);if(!$sr)throw new ApiException(404,'طلب الخدمة غير موجود');$userId=(int)$sr->client_user_id;if($sr->status!=='awaiting_payment')throw new ApiException(409,'هذا الطلب لا ينتظر تحصيلًا حاليًا','PAYMENT_NOT_ALLOWED');$meta=$this->json($sr->metadata_json);$expected=(float)($meta['expectedPaymentEgp']??0);if($expected<=0)throw new ApiException(409,'لا يوجد مبلغ مستحق مثبت لهذا الطلب','SERVICE_PAYMENT_NOT_REQUIRED');if(abs((float)$data['amountEgp']-$expected)>0.009)throw new ApiException(422,"المبلغ المستحق حاليًا هو {$expected} ج.م",'PAYMENT_AMOUNT_MISMATCH');$paidRow=DB::selectOne("SELECT COALESCE(SUM(amount_egp) FILTER (WHERE status='approved'),0)::float AS amount FROM payments WHERE service_request_id=?",[$serviceRequestId]);$state=$this->servicePaymentState($sr,$serviceRequestId,(float)($paidRow->amount??0)+(float)$data['amountEgp']);DB::statement('UPDATE service_requests SET status=?,metadata_json=?::jsonb,completed_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?',[$state['status'],json_encode($state['meta'],JSON_UNESCAPED_UNICODE),$serviceRequestId]);if($this->workflow->supportsBooking((string)$sr->request_type)&&($state['previousStage']??'')!=='balance')$this->schedule->setBookingStatus($serviceRequestId,'confirmed');
+                $sr=DB::selectOne('SELECT id,client_user_id,request_type,status,metadata_json FROM service_requests WHERE id=? FOR UPDATE',[$serviceRequestId]);if(!$sr)throw new ApiException(404,'طلب الخدمة غير موجود');$userId=(int)$sr->client_user_id;if($sr->status!=='awaiting_payment')throw new ApiException(409,'هذا الطلب لا ينتظر تحصيلًا حاليًا','PAYMENT_NOT_ALLOWED');$meta=$this->json($sr->metadata_json);$paymentStage=(string)($meta['paymentStage']??'');if($paymentStage!=='balance')throw new ApiException(409,'التسجيل اليدوي متاح استثنائيًا للدفعة المتبقية فقط','MANUAL_COLLECTION_BALANCE_ONLY');if(trim((string)($data['notes']??''))==='')throw new ApiException(422,'سبب تسجيل تحصيل الدفعة المتبقية مطلوب','MANUAL_COLLECTION_REASON_REQUIRED');$expected=(float)($meta['expectedPaymentEgp']??0);if($expected<=0)throw new ApiException(409,'لا يوجد مبلغ مستحق مثبت لهذا الطلب','SERVICE_PAYMENT_NOT_REQUIRED');if(abs((float)$data['amountEgp']-$expected)>0.009)throw new ApiException(422,"المبلغ المستحق حاليًا هو {$expected} ج.م",'PAYMENT_AMOUNT_MISMATCH');$paidRow=DB::selectOne("SELECT COALESCE(SUM(amount_egp) FILTER (WHERE status='approved'),0)::float AS amount FROM payments WHERE service_request_id=?",[$serviceRequestId]);$state=$this->servicePaymentState($sr,$serviceRequestId,(float)($paidRow->amount??0)+(float)$data['amountEgp']);DB::statement('UPDATE service_requests SET status=?,metadata_json=?::jsonb,completed_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?',[$state['status'],json_encode($state['meta'],JSON_UNESCAPED_UNICODE),$serviceRequestId]);
             }
             if(!$userId)throw new ApiException(409,'لا يوجد عميل مرتبط يمكن تسجيل التحصيل باسمه');
             $notes=trim(($data['reference']??'')!==''?'مرجع: '.$data['reference'].'\n'.($data['notes']??''):($data['notes']??''));
-            $row=DB::selectOne("INSERT INTO payments(serial_number,user_id,contract_id,service_request_id,amount_egp,payment_method,status,admin_notes,reviewed_by_admin_id,reviewed_at) VALUES (?,?,?,?,?,?,'approved',?,?,CURRENT_TIMESTAMP) RETURNING id",[$serial,$userId,$contractId,$serviceRequestId,$data['amountEgp'],$data['paymentMethod'],$notes?:null,$admin]);
+            $row=DB::selectOne("INSERT INTO payments(serial_number,user_id,contract_id,service_request_id,amount_egp,payment_method,status,admin_notes,reviewed_by_admin_id,reviewed_at,source,payment_stage,transaction_reference) VALUES (?,?,?,?,?,?,'approved',?,?,CURRENT_TIMESTAMP,'admin_manual_collection',?,?) RETURNING id",[$serial,$userId,$contractId,$serviceRequestId,$data['amountEgp'],$data['paymentMethod'],$notes?:null,$admin,$paymentStage,$data['reference']??null]);
             $this->audit->write($request,'payment.manual_recorded','payment',(int)$row->id,null,['serialNumber'=>$serial,'contractId'=>$contractId,'serviceRequestId'=>$serviceRequestId,'amountEgp'=>(float)$data['amountEgp'],'paymentMethod'=>$data['paymentMethod'],'reference'=>$data['reference']??null]);
-            $this->notifications->notify($userId,'payment_recorded','تم تسجيل الدفع',"تم تسجيل دفعة بقيمة {$data['amountEgp']} ج.م",$contractId?"/contract/{$contractId}":"/requests/{$serviceRequestId}");
+            $this->notifications->notify($userId,'payment_recorded','تم تسجيل الدفع',"تم تسجيل دفعة بقيمة {$data['amountEgp']} ج.م",$contractId?"/contract/{$contractId}":"/requests/{$serviceRequestId}",[],'important');
             return['id'=>(int)$row->id,'serialNumber'=>$serial,'status'=>'approved'];
         });
         return$this->created($request,$result,'تم تسجيل التحصيل اليدوي');
+    }
+
+    public function recordRemainingPayment(Request $request,int $id)
+    {
+        $data=$request->validate(['amountEgp'=>['required','numeric','min:0.01'],'reason'=>['required','string','min:3','max:2000'],'externalReference'=>['nullable','string','max:255']]);
+        $admin=(int)$request->attributes->get('auth_user')['id'];$serial='PAY-'.now()->year.'-'.strtoupper(substr(bin2hex(random_bytes(5)),0,8));
+        $result=DB::transaction(function()use($request,$data,$admin,$serial,$id){
+            $sr=DB::selectOne('SELECT id,client_user_id,request_type,status,metadata_json FROM service_requests WHERE id=? FOR UPDATE',[$id]);
+            if(!$sr)throw new ApiException(404,'طلب الخدمة غير موجود');
+            if($sr->status!=='awaiting_payment')throw new ApiException(409,'الطلب لا ينتظر دفعة متبقية حاليًا','PAYMENT_NOT_ALLOWED');
+            $meta=$this->json($sr->metadata_json);$stage=(string)($meta['paymentStage']??'');
+            if($stage!=='balance')throw new ApiException(409,'هذا الإجراء مخصص للدفعة المتبقية فقط','MANUAL_COLLECTION_BALANCE_ONLY');
+            $expected=(float)($meta['expectedPaymentEgp']??0);
+            if($expected<=0)throw new ApiException(409,'لا يوجد مبلغ متبقٍ مثبت على الطلب','SERVICE_PAYMENT_NOT_REQUIRED');
+            if(abs((float)$data['amountEgp']-$expected)>0.009)throw new ApiException(422,"المبلغ المتبقي المطلوب هو {$expected} ج.م",'PAYMENT_AMOUNT_MISMATCH',['expectedAmountEgp'=>$expected]);
+            $paidRow=DB::selectOne("SELECT COALESCE(SUM(amount_egp) FILTER (WHERE status='approved'),0)::float AS amount FROM payments WHERE service_request_id=?",[$id]);
+            $approvedTotal=(float)($paidRow->amount??0)+(float)$data['amountEgp'];
+            $state=$this->servicePaymentState($sr,$id,$approvedTotal);
+            $row=DB::selectOne("INSERT INTO payments(serial_number,user_id,service_request_id,amount_egp,payment_method,status,admin_notes,reviewed_by_admin_id,reviewed_at,source,payment_stage,transaction_reference) VALUES (?,?,?,?,'external_transfer','approved',?,?,CURRENT_TIMESTAMP,'admin_manual_collection','balance',?) RETURNING id",[$serial,$sr->client_user_id,$id,$data['amountEgp'],trim($data['reason']),$admin,$data['externalReference']??null]);
+            DB::statement('UPDATE service_requests SET status=?,metadata_json=?::jsonb,completed_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?',[$state['status'],json_encode($state['meta'],JSON_UNESCAPED_UNICODE),$id]);
+            $this->audit->write($request,'payment.manual_remaining_collected','payment',(int)$row->id,null,['serviceRequestId'=>$id,'amountEgp'=>(float)$data['amountEgp'],'reason'=>trim($data['reason']),'externalReference'=>$data['externalReference']??null,'paymentStage'=>'balance']);
+            $this->notifications->notify((int)$sr->client_user_id,'payment_confirmed','تم تأكيد الدفعة المتبقية','تم تسجيل سداد المبلغ المتبقي وإتاحة الخطوة التالية في طلبك',"/requests/{$id}",[],'important');
+            return['id'=>(int)$row->id,'serialNumber'=>$serial,'status'=>'paid','paymentStage'=>'balance','serviceRequestId'=>$id,'serviceRequestStatus'=>$state['status']];
+        });
+        return$this->created($request,$result,'تم تسجيل الدفعة المتبقية وتسوية الرصيد');
     }
 
     private function servicePaymentState(object $sr,int $serviceRequestId,float $approvedTotal): array
@@ -224,4 +312,12 @@ final class PaymentController extends Controller
         if(is_array($value))return$value;if(is_object($value))return(array)$value;if(is_string($value))return json_decode($value,true)?:[];return[];
     }
     private function jsonList(mixed $value): array{return array_values(array_map('strval',$this->json($value)));}
+    private function normalizeAdminPaymentStatus(string $status): string
+    {
+        return match($status){
+            'paid' => 'approved',
+            'pending' => 'pending_verification',
+            default => $status,
+        };
+    }
 }

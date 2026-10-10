@@ -12,11 +12,13 @@ import {
   FileText,
   LogIn,
   LogOut,
+  LayoutDashboard,
   Menu,
   MailCheck,
   Scale,
   Sparkles,
   UserRound,
+  UsersRound,
   X,
 } from "lucide-react";
 import { frontendApi } from "@/lib/apiClient";
@@ -82,10 +84,11 @@ export default function Navbar() {
   const navItems = useMemo<NavItem[]>(() => {
     const base: NavItem[] = [
       { href: "/create-contract?mode=self_service", label: "إعداد عقد", icon: Sparkles },
-      { href: "/request-review", label: "مراجعة عقد", icon: Scale },
+      { href: "/request-review", label: "راجع عقدك أو اسأل محامي", icon: Scale },
     ];
     if (!user) return base;
     return [
+      { href: "/dashboard", label: "لوحتي", icon: LayoutDashboard },
       ...base,
       { href: "/contracts", label: "سجل العقود", icon: FileText, badge: counts.contracts },
       { href: "/requests", label: "طلبات الخدمات", icon: Scale, badge: counts.requests },
@@ -212,9 +215,9 @@ export default function Navbar() {
                       </button>
                     </div>
                     <div className="p-2 space-y-1">
-                      <Link href="/account" className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12px] font-black text-slate-600 hover:bg-slate-50 hover:text-[#00102e] transition">
-                        <UserRound className="h-4 w-4" /> حسابي
-                      </Link>
+                      <Link href="/dashboard" className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12px] font-black text-slate-600 hover:bg-slate-50 hover:text-[#00102e] transition"><LayoutDashboard className="h-4 w-4" /> لوحتي</Link>
+                      <Link href="/account" className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12px] font-black text-slate-600 hover:bg-slate-50 hover:text-[#00102e] transition"><UserRound className="h-4 w-4" /> حسابي</Link>
+                      <Link href="/saved-parties" className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12px] font-black text-slate-600 hover:bg-slate-50 hover:text-[#00102e] transition"><UsersRound className="h-4 w-4" /> الأطراف المحفوظة</Link>
                       <button type="button" onClick={() => void logout()} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12px] font-black text-red-600 hover:bg-red-50 transition">
                         <LogOut className="h-4 w-4" /> تسجيل الخروج
                       </button>

@@ -44,6 +44,7 @@ final class AuditService
 
     private function canonicalize(mixed $value): mixed
     {
+        if($value instanceof \DateTimeInterface)return$value->format(DATE_ATOM);
         if(is_object($value))$value=(array)$value;
         if(!is_array($value))return$value;
         if(array_is_list($value))return array_map(fn($item)=>$this->canonicalize($item),$value);

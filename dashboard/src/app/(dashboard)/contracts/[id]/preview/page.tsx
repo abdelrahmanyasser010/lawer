@@ -111,16 +111,16 @@ export default function StaffContractPreviewPage() {
           <Link href={`/contracts/${id}`} className="inline-flex items-center gap-1 text-xs font-black text-slate-500"><ArrowRight className="h-4 w-4" /> تفاصيل العقد</Link>
           <div className="mt-2 flex flex-wrap items-center gap-2"><strong className="text-sm text-[#00102e]">معاينة موظف — الإصدار {payload.versionNumber}</strong><StatusBadge value={payload.versionStatus} /></div>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-black text-emerald-800"><ShieldCheck className="h-4 w-4" /> المعاينة تعمل بجلسة الإدارة ولا تستخدم جلسة العميل</div>
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-800"><ShieldCheck className="h-4 w-4" /> المعاينة تعمل بجلسة الإدارة ولا تستخدم جلسة العميل</div>
       </div>
 
       <article className="relative mx-auto min-h-[1123px] w-full max-w-[794px] overflow-hidden bg-white px-[58px] py-[54px] text-[#111827] shadow-xl print:min-h-0 print:max-w-none print:shadow-none" style={{ fontFamily: 'Arial, "Tahoma", sans-serif' }}>
         {!(["locked", "issued"].includes(payload.versionStatus)) && <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden opacity-[0.045]"><span className="-rotate-45 whitespace-nowrap text-7xl font-black">معاينة موظف — غير نهائي</span></div>}
 
         <header className="relative border-b-2 border-[#00102e] pb-5 text-center">
-          <div className="flex items-center justify-between gap-3 text-[10px] font-bold text-slate-500"><span>{payload.templateNameAr}</span><span className="font-mono" dir="ltr">{payload.serialNumber}</span></div>
+          <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-500"><span>{payload.templateNameAr}</span><span className="font-mono" dir="ltr">{payload.serialNumber}</span></div>
           <h1 className="mt-5 text-[25px] font-black leading-10 text-[#00102e]">{variantTitle}</h1>
-          <p className="mt-2 text-[11px] font-bold text-slate-500">الإصدار {payload.versionNumber} · {payload.versionStatus === "issued" ? "نسخة صادرة" : payload.versionStatus === "locked" ? "نسخة مقفلة" : "معاينة تشغيلية"}</p>
+          <p className="mt-2 text-xs font-bold text-slate-500">الإصدار {payload.versionNumber} · {payload.versionStatus === "issued" ? "نسخة صادرة" : payload.versionStatus === "locked" ? "نسخة مقفلة" : "معاينة تشغيلية"}</p>
         </header>
 
         <section className="relative mt-7">
@@ -152,14 +152,14 @@ export default function StaffContractPreviewPage() {
         {manualAnnexes.length > 0 && (
           <section className="relative mt-9 border-t border-slate-300 pt-6">
             <h2 className="text-[15px] font-black text-[#00102e]">الملاحق الاختيارية</h2>
-            <p className="mt-1 text-[10px] font-bold text-slate-500">هذه الملاحق تطبع كقوالب فارغة ويُستكمل محتواها يدويًا.</p>
+            <p className="mt-1 text-xs font-bold text-slate-500">هذه الملاحق تطبع كقوالب فارغة ويُستكمل محتواها يدويًا.</p>
             <div className="mt-4 space-y-5">
-              {manualAnnexes.map((annex) => <div key={annex.key} className="break-inside-avoid rounded-xl border border-slate-300 p-4"><h3 className="text-[12px] font-black text-[#00102e]">{annex.nameAr}</h3><p className="mt-2 text-[11px] leading-6 text-slate-600">{annex.description}</p><div className="mt-4 h-24 rounded-lg border border-dashed border-slate-300" /></div>)}
+              {manualAnnexes.map((annex) => <div key={annex.key} className="break-inside-avoid rounded-xl border border-slate-300 p-4"><h3 className="text-[12px] font-black text-[#00102e]">{annex.nameAr}</h3><p className="mt-2 text-xs leading-6 text-slate-600">{annex.description}</p><div className="mt-4 h-24 rounded-lg border border-dashed border-slate-300" /></div>)}
             </div>
           </section>
         )}
 
-        <footer className="relative mt-10 border-t border-slate-300 pt-4 text-[9px] leading-5 text-slate-500">
+        <footer className="relative mt-10 border-t border-slate-300 pt-4 text-xs leading-5 text-slate-500">
           <div className="flex flex-wrap items-center justify-between gap-2"><span className="inline-flex items-center gap-1"><FileText className="h-3 w-3" /> معاينة داخلية للإصدار {payload.versionNumber}</span>{payload.documentHash && <span className="max-w-[420px] truncate font-mono" dir="ltr">SHA-256: {payload.documentHash}</span>}</div>
         </footer>
       </article>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { AlertCircle, Calendar, Check, HelpCircle, Trash2, Upload } from "lucide-react";
+import { AlertCircle, Calendar, HelpCircle, Trash2, Upload } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { evaluateCondition, numberToArabicWordsBare, numberToEgyptianPoundsWords } from "@zdraft/template-engine";
 import type {
@@ -15,7 +15,7 @@ import { resolveWizardFieldLabel } from "../domain/contractDisplay";
 interface DynamicFieldRendererProps {
   field: WizardFieldDefinition;
   value: ContractFieldValue | undefined;
-  allFormValues?: Record<string, any>;
+  allFormValues?: Record<string, ContractFieldValue | unknown>;
   errorMessage?: string;
   touched?: boolean;
   onChange: (value: ContractFieldValue) => void;
@@ -37,6 +37,14 @@ function getInputClass(hasError?: boolean): string {
 function scalarValue(value: ContractFieldValue | undefined): PrimitiveFieldValue {
   if (Array.isArray(value)) return "";
   return value ?? "";
+}
+
+function acceptedTypesLabel(types: string[]): string {
+  const normalized = [...types].sort().join(",");
+  if (normalized === ["application/pdf", "image/*"].sort().join(",")) return "صور أو PDF";
+  if (normalized === "image/*") return "صور فقط";
+  if (normalized === "application/pdf") return "PDF فقط";
+  return "صيغ ملفات محددة";
 }
 
 function MoneyFieldInput({
@@ -115,28 +123,45 @@ function DateFieldInput({
     }
   };
 
+  const setToday = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (disabled) return;
+    onChange(new Date().toISOString().split("T")[0]);
+  };
+
   return (
-    <div onClick={handleClick} className={`relative flex items-center ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}>
-      <input
-        type="text"
-        readOnly
-        value={displayDate || ""}
-        disabled={disabled}
-        placeholder="اختر التاريخ"
-        className={`${getInputClass(hasError)} cursor-pointer pr-4 pl-10`}
-      />
-      <Calendar className={`pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 ${hasError ? "text-rose-500" : "text-slate-400"}`} />
-      <input
-        ref={hiddenInputRef}
-        type="date"
-        value={value || ""}
-        onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
-        min={min ? String(min) : undefined}
-        max={max ? String(max) : undefined}
-        disabled={disabled}
-        className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
-        tabIndex={-1}
-      />
+    <div className={`relative ${disabled ? "opacity-70" : ""}`}>
+      {!disabled && (
+        <button
+          type="button"
+          onClick={setToday}
+          className="absolute left-10 top-1/2 z-10 -translate-y-1/2 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-600 transition hover:bg-[#986410]/15 hover:text-[#00102e]"
+        >
+          اليوم
+        </button>
+      )}
+      <div onClick={handleClick} className={`relative flex items-center ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
+        <input
+          type="text"
+          readOnly
+          value={displayDate || ""}
+          disabled={disabled}
+          placeholder="اليوم / الشهر / السنة"
+          className={`${getInputClass(hasError)} cursor-pointer pr-4 ${disabled ? "pl-10" : "pl-24"}`}
+        />
+        <Calendar className={`pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 ${hasError ? "text-rose-500" : "text-slate-400"}`} />
+        <input
+          ref={hiddenInputRef}
+          type="date"
+          value={value || ""}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+          min={min ? String(min) : undefined}
+          max={max ? String(max) : undefined}
+          disabled={disabled}
+          className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
+          tabIndex={-1}
+        />
+      </div>
     </div>
   );
 }
@@ -210,8 +235,9 @@ function renderScalarControl(
           disabled={disabled}
           className="mt-0.5 h-4 w-4 accent-[#986410]"
         />
-        <span className={`text-[11px] font-bold leading-5 ${field.required ? (hasError ? "text-rose-700" : "text-[#c66b22]") : "text-slate-700"}`}>
-          {field.labelAr} {field.required && <span aria-label="إلزامي">*</span>}
+        <span className={`flex flex-wrap items-center gap-2 text-[11px] font-bold leading-5 ${hasError ? "text-rose-700" : "text-slate-700"}`}>
+          <span>{field.labelAr}</span>
+          <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${field.required ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-500"}`}>{field.required ? "مطلوب" : "اختياري"}</span>
         </span>
       </label>
     );
@@ -306,7 +332,10 @@ function RepeaterRenderer({
                 return (
                   <div key={column.key}>
                     <label className="mb-1 block text-[10.5px] font-bold text-slate-600">
-                      {column.labelAr} {required && <span className="text-[#c66b22]">*</span>}
+                      <span className="inline-flex items-center gap-1.5">
+                        <span>{column.labelAr}</span>
+                        <span className={`rounded-full px-1.5 py-0.5 text-[8px] font-black ${required ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-500"}`}>{required ? "مطلوب" : "اختياري"}</span>
+                      </span>
                     </label>
                     {column.type === "select" ? (
                       <select
@@ -378,7 +407,6 @@ export default function DynamicFieldRenderer({
   value,
   allFormValues = {},
   errorMessage,
-  touched,
   onChange,
   onFocus,
   onFilesSelected,
@@ -411,11 +439,14 @@ export default function DynamicFieldRenderer({
     return (
       <div className="space-y-1.5" onFocusCapture={onFocus}>
         <label className={`block text-xs font-bold ${hasError || attachmentError ? "text-rose-700" : "text-[#00102e]"}`}>
-          {attachmentLabel} {field.required && <span className="text-[#c66b22]">*</span>}
+          <span className="inline-flex items-center gap-2">
+            <span>{attachmentLabel}</span>
+            <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${field.required ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-500"}`}>{field.required ? "مطلوب" : "اختياري"}</span>
+          </span>
         </label>
         <label className={`flex items-center justify-between gap-3 rounded-xl border-2 border-dashed p-4 transition ${field.editable === false ? "cursor-not-allowed opacity-70" : "cursor-pointer"} ${hasError || attachmentError ? "border-rose-300 bg-rose-50/30" : "border-slate-300 bg-slate-50 hover:border-[#986410]"}`}>
           <span className="flex items-center gap-2 text-xs font-bold text-slate-600"><Upload className="h-4 w-4 text-[#986410]" />{uploading ? "جاري رفع الملفات..." : "اختر الملفات"}</span>
-          <span className="text-[10px] font-semibold text-slate-400">حتى {maxFiles} ملف · {acceptedTypes.join("، ")}</span>
+          <span className="text-[10px] font-semibold text-slate-400">حتى {maxFiles} ملف · {acceptedTypesLabel(acceptedTypes)}</span>
           <input
             type="file"
             accept={acceptedTypes.join(",")}
@@ -438,35 +469,15 @@ export default function DynamicFieldRenderer({
             }}
           />
         </label>
-        <p className="text-[10px] font-semibold text-slate-400">{field.helpText ?? "يمكنك رفع الصور أو ملفات PDF حسب المطلوب."}</p>
+        {field.helpText && <p className="text-[10px] font-semibold text-slate-400">{field.helpText}</p>}
         {(attachmentError || hasError) && <p className="flex items-center gap-1.5 text-[11px] font-bold text-rose-600"><AlertCircle className="h-3.5 w-3.5" />{attachmentError || errorMessage}</p>}
       </div>
     );
   }
 
   const label = resolveWizardFieldLabel(field, allFormValues);
-  let placeholder = field.placeholder;
-  let helpText = field.helpText;
-
-  if (field.key.endsWith("_national_id")) {
-    const typeKey = field.key.replace(/_national_id$/, "_identity_document_type");
-    const selectedType = String(allFormValues[typeKey] ?? "").trim();
-    if (selectedType === "passport" || label === "رقم جواز السفر") {
-      placeholder = "أدخل رقم جواز السفر الساري";
-      helpText = "أدخل رقم جواز السفر كما هو مثبت بالمستند";
-    } else if (selectedType === "national_id" || label === "الرقم القومي" || field.key.includes("witness")) {
-      placeholder = "14 رقمًا قوميًا";
-      helpText = "أدخل الرقم القومي المكون من 14 رقمًا بدون حروف أو مسافات";
-    } else {
-      placeholder = "اختر نوع مستند إثبات الهوية أولًا";
-      helpText = "اختر رقم قومي أو جواز سفر، ثم أدخل الرقم كما هو بالمستند";
-    }
-  }
-
-  if (field.key.includes("supporting_documents") || field.key.includes("extra_docs")) {
-    placeholder = placeholder || "مثال: صور بطاقات الطرفين، إيصال مرافق، محضر استلام/جرد المنقولات";
-    helpText = helpText || "المستندات أو المرفقات التي يتم إرفاقها بالعقد عند التوقيع لإثبات الحالة أو الهوية أو قراءات العدادات";
-  }
+  const placeholder = field.placeholder;
+  const helpText = field.helpText;
 
   const effectiveField: WizardFieldDefinition = {
     ...field,
@@ -481,8 +492,9 @@ export default function DynamicFieldRenderer({
     <div className="space-y-1.5" onFocusCapture={onFocus}>
       {field.type !== "checkbox" && (
         <div className="flex items-center justify-between gap-2">
-          <label className={`block text-xs font-bold ${hasError ? "text-rose-700" : "text-[#00102e]"}`}>
-            {label} {field.required && <span className={hasError ? "text-rose-600" : "text-[#c66b22]"}>*</span>}
+          <label className={`flex flex-wrap items-center gap-2 text-xs font-bold ${hasError ? "text-rose-700" : "text-[#00102e]"}`}>
+            <span>{label}</span>
+            <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${field.required ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-500"}`}>{field.required ? "مطلوب" : "اختياري"}</span>
           </label>
         </div>
       )}

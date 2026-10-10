@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 use App\Exceptions\ApiException;
 use App\Services\AuditService;
+use App\Services\NotificationService;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -12,10 +13,10 @@ final class SettingsController extends Controller
     private const EDITABLE = [
         'office.display_name','office.support_email','office.address','office.whatsapp_number','office.review_whatsapp_number','office.support_whatsapp_number','office.support_phone','payments.vodafone_cash_number',
         'contracts.self_service_edit_hours','services.contract_review.fee_egp','services.contract_review.deposit_egp',
-        'services.contract_drafting.deposit_egp','customer_portal.communication_channels',
+        'services.contract_drafting.deposit_egp','services.self_service_lawyer_review.enabled','services.self_service_lawyer_review.fee_egp','customer_portal.communication_channels',
         'notifications.whatsapp_mode','notifications.web_push_enabled',
     ];
-    public function __construct(private AuditService $audit) {}
+    public function __construct(private AuditService $audit, private NotificationService $notifications) {}
     public function index(Request $request)
     {
         $rows = DB::table('platform_settings')->selectRaw('setting_key AS key,setting_value_json AS value,is_secret AS "isSecret",updated_at AS "updatedAt"')->orderBy('setting_key')->get()->map(function($row){ if ($row->isSecret) $row->value='••••••••'; elseif (is_string($row->value)) $row->value=json_decode($row->value,true); return $row; });
@@ -40,12 +41,23 @@ final class SettingsController extends Controller
         });
         return $this->ok($request,['updated'=>count($validated)],'تم حفظ الإعدادات وتسجيل التغيير');
     }
+    public function testEmail(Request $request)
+    {
+        $data=$request->validate(['email'=>['nullable','email','max:255']]);
+        $auth=$request->attributes->get('auth_user');
+        $recipient=(string)($data['email']??$auth['email']??'');
+        if($recipient==='')throw new ApiException(422,'حدد بريدًا لإرسال رسالة الاختبار','TEST_EMAIL_REQUIRED');
+        $this->notifications->email($recipient,'settings_test_email','رسالة اختبار من Z draft',['name'=>$auth['name']??null,'message'=>'تم إرسال هذه الرسالة للتأكد من إعدادات البريد.']);
+        $this->audit->write($request,'settings.test_email_sent','platform_settings','email',null,['recipient'=>$recipient]);
+        return $this->ok($request,['queued'=>true,'recipient'=>$recipient],'تم وضع رسالة الاختبار في قائمة الإرسال');
+    }
     private function validateValue(string $key,mixed $value): mixed
     {
         return match($key){
             'office.display_name'=>$this->text($value,2,120),'office.support_email'=>$this->email($value),'office.address'=>$this->text($value,0,500),'office.whatsapp_number','office.review_whatsapp_number','office.support_whatsapp_number','office.support_phone','payments.vodafone_cash_number'=>$this->text($value,0,30),
             'contracts.self_service_edit_hours'=>$this->number($value,1,168),
-            'services.contract_review.fee_egp','services.contract_review.deposit_egp','services.contract_drafting.deposit_egp'=>$this->number($value,0,100000),
+            'services.contract_review.fee_egp','services.contract_review.deposit_egp','services.contract_drafting.deposit_egp','services.self_service_lawyer_review.fee_egp'=>$this->number($value,0,100000),
+            'services.self_service_lawyer_review.enabled'=>$this->bool($value),
             'customer_portal.communication_channels'=>$this->channels($value),'notifications.whatsapp_mode'=>$this->choice($value,['manual_wa_me','disabled']),
             'notifications.web_push_enabled'=>$value===false?false:throw new ApiException(400,'Web Push غير مفعل في إصدار MVP الحالي'),
             default=>throw new ApiException(400,'الإعداد غير مدعوم')};

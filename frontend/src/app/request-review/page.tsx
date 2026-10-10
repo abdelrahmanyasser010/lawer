@@ -2,15 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, CheckCircle2, Clock3, FileText, Loader2, MessageCircle, Phone, Receipt, Scale, Trash2, Upload, Video, WalletCards, X } from "lucide-react";
+import { Calendar, CheckCircle2, Clock3, FileText, Loader2, MessageCircle, Phone, Scale, Trash2, Upload, Video, X } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { apiRequest, ApiClientError, frontendApi } from "@/lib/apiClient";
-import { compressMultipleFiles, compressUploadFile } from "@/lib/compression";
+import { compressMultipleFiles } from "@/lib/compression";
 import { usePublicCatalog } from "@/hooks/usePublicCatalog";
 import type { CommunicationChannel } from "@/types/customer";
 import { normalizePhoneInput, phoneValidationError } from "@/lib/inputValidation";
-import { usePaymentAccess } from "@/hooks/usePaymentAccess";
+import GatewayCheckoutModal from "@/components/checkout/GatewayCheckoutModal";
 import { formatFileSize } from "@/lib/labels";
 
 const MAX_MAIN_CONTRACT_FILES = 5;
@@ -29,9 +29,9 @@ function isPreviewableImage(file: File) {
 export default function RequestReviewPage() {
   const router = useRouter();
   const { catalog, loading: catalogLoading, loadError: catalogLoadError } = usePublicCatalog();
-  const { paymentAccess, paymentVerified, paymentCashNumber, requireVerified } = usePaymentAccess("/request-review");
 
-  const [title, setTitle] = useState("");
+  const [requestPurpose, setRequestPurpose] = useState<"review" | "consultation">("review");
+  const [contractTypeText, setContractTypeText] = useState("");
   const [description, setDescription] = useState("");
   const [channel, setChannel] = useState<CommunicationChannel>("whatsapp");
 
@@ -43,20 +43,19 @@ export default function RequestReviewPage() {
   const [dayMenuOpen, setDayMenuOpen] = useState(false);
 
   const [phone, setPhone] = useState("");
-  const [senderWalletPhone, setSenderWalletPhone] = useState("");
 
   const [mainContracts, setMainContracts] = useState<File[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
 
-  const [receipt, setReceipt] = useState<File | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [createdRequest, setCreatedRequest] = useState<{ id: number; serialNumber: string } | null>(null);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const totalReviewPrice = catalog?.services?.contractReviewFeeEgp || 0;
   const reviewDeposit = totalReviewPrice > 0 ? Math.min(catalog?.services?.contractReviewDepositEgp || 0, totalReviewPrice) : (catalog?.services?.contractReviewDepositEgp || 0);
   const remainingPrice = Math.max(0, totalReviewPrice - reviewDeposit);
-  const cashNumber = paymentCashNumber;
   const reviewNumber = catalog?.office?.reviewWhatsappNumber || "";
 
   const enabledChannels = useMemo(() => {
@@ -140,114 +139,46 @@ export default function RequestReviewPage() {
     }
   }
 
-  async function selectReceipt(file: File | null) {
-    if (!file) { setReceipt(null); return; }
-    setPreparing(true); setError("");
-    try {
-      const compressed = await compressUploadFile(file);
-      if (compressed.file.size > MAX_FILE_BYTES) {
-        setError("إثبات الدفع أكبر من الحد المسموح 20MB.");
-        return;
-      }
-      setReceipt(compressed.file);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر قراءة إثبات الدفع.");
-    } finally {
-      setPreparing(false);
-    }
-  }
 
   async function submit() {
     setError("");
-    if (!(await requireVerified())) return;
-    if (!title.trim()) {
-      setError("اكتب موضوع المراجعة باختصار.");
-      return;
-    }
-    if (description.trim().length < 10) {
-      setError("اكتب تفاصيل المراجعة بما لا يقل عن 10 أحرف.");
-      return;
-    }
-    const phoneError = phoneValidationError(phone, true);
-    if (phoneError) {
-      setError(phoneError);
-      return;
-    }
-    if (!selectedSlotKey) {
-      setError("اختر يومًا وموعدًا متاحًا للتواصل ومناقشة تقرير المراجعة.");
-      return;
-    }
-    if (mainContracts.length === 0) {
-      setError("يجب رفع العقد الأساسي المراد مراجعته.");
-      return;
-    }
-    if (reviewDeposit > 0 && !cashNumber) {
-      setError("بيانات الدفع غير متاحة حاليًا.");
-      return;
-    }
-    const senderPhoneError = reviewDeposit > 0 ? phoneValidationError(senderWalletPhone, true) : "";
-    if (senderPhoneError) {
-      setError(`رقم المحفظة التي تم التحويل منها: ${senderPhoneError}`);
-      return;
-    }
-    if (reviewDeposit > 0 && !receipt) {
-      setError("ارفع إثبات دفع عربون مراجعة العقد.");
-      return;
-    }
+    if (!contractTypeText.trim()) return setError("اكتب نوع العقد.");
+    if (requestPurpose === "consultation" && description.trim().length < 10) return setError("اكتب سؤالك أو المشكلة بما لا يقل عن 10 أحرف.");
+    const phoneError = phoneValidationError(phone, true); if (phoneError) return setError(phoneError);
+    if (!selectedSlotKey) return setError(requestPurpose === "review" ? "اختر يومًا وموعدًا مناسبًا لمناقشة نتيجة المراجعة." : "اختر يومًا وموعدًا مناسبًا للاستشارة.");
+    if (mainContracts.length === 0) return setError(requestPurpose === "review" ? "ارفع العقد اللي عايز تراجعه." : "ارفع العقد اللي الاستشارة بخصوصه.");
 
     setSubmitting(true);
-    let createdRequestId: number | null = null;
     try {
       const attachmentIds: number[] = [];
-      const allFiles = [...mainContracts, ...attachments];
-      for (const file of allFiles) {
-        const body = new FormData();
-        body.append("file", file);
+      for (const file of [...mainContracts, ...attachments]) {
+        const body = new FormData(); body.append("file", file);
         const uploaded = await apiRequest<{ id: number }>("/api/v1/attachments", { method: "POST", body });
         attachmentIds.push(uploaded.id);
       }
-
-      const selectedDay = availabilityDays.find((item) => item.date === selectedDate);
-      const selectedSlot = selectedDay?.slots.find((item) => item.slotKey === selectedSlotKey);
-
-      const request = await apiRequest<{ id: number; serialNumber: string }>("/api/v1/service-requests", {
+      const generatedTitle = `${requestPurpose === "review" ? "مراجعة عقد" : "استشارة بخصوص عقد"} — ${contractTypeText.trim()}`;
+      const request = await apiRequest<{ id: number; serialNumber: string; paymentAmountEgp?: number }>("/api/v1/service-requests", {
         method: "POST",
         body: JSON.stringify({
           requestType: "contract_review",
-          title: title.trim(),
+          requestPurpose,
+          contractTypeText: contractTypeText.trim(),
+          title: generatedTitle,
           description: description.trim(),
           communicationChannel: channel,
           availabilitySlotKey: selectedSlotKey,
           attachmentIds,
           paymentRequired: reviewDeposit > 0,
-          clientContactSnapshot: {
-            phone: normalizePhoneInput(phone),
-            paymentSenderPhone: normalizePhoneInput(senderWalletPhone),
-            preferredDate: selectedDate,
-            preferredSlotStart: selectedSlot?.start || null,
-            preferredPeriodLabel: selectedSlot ? `${selectedDay?.label || selectedDate} — ${selectedSlot.label}` : null,
-          },
+          clientContactSnapshot: { phone: normalizePhoneInput(phone) },
         }),
       });
-      createdRequestId = request.id;
-
-      if (reviewDeposit > 0 && receipt) {
-        const receiptBody = new FormData();
-        receiptBody.append("file", receipt);
-        const receiptAttachment = await apiRequest<{ id: number }>("/api/v1/attachments", { method: "POST", body: receiptBody });
-        await apiRequest("/api/v1/payments/receipts", {
-          method: "POST",
-          body: JSON.stringify({ serviceRequestId: request.id, amountEgp: reviewDeposit, senderPhone: normalizePhoneInput(senderWalletPhone), attachmentId: receiptAttachment.id }),
-        });
-      }
-      router.push(`/requests/${request.id}`);
+      const created = { id: request.id, serialNumber: request.serialNumber };
+      setCreatedRequest(created);
+      if (reviewDeposit > 0) setCheckoutOpen(true);
+      else router.push(`/requests/${request.id}`);
     } catch (caught) {
-      if (createdRequestId) {
-        router.push(`/requests/${createdRequestId}?payment=retry`);
-        return;
-      }
       if (caught instanceof ApiClientError && caught.status === 401) {
-        router.push("/login?next=%2Frequest-review");
+        router.push(`/login?next=${encodeURIComponent("/request-review")}`);
         return;
       }
       setError(caught instanceof Error ? caught.message : "تعذر إرسال الطلب الآن.");
@@ -268,19 +199,19 @@ export default function RequestReviewPage() {
               {/* Left Column: Summary */}
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-[#986410]/40 bg-[#986410]/10 px-3 py-1.5 text-xs font-black text-[#d9a84e]">
-                  <Scale className="h-4 w-4" /> مراجعة عقد
+                  <Scale className="h-4 w-4" /> راجع عقدك أو اسأل محامي
                 </div>
                 <h2 className="mt-4 text-xl sm:text-2xl font-black text-white">
-                  مراجعة وتدقيق العقد بواسطة محامٍ
+                  مراجعة أو استشارة بخصوص عقد موجود
                 </h2>
                 <p className="mt-3 text-[12px] leading-6 text-slate-300">
-                  اكتب باختصار ما الذي تريد مراجعته في العقد، وارفع العقد الأساسي مع أي مستندات داعمة، ثم اختر وسيلة التواصل والموعد من جدول المكتب لمناقشة التقرير.
+                  اختار محتاج مراجعة للعقد ولا استشارة بخصوصه، وارفع العقد، وبعدها اختار وسيلة التواصل والموعد المناسب.
                 </p>
 
                 {/* Pricing Box */}
                 <div className="mt-5 rounded-2xl border border-[#986410]/35 bg-[#986410]/10 p-5 space-y-3">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                    <span className="text-[11px] font-bold text-[#d9a84e]">تسعير مراجعة العقد</span>
+                    <span className="text-[11px] font-bold text-[#d9a84e]">سعر الخدمة</span>
                     <span className="text-[10px] text-slate-300">الإجمالي: <b>{totalReviewPrice.toLocaleString("ar-EG")} ج.م</b></span>
                   </div>
 
@@ -301,32 +232,32 @@ export default function RequestReviewPage() {
                       </div>
 
                       <div className="flex items-center justify-between text-[11px] text-slate-400 border-t border-white/5 pt-1.5">
-                        <span>المتبقي عند إتمام المراجعة:</span>
+                        <span>المتبقي بعد انتهاء الخدمة:</span>
                         <span className="text-white font-bold">{remainingPrice.toLocaleString("ar-EG")} ج.م</span>
                       </div>
                     </div>
                   )}
 
                   <p className="mt-2 text-[10px] leading-5 text-slate-400 border-t border-white/10 pt-2">
-                    يُدفع العربون لتأكيد حجز الموعد والبدء في دراسة العقد، وسيظهر المبلغ المتبقي ({remainingPrice.toLocaleString("ar-EG")} ج.م) داخل الطلب عند اكتمال المراجعة وقبل إتاحة المخرج النهائي.
+                    يُدفع المبلغ المطلوب الآن لبدء الخدمة، وسيظهر المتبقي ({remainingPrice.toLocaleString("ar-EG")} ج.م) داخل الطلب في المرحلة المحددة من الخدمة.
                   </p>
                 </div>
 
                 <div className="mt-6 space-y-3 text-[11px] leading-5 text-slate-300">
                   <div className="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-3.5">
-                    <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#d9a84e]" /> يمكنك إرفاق العقد الأساسي بالإضافة لأي مستندات مساعدة.
+                    <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#d9a84e]" /> العقد الأساسي مطلوب، ويمكنك إرفاق أي مستندات مساعدة لو موجودة.
                   </div>
                   <div className="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-3.5">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> حالة الطلب والمواعيد وأي ملفات يتيحها المكتب تظل محفوظة داخل حسابك.
                   </div>
                   <div className="flex gap-3 rounded-xl border border-white/10 bg-white/5 p-3.5">
-                    <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" /> موعدك يُحجز مبدئيًا عند إرسال الطلب، ويُثبت بعد مراجعة الدفع.
+                    <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" /> موعدك يُحجز حسب المواعيد المتاحة ويظهر داخل الطلب.
                   </div>
                   {reviewNumber && (
                     <div className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3.5">
                       <div className="flex items-center gap-2 text-emerald-300">
                         <MessageCircle className="h-4 w-4 shrink-0 text-emerald-400" />
-                        <span>رقم WhatsApp للمراجعات:</span>
+                        <span>رقم WhatsApp للخدمة:</span>
                       </div>
                       <b dir="ltr" className="font-mono text-white">{reviewNumber}</b>
                     </div>
@@ -337,14 +268,23 @@ export default function RequestReviewPage() {
               {/* Right Column: Form */}
               <div className="space-y-4 rounded-2xl border border-white/10 bg-slate-950/60 p-5 sm:p-6">
 
-                {/* Compact Fields Group */}
+                {/* Purpose + contract type */}
                 <div className="space-y-3">
-                  <label className="block text-[11px] font-bold text-slate-300">موضوع المراجعة
-                    <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="مثال: مراجعة قبل توقيع عقد إيجار تجاري" className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] text-white placeholder:text-slate-500 focus:border-[#986410] outline-none" />
+                  <div>
+                    <p className="mb-1.5 text-[11px] font-bold text-slate-300">محتاج إيه؟ <span className="text-red-400">*</span></p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => setRequestPurpose("review")} className={`rounded-xl border px-3 py-2.5 text-[11px] font-black transition ${requestPurpose === "review" ? "border-[#986410] bg-[#986410]/15 text-[#d9a84e]" : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600"}`}>مراجعة العقد</button>
+                      <button type="button" onClick={() => setRequestPurpose("consultation")} className={`rounded-xl border px-3 py-2.5 text-[11px] font-black transition ${requestPurpose === "consultation" ? "border-[#986410] bg-[#986410]/15 text-[#d9a84e]" : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600"}`}>استشارة بخصوص العقد</button>
+                    </div>
+                  </div>
+
+                  <label className="block text-[11px] font-bold text-slate-300">نوع العقد <span className="text-red-400">*</span>
+                    <input value={contractTypeText} onChange={(event) => setContractTypeText(event.target.value)} placeholder="مثال: عقد إيجار شقة، عقد بيع عربية، عقد شراكة..." className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-[12px] text-white placeholder:text-slate-500 focus:border-[#986410] outline-none" />
                   </label>
 
-                  <label className="block text-[11px] font-bold text-slate-300">تفاصيل المراجعة
-                    <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} placeholder="اكتب باختصار ما الذي تريد مراجعته في العقد، والنقاط التي تريد التركيز عليها." className="mt-1.5 w-full resize-none rounded-xl border border-slate-700 bg-slate-900 p-3 text-[12px] text-white placeholder:text-slate-500 focus:border-[#986410] outline-none" />
+                  <label className="block text-[11px] font-bold text-slate-300">
+                    {requestPurpose === "review" ? "عايز المحامي يراجعلك إيه أو يركز على إيه؟" : <>احكيلنا سؤالك أو المشكلة <span className="text-red-400">*</span></>}
+                    <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} placeholder={requestPurpose === "review" ? "اختياري — اكتب أي نقطة معينة حابب المحامي يركز عليها." : "احكيلنا بشكل بسيط سؤالك أو المشكلة المرتبطة بالعقد."} className="mt-1.5 w-full resize-none rounded-xl border border-slate-700 bg-slate-900 p-3 text-[12px] text-white placeholder:text-slate-500 focus:border-[#986410] outline-none" />
                   </label>
                 </div>
 
@@ -388,11 +328,11 @@ export default function RequestReviewPage() {
                 <div className="grid gap-3 pt-1 sm:grid-cols-2">
                   {/* Main Contract Upload (Required) */}
                   <div>
-                    <div className="flex justify-between gap-2 text-[10px] font-bold text-slate-300 mb-1"><span>العقد الأساسي <span className="text-red-400">*</span></span><span>{mainContracts.length}/{MAX_MAIN_CONTRACT_FILES}</span></div>
+                    <div className="flex justify-between gap-2 text-[10px] font-bold text-slate-300 mb-1"><span>{requestPurpose === "review" ? "العقد اللي عايز تراجعه" : "العقد اللي الاستشارة بخصوصه"} <span className="text-red-400">*</span></span><span>{mainContracts.length}/{MAX_MAIN_CONTRACT_FILES}</span></div>
                     <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#986410]/50 bg-[#986410]/10 p-3 text-center transition hover:bg-[#986410]/20 min-h-[70px]">
                       <input type="file" multiple accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.webp" className="hidden" disabled={preparing} onChange={(event) => void addMainContracts(event.target.files)} />
                       {preparing ? <Loader2 className="h-4 w-4 animate-spin text-[#d9a84e]" /> : <Upload className="h-4 w-4 text-[#d9a84e]" />}
-                      <span className="mt-1 text-[10px] font-black text-white">رفع العقد</span>
+                      <span className="mt-1 text-[10px] font-black text-white">{requestPurpose === "review" ? "ارفع العقد" : "ارفع عقد الاستشارة"}</span>
                     </label>
                   </div>
 
@@ -419,38 +359,14 @@ export default function RequestReviewPage() {
                   </div>
                 )}
 
-                {reviewDeposit > 0 && !paymentVerified && <button type="button" onClick={() => void requireVerified()} className="w-full rounded-xl border border-[#986410]/30 bg-[#986410]/10 px-4 py-3 text-xs font-black text-[#d9a84e]">{paymentAccess === "unverified" ? "أكد بريدك الإلكتروني لعرض تعليمات الدفع" : "سجّل الدخول وأكد بريدك لعرض تعليمات الدفع"}</button>}
-              {reviewDeposit > 0 && paymentVerified && <>
-                  <div className="rounded-xl border border-white/10 bg-slate-900/90 p-3.5 mt-3">
-                    <div className="flex items-center justify-between gap-3">
-                    <span className="inline-flex items-center gap-2 text-[11px] font-bold text-slate-300"><WalletCards className="h-4 w-4 text-[#d9a84e]" /> حوّل العربون إلى رقم فودافون كاش:</span>
-                    {catalogLoading ? (
-                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-400"><Loader2 className="h-3 w-3 animate-spin" /> جاري التحميل...</span>
-                    ) : paymentVerified && cashNumber ? (
-                      <b dir="ltr" className="font-mono text-xs tracking-wide text-[#d9a84e]">{cashNumber}</b>
-                    ) : (
-                      <span className="text-[10px] font-bold text-red-300">غير متاح مؤقتًا.</span>
-                    )}
-                    </div>
-                    <label className="mt-3 block text-[10px] font-bold text-slate-300">
-                      رقم المحفظة التي تم التحويل منها
-                      <input value={senderWalletPhone} onChange={(event) => setSenderWalletPhone(normalizePhoneInput(event.target.value))} dir="ltr" placeholder="01XXXXXXXXX" className="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-left text-[12px] text-white placeholder:text-slate-500 focus:border-[#986410] outline-none font-mono" />
-                      <span className="mt-1 block text-[9px] leading-4 text-slate-500">يساعدنا الرقم على مطابقة التحويل ورد المبلغ عند حدوث مشكلة.</span>
-                    </label>
-                  </div>
-
-                  <label className={`block rounded-xl border border-dashed border-[#986410]/50 bg-[#986410]/10 p-3 text-center transition hover:bg-[#986410]/20 ${catalogLoading || !cashNumber || !paymentVerified ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
-                    <input type="file" accept="image/*,.pdf" className="hidden" disabled={catalogLoading || !cashNumber || !paymentVerified} onChange={(event) => void selectReceipt(event.target.files?.[0] || null)} />
-                    <Upload className="mx-auto h-4 w-4 text-[#d9a84e]" />
-                    <span className="mt-1.5 block text-[10px] font-black text-white">{receipt ? "تغيير إثبات دفع العربون" : `رفع إثبات دفع عربون المراجعة — ${reviewDeposit.toLocaleString("ar-EG")} ج.م`}</span>
-                  </label>
-                  {receipt && <ReviewUploadCard file={receipt} label="إثبات دفع العربون" tone="gold" onRemove={() => setReceipt(null)} />}
-                </>}
+                <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-3 text-[10px] font-bold leading-5 text-blue-100">
+                  بعد إنشاء الطلب هتدفع المبلغ المطلوب من خلال بوابة الدفع الإلكترونية. مراجعة العقد والاستشارة بخصوص عقد لهم نفس إعداد السعر والدفع.
+                </div>
 
                 {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-2.5 text-[11px] font-bold text-red-300">{error}</div>}
 
-                <button type="button" disabled={submitting || preparing || catalogLoading || catalogLoadError || (reviewDeposit > 0 && !cashNumber)} onClick={() => void submit()} className="mt-2 w-full rounded-xl bg-[#986410] py-3 text-[12px] font-black text-white transition hover:bg-[#986410]/90 disabled:opacity-60">
-                  {submitting ? "جاري رفع الملفات وإرسال الطلب..." : "إرسال طلب مراجعة العقد"}
+                <button type="button" disabled={submitting || preparing || catalogLoading || catalogLoadError || Boolean(createdRequest)} onClick={() => void submit()} className="mt-2 w-full rounded-xl bg-[#986410] py-3 text-[12px] font-black text-white transition hover:bg-[#986410]/90 disabled:opacity-60">
+                  {submitting ? "جاري إنشاء الطلب..." : reviewDeposit > 0 ? "أنشئ الطلب وادفع" : requestPurpose === "review" ? "إرسال طلب المراجعة" : "إرسال طلب الاستشارة"}
                 </button>
               </div>
 
@@ -460,6 +376,20 @@ export default function RequestReviewPage() {
       </main>
 
       <Footer />
+      {createdRequest && reviewDeposit > 0 && (
+        <GatewayCheckoutModal
+          isOpen={checkoutOpen}
+          onClose={() => { setCheckoutOpen(false); router.push(`/requests/${createdRequest.id}`); }}
+          orderTitle={`${requestPurpose === "review" ? "مراجعة عقد" : "استشارة بخصوص عقد"} — ${contractTypeText.trim()}`}
+          amountEgp={reviewDeposit}
+          serviceRequestId={createdRequest.id}
+          serialNumber={createdRequest.serialNumber}
+          purpose="review_consultation_initial"
+          lineItems={[{ key: "initial", label: "الدفعة المطلوبة الآن", amountEgp: reviewDeposit }]}
+          metadata={{ requestPurpose, contractTypeText: contractTypeText.trim(), totalPriceEgp: totalReviewPrice, remainingEgp: remainingPrice }}
+          onPaid={() => router.push(`/requests/${createdRequest.id}?payment=success`)}
+        />
+      )}
     </div>
   );
 }
@@ -477,7 +407,6 @@ function ReviewUploadCard({ file, label, tone, onRemove }: { file: File; label: 
     };
   }, [previewUrl]);
 
-  const isPaymentProof = label.includes("إثبات");
   const borderClass = tone === "gold" ? "border-[#986410]/35 bg-[#986410]/10" : "border-slate-700 bg-slate-900";
   const labelClass = tone === "gold" ? "text-[#d9a84e]" : "text-slate-400";
 
@@ -489,7 +418,7 @@ function ReviewUploadCard({ file, label, tone, onRemove }: { file: File; label: 
       >
         {!previewUrl && (
           <div className="flex flex-col items-center gap-1 text-slate-500">
-            {isPaymentProof ? <Receipt className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
+            <FileText className="h-6 w-6" />
             <span className="text-[10px] font-bold">ملف مرفوع</span>
           </div>
         )}

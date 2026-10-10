@@ -24,6 +24,15 @@ final class ServiceRequestWorkflow
             'client_review' => ['revision_requested','completed','cancelled'],
             'revision_requested' => ['in_progress','client_review','cancelled'],
         ],
+        'self_service_lawyer_review' => [
+            'awaiting_payment' => ['cancelled'],
+            'new' => ['assigned','in_progress','awaiting_client_info','cancelled'],
+            'assigned' => ['in_progress','awaiting_client_info','cancelled'],
+            'awaiting_client_info' => ['new','assigned','in_progress','cancelled'],
+            'in_progress' => ['client_review','awaiting_client_info','completed','cancelled'],
+            'client_review' => ['in_progress','completed','cancelled'],
+            'revision_requested' => ['in_progress','client_review','cancelled'],
+        ],
     ];
 
     public function allowedStaffTransitions(string $type, string $status): array

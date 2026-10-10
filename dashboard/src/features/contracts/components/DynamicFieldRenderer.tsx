@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
-import { AlertCircle, Calendar, Check, HelpCircle, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, Calendar, HelpCircle, Plus, Trash2 } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { evaluateCondition, numberToEgyptianPoundsWords } from "@zdraft/template-engine";
 import type {
@@ -15,7 +15,7 @@ import { resolveWizardFieldLabel } from "../domain/contractDisplay";
 interface DynamicFieldRendererProps {
   field: WizardFieldDefinition;
   value: ContractFieldValue | undefined;
-  allFormValues?: Record<string, any>;
+  allFormValues?: Record<string, ContractFieldValue | unknown>;
   errorMessage?: string;
   touched?: boolean;
   onChange: (value: ContractFieldValue) => void;
@@ -73,10 +73,10 @@ function MoneyFieldInput({
           className={`${getInputClass(hasError)} pl-12`}
           dir="ltr"
         />
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">ج.م</span>
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">ج.م</span>
       </div>
       {words && (
-        <div className="rounded-lg border border-[#986410]/20 bg-[#986410]/5 px-2.5 py-1 text-[10px] font-bold leading-5 text-[#00102e]" dir="rtl">
+        <div className="rounded-lg border border-[#986410]/20 bg-[#986410]/5 px-2.5 py-1 text-xs font-bold leading-5 text-[#00102e]" dir="rtl">
           <span className="text-[#986410]">كتابةً تلقائيًا: </span>{words}
         </div>
       )}
@@ -125,16 +125,23 @@ function DateFieldInput({
   };
 
   return (
-    <div className="space-y-1">
-      <div onClick={handleClick} className="relative flex items-center cursor-pointer">
+    <div className="relative">
+      <button
+        type="button"
+        onClick={setToday}
+        className="absolute left-9 top-1/2 z-10 -translate-y-1/2 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-black text-slate-600 transition hover:bg-[#986410]/15 hover:text-[#00102e]"
+      >
+        اليوم
+      </button>
+      <div onClick={handleClick} className="relative flex cursor-pointer items-center">
         <input
           type="text"
           readOnly
           value={displayDate || ""}
-          placeholder="اختر التاريخ (انقر هنا)"
-          className={`${getInputClass(hasError)} cursor-pointer pr-3 pl-9 font-medium`}
+          placeholder="اليوم / الشهر / السنة"
+          className={`${getInputClass(hasError)} cursor-pointer pr-3 pl-20 font-medium`}
         />
-        <Calendar className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${hasError ? "text-rose-500" : "text-slate-400"}`} />
+        <Calendar className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${hasError ? "text-rose-500" : "text-slate-500"}`} />
         <input
           ref={hiddenInputRef}
           type="date"
@@ -145,15 +152,6 @@ function DateFieldInput({
           className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
           tabIndex={-1}
         />
-      </div>
-      <div className="flex items-center gap-1.5 pt-0.5">
-        <button
-          type="button"
-          onClick={setToday}
-          className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 hover:bg-[#986410]/15 hover:text-[#00102e] transition"
-        >
-          اليوم
-        </button>
       </div>
     </div>
   );
@@ -187,7 +185,7 @@ function renderScalarControl(
               type="button"
               aria-pressed={selected}
               onClick={() => onChange(option.value)}
-              className={`min-h-8 rounded-lg border px-2.5 py-1.5 text-right text-[11px] font-bold leading-5 transition ${
+              className={`min-h-10 rounded-lg border px-3 py-2 text-right text-xs font-bold leading-5 transition ${
                 selected
                   ? "border-[#986410] bg-[#986410]/10 text-[#00102e] ring-1 ring-[#986410]/30"
                   : "border-slate-200 bg-white text-slate-600 hover:border-[#986410]/40 hover:bg-slate-50"
@@ -227,7 +225,7 @@ function renderScalarControl(
           onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.checked)}
           className="mt-0.5 h-3.5 w-3.5 accent-[#986410]"
         />
-        <span className={`text-[11px] font-bold leading-5 ${field.required ? (hasError ? "text-rose-700" : "text-[#c66b22]") : "text-slate-700"}`}>
+        <span className={`text-xs font-bold leading-5 ${field.required ? (hasError ? "text-rose-700" : "text-rose-700") : "text-slate-700"}`}>
           {field.labelAr} {field.required && <span aria-label="إلزامي">*</span>}
         </span>
       </label>
@@ -305,7 +303,7 @@ function RepeaterRenderer({
               type="button"
               onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}
               disabled={rows.length <= Math.max(1, field.minRows ?? 1)}
-              className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-white px-2 py-0.5 text-[9px] font-black text-rose-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-white px-2 py-0.5 text-xs font-black text-rose-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Trash2 className="h-3 w-3" /> حذف
             </button>
@@ -317,8 +315,8 @@ function RepeaterRenderer({
                 const required = Boolean(column.required || (column.requiredWhen && evaluateCondition(column.requiredWhen, row)));
                 return (
                   <div key={column.key}>
-                    <label className="mb-1 block text-[10px] font-bold text-slate-600">
-                      {column.labelAr} {required && <span className="text-[#c66b22]">*</span>}
+                    <label className="mb-1 block text-xs font-bold text-slate-600">
+                      {column.labelAr} {required && <span className="text-rose-700">*</span>}
                     </label>
                     {column.type === "select" ? (
                       <select
@@ -377,7 +375,6 @@ export default function DynamicFieldRenderer({
   value,
   allFormValues = {},
   errorMessage,
-  touched,
   onChange,
   onFocus,
 }: DynamicFieldRendererProps) {
@@ -432,8 +429,8 @@ export default function DynamicFieldRenderer({
     <div className="space-y-1" onFocusCapture={onFocus}>
       {field.type !== "checkbox" && (
         <div className="flex items-center justify-between gap-2">
-          <label className={`block text-[11px] font-bold ${hasError ? "text-rose-700" : "text-slate-800"}`}>
-            {label} {field.required && <span className={hasError ? "text-rose-600" : "text-[#c66b22]"}>*</span>}
+          <label className={`block text-xs font-bold ${hasError ? "text-rose-700" : "text-slate-800"}`}>
+            {label} {field.required && <span className={hasError ? "text-rose-600" : "text-rose-700"}>*</span>}
           </label>
         </div>
       )}
@@ -445,8 +442,8 @@ export default function DynamicFieldRenderer({
         </p>
       )}
       {helpText && !hasError && (
-        <details className="group max-w-full text-[10px] text-slate-500">
-          <summary className="inline-flex cursor-pointer list-none items-center gap-1 font-bold text-slate-400 transition hover:text-[#986410] [&::-webkit-details-marker]:hidden">
+        <details className="group max-w-full text-xs text-slate-500">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-1 font-bold text-slate-500 transition hover:text-[#986410] [&::-webkit-details-marker]:hidden">
             <HelpCircle className="h-3 w-3" />
             توضيح
           </summary>

@@ -28,3 +28,9 @@ Copy `.env.example` to `.env.local`. `NEXT_PUBLIC_DASHBOARD_DEMO_ROLE` is tempor
 ## Production boundary
 
 The client-side permission gate prevents accidental route access in the UI, but it is not a security boundary. The backend must authenticate the staff session and verify the required permission on every endpoint.
+
+## Template UX V7
+The template builder now includes drag/drop reorder mode and visual builders for repeaters, annex steps/questions, and default values. Raw JSON editing is no longer exposed in these authoring flows.
+
+## Template UX V8
+Added a deliberately simple customer-preview drawer to the template editor. It reuses the current template definition and existing variant state, adds no backend endpoint, and keeps the existing dashboard colors/design tokens unchanged.

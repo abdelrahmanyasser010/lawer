@@ -10,7 +10,7 @@ final class NotificationController extends Controller
     public function index(Request $request)
     {
         $id = $request->attributes->get('auth_user')['id'];
-        $query = DB::table('dashboard_notifications')->selectRaw('id,notification_type AS "type",title,message,action_url AS "actionUrl",payload_json AS payload,read_at AS "readAt",created_at AS "createdAt"')->where('recipient_user_id',$id);
+        $query = DB::table('dashboard_notifications')->selectRaw('id,notification_type AS "type",title,message,action_url AS "actionUrl",importance,payload_json AS payload,read_at AS "readAt",created_at AS "createdAt"')->where('recipient_user_id',$id);
         if ($request->boolean('unreadOnly')) $query->whereNull('read_at');
         $items = $query->orderByDesc('created_at')->limit(100)->get()->map(function ($item) {
             if (is_string($item->payload)) {

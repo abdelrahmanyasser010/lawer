@@ -89,7 +89,7 @@ export default function NotificationsPage() {
         <header className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-end">
           <div>
             <h1 className="text-3xl font-black text-[#00102e]">الإشعارات</h1>
-            <p className="mt-2 text-sm text-slate-600">سجل تحديثات الدفع والعقود والاستشارات القانونية.</p>
+            <p className="mt-2 text-sm text-slate-600">تحديثات العقود وخدمات المحامين والدفع، مع روابط مباشرة للخطوة المهمة.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -176,6 +176,7 @@ export default function NotificationsPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <h2 className={`text-sm font-black ${isRead ? "text-slate-800" : "text-[#00102e]"}`}>{item.title}</h2>
+                        {item.importance === "important" && <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">مهم</span>}
                         {isRead ? (
                           <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">سابق</span>
                         ) : (

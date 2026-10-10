@@ -61,6 +61,17 @@ export default function VerifyEmailPage() {
       <label className="block text-xs font-black text-slate-700">رمز التأكيد<div className="relative mt-2"><ShieldCheck className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"/><input autoFocus value={code} onChange={(e)=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={6} placeholder="000000" className="w-full rounded-2xl border border-slate-300 py-3.5 pl-4 pr-12 text-center text-2xl font-black tracking-[.35em] text-[#00102e] outline-none focus:border-[#986410]"/></div></label>
       <button disabled={state==="loading"||code.length!==6} className="inline-flex w-full items-center justify-center rounded-2xl bg-[#00102e] px-5 py-3.5 text-sm font-black text-white disabled:opacity-50">{state==="loading"?<><Loader2 className="ml-2 h-4 w-4 animate-spin"/> جاري التحقق...</>:"تأكيد البريد"}</button>
     </form>}
-    <div className="mt-5 text-center">{state==="success"?<Link href={nextUrl} className="inline-flex rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-white">متابعة</Link>:<button disabled={resending||state==="loading"||resendAfter>0} onClick={()=>void resend()} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-xs font-black text-[#00102e] disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${resending?"animate-spin":""}`}/>{resendAfter>0?`إعادة الإرسال بعد ${resendAfter} ث`:`إعادة إرسال الرمز`}</button>}</div>
+    <div className="mt-5 space-y-3 text-center">
+      {state==="success" ? (
+        <Link href={nextUrl} className="inline-flex rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-white">متابعة</Link>
+      ) : (
+        <>
+          <button disabled={resending||state==="loading"||resendAfter>0} onClick={()=>void resend()} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-xs font-black text-[#00102e] disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${resending?"animate-spin":""}`}/>{resendAfter>0?`إعادة الإرسال بعد ${resendAfter} ث`:`إعادة إرسال الرمز`}</button>
+          <div>
+            <Link href={nextUrl} className="text-[11px] font-black text-slate-500 underline underline-offset-4 hover:text-[#986410]">كمّل المسودة الآن وأكّد البريد قبل الدفع</Link>
+          </div>
+        </>
+      )}
+    </div>
   </AuthShell>;
 }

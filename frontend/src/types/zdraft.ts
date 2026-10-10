@@ -71,15 +71,6 @@ export interface DocumentAttachment {
   compressed: boolean;
 }
 
-export interface VodafoneCashPayment {
-  id: number;
-  serialNumber: string;
-  amountEgp: number;
-  senderPhone?: string;
-  paymentProofImageUrl: string;
-  status: 'pending_verification' | 'approved' | 'rejected';
-  createdAt: string;
-}
 
 export interface SharedCollaboration {
   id: number;

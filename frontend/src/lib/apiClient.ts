@@ -7,6 +7,11 @@ import type {
   PublicCatalog,
   ServiceRequestDetails,
   ServiceRequestSummary,
+  SavedParty,
+  CustomerDashboard,
+  LegalContentDocument,
+  PaymentCheckoutResponse,
+  PaymentLineItem,
 } from "@/types/customer";
 import { demoApiRequest, demoMode } from "./demoApi";
 
@@ -114,4 +119,14 @@ export const frontendApi = {
   requests: () => apiRequest<ServiceRequestSummary[]>("/api/v1/service-requests/my"),
   request: (id: number | string) => apiRequest<ServiceRequestDetails>(`/api/v1/service-requests/${id}`),
   notifications: () => apiRequest<{ items: CustomerNotification[]; unreadCount: number }>("/api/v1/notifications"),
+
+  savedParties: () => apiRequest<SavedParty[]>("/api/v1/saved-parties"),
+  savedParty: (id: number | string) => apiRequest<SavedParty>(`/api/v1/saved-parties/${id}`),
+  updateSavedParty: (id: number | string, body: Partial<SavedParty>) => apiRequest<SavedParty>(`/api/v1/saved-parties/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteSavedParty: (id: number | string) => apiRequest<{ deleted: boolean }>(`/api/v1/saved-parties/${id}`, { method: "DELETE" }),
+  dashboard: () => apiRequest<CustomerDashboard>("/api/v1/customer/dashboard"),
+  legalContent: (key: string) => apiRequest<LegalContentDocument>(`/api/v1/public/legal-content/${encodeURIComponent(key)}`),
+  acceptLegal: (body: { documentType: string; publishedVersion: number; context: "registration" | "checkout" }) => apiRequest<{ accepted: boolean }>("/api/v1/legal-acceptances", { method: "POST", body: JSON.stringify(body) }),
+  createCheckout: (body: { contractId?: number; serviceRequestId?: number; amountEgp: number; purpose: string; lineItems?: PaymentLineItem[]; returnUrl?: string; metadata?: Record<string, unknown> }) => apiRequest<PaymentCheckoutResponse>("/api/v1/payments/checkout", { method: "POST", body: JSON.stringify(body) }),
+  paymentStatus: (id: string | number) => apiRequest<{ status: string; transactionReference?: string | null }>(`/api/v1/payments/attempts/${id}`),
 };

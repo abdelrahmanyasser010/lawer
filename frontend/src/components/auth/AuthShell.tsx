@@ -12,9 +12,9 @@ export default function AuthShell({ title, subtitle, children }: { title: string
             <div className="h-16 w-16 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-white/10"><Image src="/logo.png" alt="Z draft" width={96} height={96} className="h-full w-full object-contain" priority /></div>
             <span className="text-3xl font-black text-white">Z draft</span>
           </div>
-          <h1 className="mt-10 text-3xl font-black leading-tight text-white">حساب واحد لعقودك واستشاراتك</h1>
-          <p className="mt-4 text-sm leading-7 text-slate-400">تأكيد البريد وحماية الحساب جزء من حفظ العقود والمدفوعات والمستندات بصورة آمنة.</p>
-          <div className="mt-8 space-y-3">{["تأكيد البريد برمز OTP", "سجل عقود واستشارات مرتبط بحسابك", "إشعارات داخل المنصة وعلى البريد"].map((text) => <div key={text} className="flex items-center gap-3 text-sm text-slate-300"><CheckCircle2 className="h-4 w-4 text-[#d9a84e]" /> {text}</div>)}</div>
+          <h1 className="mt-10 text-3xl font-black leading-tight text-white">حساب واحد لعقودك وخدماتك القانونية</h1>
+          <p className="mt-4 text-sm leading-7 text-slate-400">تأكيد البريد وحماية الحساب جزء من حفظ العقود والطلبات والمدفوعات بصورة آمنة.</p>
+          <div className="mt-8 space-y-3">{["تأكيد البريد برمز OTP", "سجل عقود وخدمات مرتبط بحسابك", "إشعارات داخل المنصة وعلى البريد للأحداث المهمة"].map((text) => <div key={text} className="flex items-center gap-3 text-sm text-slate-300"><CheckCircle2 className="h-4 w-4 text-[#d9a84e]" /> {text}</div>)}</div>
         </div>
       </aside>
       <main className="flex flex-1 items-center justify-center px-5 py-12">

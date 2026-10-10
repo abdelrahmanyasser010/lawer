@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { ReactNode, useCallback, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 
 type DialogProps = {
   open: boolean;
@@ -13,20 +13,34 @@ type DialogProps = {
 };
 
 export function AdminDialog({ open, title, description, children, onClose, maxWidth = "max-w-lg" }: DialogProps) {
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/55 p-4" role="dialog" aria-modal="true" aria-label={title} onMouseDown={onClose}>
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/55 p-2 sm:p-4" role="dialog" aria-modal="true" aria-label={title} onMouseDown={onClose}>
       <div className={`max-h-[92vh] w-full ${maxWidth} overflow-y-auto rounded-3xl bg-white shadow-2xl`} onMouseDown={(event) => event.stopPropagation()}>
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-100 bg-white px-6 py-5">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-100 bg-white px-4 py-4 sm:px-6 sm:py-5">
           <div>
             <h2 className="text-lg font-black text-[#00102e]">{title}</h2>
             {description && <p className="mt-1 text-xs leading-6 text-slate-500">{description}</p>}
           </div>
-          <button type="button" onClick={onClose} className="shrink-0 rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50" aria-label="إغلاق">
+          <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50" aria-label="إغلاق">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6">{children}</div>
       </div>
     </div>
   );

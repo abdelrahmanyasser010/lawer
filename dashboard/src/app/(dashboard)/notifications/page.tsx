@@ -100,7 +100,7 @@ export default function NotificationsPage() {
     <div className="mx-auto max-w-5xl space-y-6 p-6 sm:p-8">
       <header className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-3xl font-black text-[#00102e]">الإشعارات</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-[#00102e]">الإشعارات</h1>
           <p className="mt-1 text-xs font-semibold text-slate-500">
             سجل التنبيهات والإجراءات المتخذة في النظام ({items.length} إشعار مسجل).
           </p>
@@ -118,7 +118,7 @@ export default function NotificationsPage() {
             <button
               type="button"
               onClick={() => void readAll()}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-black text-[#d5a84c] hover:bg-[#00102e]/90"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-black text-[#d7a94f] hover:bg-[#00102e]/90"
             >
               <CheckCheck className="h-4 w-4" />
               تعليم الكل كمقروء
@@ -175,7 +175,7 @@ export default function NotificationsPage() {
               }`}
             >
               <div className="flex items-start gap-3.5">
-                <div className={`rounded-xl p-2.5 ${isRead ? "bg-slate-100 text-slate-500" : "bg-[#00102e] text-[#d5a84c]"}`}>
+                <div className={`rounded-xl p-2.5 ${isRead ? "bg-slate-100 text-slate-500" : "bg-[#00102e] text-[#d7a94f]"}`}>
                   <Bell className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -183,12 +183,12 @@ export default function NotificationsPage() {
                     <div className="flex items-center gap-2">
                       <h2 className={`font-black text-sm ${isRead ? "text-slate-800" : "text-[#00102e]"}`}>{n.title}</h2>
                       {isRead ? (
-                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">سجل سابق</span>
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500">سجل سابق</span>
                       ) : (
-                        <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-900">جديد</span>
+                        <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-black text-amber-900">جديد</span>
                       )}
                     </div>
-                    <time className="text-[10px] font-semibold text-slate-400 font-mono">
+                    <time className="text-xs font-semibold text-slate-500 font-mono">
                       {new Date(n.createdAt).toLocaleString("ar-EG")}
                     </time>
                   </div>
@@ -214,7 +214,7 @@ export default function NotificationsPage() {
                       type="button"
                       disabled={deletingId === n.id}
                       onClick={() => void deleteNotice(n.id)}
-                      className="inline-flex items-center gap-1 rounded-xl p-2 text-xs font-bold text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                      className="inline-flex items-center gap-1 rounded-xl p-2 text-xs font-bold text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition"
                       title="حذف هذا الإشعار من السجل"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

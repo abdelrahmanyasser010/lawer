@@ -1,12 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Lock, Mail, Phone, User } from "lucide-react";
 import { frontendApi, ApiClientError } from "@/lib/apiClient";
 import PasswordRequirements from "@/components/auth/PasswordRequirements";
 import { apiFieldErrors, normalizePhoneInput, passwordValidationError, phoneValidationError, type FieldErrors } from "@/lib/inputValidation";
+import { safeInternalRedirect } from "@/lib/safeRedirect";
 
 function BrandLogo({ compact = false }: { compact?: boolean }) {
   return (
@@ -19,12 +21,28 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export default function RegisterPage() {
+function RegisterContent() {
+  const params = useSearchParams();
+  const nextUrl = safeInternalRedirect(params.get("next"), "/dashboard");
+  const loginHref = `/login?next=${encodeURIComponent(nextUrl)}`;
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [form, setForm] = useState({ fullName: "", email: "", phone: "", password: "", whatsappServiceConsent: true, agreedToTerms: false });
+  const [legalVersions, setLegalVersions] = useState<{ terms?: number; privacy?: number }>({});
+
+  useEffect(() => {
+    let active = true;
+    Promise.allSettled([frontendApi.legalContent("terms_and_conditions"), frontendApi.legalContent("privacy_policy")]).then(([terms, privacy]) => {
+      if (!active) return;
+      setLegalVersions({
+        terms: terms.status === "fulfilled" ? terms.value.publishedVersion : undefined,
+        privacy: privacy.status === "fulfilled" ? privacy.value.publishedVersion : undefined,
+      });
+    });
+    return () => { active = false; };
+  }, []);
 
   function focusFirst(errors: FieldErrors) {
     const first = ["fullName", "email", "phone", "password", "agreedToTerms"].find((key) => errors[key]);
@@ -58,9 +76,13 @@ export default function RegisterPage() {
         accountType: "individual",
         whatsappServiceConsent: form.whatsappServiceConsent,
         agreedToTerms: form.agreedToTerms,
+        legalAcceptances: [
+          legalVersions.terms ? { documentType: "terms_and_conditions", publishedVersion: legalVersions.terms, context: "registration" } : null,
+          legalVersions.privacy ? { documentType: "privacy_policy", publishedVersion: legalVersions.privacy, context: "registration" } : null,
+        ].filter(Boolean),
       });
       window.dispatchEvent(new Event("zdraft-auth-changed"));
-      window.location.href = "/verify-email?sent=1";
+      window.location.href = `/verify-email?sent=1&next=${encodeURIComponent(nextUrl)}`;
     } catch (caught) {
       if (caught instanceof ApiClientError) {
         const backendErrors = apiFieldErrors(caught.details);
@@ -77,9 +99,9 @@ export default function RegisterPage() {
         <div className="max-w-md">
           <BrandLogo />
           <h1 className="mt-10 text-3xl font-black leading-tight text-white">أنشئ حسابك واحفظ كل معاملاتك القانونية</h1>
-          <p className="mt-4 text-sm leading-7 text-slate-400">الحساب يتيح لك حفظ العقود والمسودات، متابعة الاستشارات والمدفوعات، واستلام المستندات من مكان واحد.</p>
+          <p className="mt-4 text-sm leading-7 text-slate-400">الحساب يتيح لك حفظ العقود والمسودات، متابعة خدمات المحامين والمدفوعات، واستلام النتائج من مكان واحد.</p>
           <div className="mt-8 space-y-3">
-            {["حفظ العقود والمسودات تلقائيًا", "متابعة الاستشارات والإشعارات", "الرجوع لسجل المدفوعات والمستندات"].map((text) => (
+            {["حفظ العقود والمسودات تلقائيًا", "متابعة خدمات المحامين والإشعارات", "الرجوع للعقود والدفعات والنتائج"].map((text) => (
               <div key={text} className="flex items-center gap-3 text-sm text-slate-300"><CheckCircle2 className="h-4 w-4 text-[#d9a84e]" /> {text}</div>
             ))}
           </div>
@@ -90,7 +112,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-md">
           <div className="mb-7 lg:hidden"><BrandLogo compact /></div>
           <h2 className="text-2xl font-black text-[#00102e]">إنشاء حساب</h2>
-          <p className="mt-2 text-sm text-slate-500">لديك حساب بالفعل؟ <Link href="/login" className="font-black text-[#986410]">تسجيل الدخول</Link></p>
+          <p className="mt-2 text-sm text-slate-500">لديك حساب بالفعل؟ <Link href={loginHref} className="font-black text-[#986410]">تسجيل الدخول</Link></p>
           {error && <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">{error}</div>}
 
           <form onSubmit={register} className="mt-6 space-y-4">
@@ -124,7 +146,7 @@ export default function RegisterPage() {
 
             <label data-field="agreedToTerms" className={`flex items-start gap-3 text-xs leading-6 ${fieldErrors.agreedToTerms ? "text-red-700" : "text-slate-600"}`}>
               <input type="checkbox" checked={form.agreedToTerms} onChange={(event) => { setForm({ ...form, agreedToTerms: event.target.checked }); setFieldErrors((e) => ({...e, agreedToTerms:""})); }} className="mt-1 h-4 w-4 shrink-0 accent-[#00102e]" />
-              <span>أوافق على <Link href="/declaration" target="_blank" className="font-black text-[#986410]">شروط الاستخدام والإقرار القانوني</Link> و<Link href="/privacy" target="_blank" className="font-black text-[#986410]">سياسة الخصوصية</Link>.</span>
+              <span>أوافق على <Link href="/terms" target="_blank" className="font-black text-[#986410]">الشروط والأحكام</Link> و<Link href="/privacy" target="_blank" className="font-black text-[#986410]">سياسة الخصوصية</Link>.</span>
             </label>
 
             <button disabled={loading} className="w-full rounded-2xl bg-[#00102e] py-3.5 text-sm font-black text-white transition hover:bg-[#071b43] disabled:opacity-60">{loading ? "جاري إنشاء الحساب..." : "إنشاء الحساب"}</button>
@@ -169,5 +191,13 @@ function AuthField({ field, label, icon: Icon, children, error }: { field: strin
       </div>
       {error && <span className="mt-1 block text-[10px] font-bold text-red-600">{error}</span>}
     </label>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f8fafc]" />}>
+      <RegisterContent />
+    </Suspense>
   );
 }

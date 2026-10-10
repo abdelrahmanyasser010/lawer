@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Copy, KeyRound, Loader2, Save, ShieldCheck, Smartphone } from "lucide-react";
+import Link from "next/link";
+import { Check, Copy, KeyRound, Loader2, Save, ShieldCheck, Smartphone, UsersRound } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { apiRequest, ApiClientError, frontendApi } from "@/lib/apiClient";
@@ -64,6 +65,7 @@ export default function AccountPage() {
         phone: profile.phone,
         whatsappNumber: profile.whatsappNumber,
         companyName: profile.companyName,
+        reusableData: profile.reusableData || {},
       });
       setProfile((current) => current ? { ...current, ...updated } : updated);
       setNotice("تم تحديث بيانات الحساب.");
@@ -112,9 +114,12 @@ export default function AccountPage() {
     <div className="flex min-h-screen flex-col bg-[#f8fafc]">
       <Navbar />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-9 sm:px-6">
-        <header className="border-b border-slate-200 pb-6">
-          <h1 className="text-3xl font-black text-[#00102e]">حسابي</h1>
-          <p className="mt-2 text-sm text-slate-600">بيانات التواصل وأمان الحساب والأجهزة المسجل عليها الدخول.</p>
+        <header className="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-black text-[#00102e]">حسابي</h1>
+            <p className="mt-2 text-sm text-slate-600">بياناتك اللي تقدر تستخدمها في العقود، وأمان الحساب والأجهزة المسجل عليها الدخول.</p>
+          </div>
+          <Link href="/saved-parties" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-[#00102e] hover:bg-slate-50"><UsersRound className="h-4 w-4 text-[#986410]" /> الأطراف المحفوظة</Link>
         </header>
 
         {loading ? <div className="mt-8 rounded-2xl border bg-white p-14"><Loader2 className="mx-auto h-7 w-7 animate-spin text-blue-700" /></div> : !profile ? (
@@ -131,7 +136,15 @@ export default function AccountPage() {
                 <label className="text-xs font-black text-slate-700">رقم الهاتف<input value={profile.phone || ""} onChange={(event) => setProfile({ ...profile, phone: normalizePhoneInput(event.target.value) })} dir="ltr" className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-left text-sm outline-none focus:border-[#986410]" /></label>
                 <label className="text-xs font-black text-slate-700">رقم WhatsApp<input value={profile.whatsappNumber || ""} onChange={(event) => setProfile({ ...profile, whatsappNumber: normalizePhoneInput(event.target.value) })} dir="ltr" className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-left text-sm outline-none focus:border-[#986410]" /></label>
                 {profile.accountType === "business" && <label className="text-xs font-black text-slate-700 sm:col-span-2">اسم الشركة<input value={profile.companyName || ""} onChange={(event) => setProfile({ ...profile, companyName: event.target.value })} className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#986410]" /></label>}
+                <label className="text-xs font-black text-slate-700">الرقم القومي<input value={String(profile.reusableData?.nationalId || "")} onChange={(event) => setProfile({ ...profile, reusableData: { ...(profile.reusableData || {}), nationalId: event.target.value } })} inputMode="numeric" dir="ltr" className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-left text-sm outline-none focus:border-[#986410]" /></label>
+                <label className="text-xs font-black text-slate-700">الجنسية<input value={String(profile.reusableData?.nationality || "")} onChange={(event) => setProfile({ ...profile, reusableData: { ...(profile.reusableData || {}), nationality: event.target.value } })} className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#986410]" /></label>
+                <label className="text-xs font-black text-slate-700 sm:col-span-2">العنوان<input value={String(profile.reusableData?.address || "")} onChange={(event) => setProfile({ ...profile, reusableData: { ...(profile.reusableData || {}), address: event.target.value } })} className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#986410]" /></label>
+                {profile.accountType === "business" && <>
+                  <label className="text-xs font-black text-slate-700">السجل التجاري<input value={String(profile.reusableData?.commercialRegister || "")} onChange={(event) => setProfile({ ...profile, reusableData: { ...(profile.reusableData || {}), commercialRegister: event.target.value } })} className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#986410]" /></label>
+                  <label className="text-xs font-black text-slate-700">الرقم الضريبي<input value={String(profile.reusableData?.taxNumber || "")} onChange={(event) => setProfile({ ...profile, reusableData: { ...(profile.reusableData || {}), taxNumber: event.target.value } })} className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#986410]" /></label>
+                </>}
               </div>
+              <p className="mt-3 text-[10px] leading-5 text-slate-500">البيانات دي مش بتتملى في العقد تلقائيًا؛ وقت إدخال طرف في العقد أنت اللي بتختار «استخدم بياناتي».</p>
               <button type="button" disabled={saving} onClick={() => void save()} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-white disabled:opacity-50"><Save className="h-4 w-4" /> حفظ التغييرات</button>
             </section>
 

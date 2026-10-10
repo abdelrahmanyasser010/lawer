@@ -47,6 +47,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
             if (!$request->is('api/*') && !$request->expectsJson()) return null;
             $status = $e->getStatusCode();
+            if ($status === 405 && strtoupper((string) ($e->getHeaders()['Allow'] ?? '')) === 'OPTIONS') {
+                $status = 404;
+            }
             return SecurityHeaders::decorate($request, response()->json([
                 'success' => false,
                 'code' => $status === 404 ? 'ROUTE_NOT_FOUND' : ($status === 405 ? 'METHOD_NOT_ALLOWED' : 'HTTP_ERROR'),

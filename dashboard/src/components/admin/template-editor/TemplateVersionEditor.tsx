@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   AlertTriangle,
@@ -60,6 +60,9 @@ type Version = {
   templateId: number;
   versionNumber: number;
   status: string;
+  templateNameAr?: string;
+  categoryId?: number | null;
+  categoryNameAr?: string | null;
   definition: ContractTemplateDefinition;
   changeSummary?: string;
   legalReference?: string;
@@ -658,6 +661,105 @@ function ClauseSettingsForm({
   );
 }
 
+function VariantClauseSelectionPanel({
+  variants,
+  clauses,
+  readOnly,
+  busy,
+  onSave,
+}: {
+  variants: ContractVariantDefinition[];
+  clauses: LegalClauseDefinition[];
+  readOnly: boolean;
+  busy: boolean;
+  onSave: (variant: ContractVariantDefinition, requiredClauseKeys: string[]) => void;
+}) {
+  const enabledClauses = useMemo(() => clauses.filter((clause) => clause.enabled !== false), [clauses]);
+  const [search, setSearch] = useState("");
+  const [selectedByVariant, setSelectedByVariant] = useState<Record<string, string[]>>(
+    () => Object.fromEntries(variants.map((variant) => [variant.key, variant.requiredClauseKeys ?? []])),
+  );
+
+  const filteredClauses = useMemo(() => {
+    const clean = search.trim().toLowerCase();
+    if (!clean) return enabledClauses;
+    return enabledClauses.filter((clause) => `${clause.titleAr} ${clause.key} ${clause.sourceDocumentName ?? ""}`.toLowerCase().includes(clean));
+  }, [enabledClauses, search]);
+
+  const groupedClauses = useMemo(() => {
+    const groups = new Map<string, LegalClauseDefinition[]>();
+    filteredClauses.forEach((clause) => {
+      const groupName = clause.sourceDocumentName || "بنود عامة";
+      groups.set(groupName, [...(groups.get(groupName) ?? []), clause]);
+    });
+    return Array.from(groups.entries());
+  }, [filteredClauses]);
+
+  function toggleClause(variantKey: string, clauseKey: string, checked: boolean) {
+    setSelectedByVariant((current) => {
+      const previous = current[variantKey] ?? [];
+      const next = checked ? [...new Set([...previous, clauseKey])] : previous.filter((key) => key !== clauseKey);
+      return { ...current, [variantKey]: next };
+    });
+  }
+
+  if (!variants.length || !enabledClauses.length) return null;
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h3 className="text-base font-bold text-[#00102e]">اختيار البنود الأساسية لكل نسخة</h3>
+          <p className="mt-1 text-xs font-medium leading-5 text-slate-500">نفس بيانات البنود القديمة، لكن مكانها الصحيح هنا داخل صياغة العقد.</p>
+        </div>
+        <input value={search} onChange={(event: ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)} placeholder="ابحث في البنود" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#986410] lg:w-72" />
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {variants.map((variant) => {
+          const selectedKeys = selectedByVariant[variant.key] ?? [];
+          return (
+            <details key={variant.key} className="rounded-xl border border-slate-200 bg-slate-50 p-3" open={variants.length === 1}>
+              <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="text-sm font-bold text-[#00102e]">{variant.nameAr}</span>
+                    <span className="mr-2 rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-slate-500">{selectedKeys.length} محدد</span>
+                  </div>
+                  {!readOnly && <button type="button" disabled={busy} onClick={(event) => { event.preventDefault(); onSave(variant, selectedKeys); }} className="rounded-lg bg-[#00102e] px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40">حفظ اختيار البنود</button>}
+                </div>
+              </summary>
+
+              <div className="mt-3 space-y-3">
+                {groupedClauses.map(([groupName, groupClauses]) => (
+                  <div key={`${variant.key}:${groupName}`} className="rounded-xl bg-white p-3">
+                    <div className="mb-2 text-xs font-bold text-slate-500">{groupName}</div>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {groupClauses.map((clause) => {
+                        const checked = selectedKeys.includes(clause.key);
+                        return (
+                          <label key={clause.key} className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2.5 text-xs transition ${checked ? "border-[#986410]/50 bg-[#986410]/5" : "border-slate-200 hover:border-slate-300"}`}>
+                            <input type="checkbox" checked={checked} disabled={readOnly} onChange={(event) => toggleClause(variant.key, clause.key, event.target.checked)} className="mt-1 h-4 w-4 accent-[#986410]" />
+                            <span className="min-w-0">
+                              <span className="block font-bold text-slate-800">{clause.titleAr}</span>
+                              {clause.guidance && <span className="mt-1 line-clamp-1 block text-[11px] font-medium leading-5 text-slate-500">{clause.guidance}</span>}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {!filteredClauses.length && <div className="rounded-xl border border-dashed border-slate-200 bg-white p-4 text-center text-xs font-bold text-slate-500">لا توجد بنود مطابقة للبحث.</div>}
+              </div>
+            </details>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function VariantSettingsForm({
   version,
   value,
@@ -671,93 +773,39 @@ function VariantSettingsForm({
   onCancel: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  const optionalClauses = version.definition.optionalClauses ?? [];
-  const legalClauses = (version.definition.legalClauses ?? []).filter((clause) => clause.enabled !== false);
-  const [allowedOptionalKeys, setAllowedOptionalKeys] = useState<string[]>(value?.allowedOptionalClauseKeys ?? []);
-  const [requiredClauseKeys, setRequiredClauseKeys] = useState<string[]>(value?.requiredClauseKeys ?? []);
+  const currentIndex = value ? version.definition.variants.findIndex((variant) => variant.key === value.key) : -1;
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5 p-6">
+    <form onSubmit={onSubmit} className="space-y-4 p-5">
       <input type="hidden" name="key" value={value?.key ?? ""} />
-      <FieldEditorSection title="ما الذي يظهر للعميل؟" description="هذه البيانات هي التي يفهم منها العميل نوع العقد قبل البدء.">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FieldInputLabel label="اسم نوع العقد">
-            <input name="nameAr" required defaultValue={value?.nameAr} placeholder="مثال: عقد بيع ابتدائي" className="w-full rounded-xl border border-slate-200 p-3 font-normal" />
+      <input type="hidden" name="documentTitleAr" value={value?.documentTitleAr ?? ""} />
+      <input type="hidden" name="sourceDocumentName" value={value?.sourceDocumentName ?? ""} />
+      <input type="hidden" name="requiredClauseKeys" value={value?.requiredClauseKeys.join(", ") ?? ""} />
+      <input type="hidden" name="allowedOptionalClauseKeys" value={value?.allowedOptionalClauseKeys.join(", ") ?? ""} />
+      <input type="hidden" name="defaultFieldValues" value={JSON.stringify(value?.defaultFieldValues ?? {})} />
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FieldInputLabel label="اسم نسخة العقد">
+          <input name="nameAr" required defaultValue={value?.nameAr} placeholder="مثال: عقد إيجار سكني" className="w-full rounded-xl border border-slate-200 p-3 text-sm font-normal" />
+        </FieldInputLabel>
+        {value && (
+          <FieldInputLabel label="ترتيب الظهور">
+            <select name="moveToIndex" defaultValue={currentIndex >= 0 ? currentIndex : 0} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal">
+              {version.definition.variants.map((variant, index) => (
+                <option key={variant.key} value={index}>{index + 1} — {variant.nameAr}</option>
+              ))}
+            </select>
           </FieldInputLabel>
-          <FieldInputLabel label="عنوان المستند النهائي">
-            <input name="documentTitleAr" defaultValue={value?.documentTitleAr} placeholder="مثال: عقد بيع ابتدائي لوحدة سكنية" className="w-full rounded-xl border border-slate-200 p-3 font-normal" />
+        )}
+        <div className="sm:col-span-2">
+          <FieldInputLabel label="وصف داخلي اختياري">
+            <textarea name="description" rows={3} defaultValue={value?.description} placeholder="ملاحظة مختصرة للفريق عن استخدام هذه النسخة." className="w-full rounded-xl border border-slate-200 p-3 text-sm font-normal leading-6" />
           </FieldInputLabel>
         </div>
-        <FieldInputLabel label="وصف مختصر">
-          <textarea name="description" rows={3} defaultValue={value?.description} placeholder="اشرح متى يستخدم العميل هذا النوع من العقد." className="w-full rounded-xl border border-slate-200 p-3 font-normal leading-7" />
-        </FieldInputLabel>
-      </FieldEditorSection>
-
-      {optionalClauses.length > 0 && (
-        <FieldEditorSection title="إضافات يمكن تفعيلها مع هذا النوع" description="اختارها بالاسم الظاهر بدل كتابة رموز داخلية.">
-          <input type="hidden" name="allowedOptionalClauseKeys" value={allowedOptionalKeys.join(", ")} />
-          <div className="grid gap-2 sm:grid-cols-2">
-            {optionalClauses.map((optional) => {
-              const checked = allowedOptionalKeys.includes(optional.key);
-              return (
-                <label key={optional.key} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-xs transition ${checked ? "border-[#986410]/50 bg-[#986410]/5" : "border-slate-200 bg-white hover:border-slate-300"}`}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(event) => setAllowedOptionalKeys((current) => event.target.checked ? [...new Set([...current, optional.key])] : current.filter((key) => key !== optional.key))}
-                    className="mt-1 h-4 w-4 accent-[#986410]"
-                  />
-                  <span>
-                    <span className="block font-black text-slate-800">{optional.nameAr}</span>
-                    {optional.description && <span className="mt-1 block leading-5 text-slate-500">{optional.description}</span>}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        </FieldEditorSection>
-      )}
-
-      {legalClauses.length > 0 && (
-        <FieldEditorSection title="البنود الأساسية لهذا النوع" description="اختر البنود التي يجب أن تدخل دائمًا في هذا النوع من العقد. لا تحتاج لكتابة أي رموز داخلية.">
-          <input type="hidden" name="requiredClauseKeys" value={requiredClauseKeys.join(", ")} />
-          <div className="grid gap-2 sm:grid-cols-2">
-            {legalClauses.map((clause) => {
-              const checked = requiredClauseKeys.includes(clause.key);
-              return (
-                <label key={clause.key} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-xs transition ${checked ? "border-[#986410]/50 bg-[#986410]/5" : "border-slate-200 bg-white hover:border-slate-300"}`}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(event) => setRequiredClauseKeys((current) => event.target.checked ? [...new Set([...current, clause.key])] : current.filter((key) => key !== clause.key))}
-                    className="mt-1 h-4 w-4 accent-[#986410]"
-                  />
-                  <span>
-                    <span className="block font-black text-slate-800">{clause.titleAr}</span>
-                    {clause.guidance && <span className="mt-1 line-clamp-2 block leading-5 text-slate-500">{clause.guidance}</span>}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        </FieldEditorSection>
-      )}
-
-      {!legalClauses.length && <input type="hidden" name="requiredClauseKeys" value={value?.requiredClauseKeys.join(", ") ?? ""} />}
-
-      <TechnicalDetails>
-        <p className="rounded-xl border border-slate-200 bg-white p-3 text-xs font-bold leading-6 text-slate-500">هذه إعدادات تقنية اختيارية ولا تظهر للعميل.</p>
-        <FieldInputLabel label="اسم ملف المرجع الداخلي">
-          <input name="sourceDocumentName" defaultValue={value?.sourceDocumentName} className="w-full rounded-xl border border-slate-200 bg-white p-3 font-normal" />
-        </FieldInputLabel>
-        <DefaultValuesBuilder
-          name="defaultFieldValues"
-          values={value?.defaultFieldValues}
-          fieldOptions={(value?.steps ?? []).flatMap((step) => step.fields.map((field) => ({ key: field.key, label: `${step.titleAr} — ${field.labelAr}` })))}
-        />
-      </TechnicalDetails>
-
-      {!optionalClauses.length && <input type="hidden" name="allowedOptionalClauseKeys" value={value?.allowedOptionalClauseKeys.join(", ") ?? ""} />}
+      </div>
+      <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-medium leading-5 text-slate-500">
+        اختيار البنود القانونية اتنقل لمرحلة «صياغة العقد» حتى يفضل تعديل النسخة خفيف وواضح.
+      </p>
       <FormActions busy={busy} onCancel={onCancel} />
     </form>
   );
@@ -1107,11 +1155,11 @@ function FieldSettingsForm({
 function FieldBadge({ field }: { field: WizardFieldDefinition }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-600">{fieldTypeLabels[field.type]}</span>
-      <span className={`rounded-full px-2.5 py-1 text-xs font-black ${field.required ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800"}`}>
+      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">{fieldTypeLabels[field.type]}</span>
+      <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${field.required ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800"}`}>
         {field.required ? "إجباري" : "اختياري"}
       </span>
-      {field.visibleWhen && <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-black text-violet-800">شرطي</span>}
+      {field.visibleWhen && <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-bold text-violet-800">شرطي</span>}
     </div>
   );
 }
@@ -1283,6 +1331,8 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
     if (!version) return;
     const form = new FormData(event.currentTarget);
     const variantKey = value?.key ?? optionalText(form.get("key")) ?? "";
+    const moveToIndexRaw = form.get("moveToIndex");
+    const moveToIndex = moveToIndexRaw === null || moveToIndexRaw === "" ? undefined : Number(moveToIndexRaw);
     const variant = {
       key: variantKey,
       nameAr: String(form.get("nameAr") || "").trim(),
@@ -1293,11 +1343,21 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
       allowedOptionalClauseKeys: splitCsv(form.get("allowedOptionalClauseKeys")),
       defaultFieldValues: parseJson<Record<string, ContractFieldValue>>(form.get("defaultFieldValues"), value?.defaultFieldValues ?? {}, "القيم الافتراضية"),
       steps: value?.steps ?? [],
+      ...(value && Number.isFinite(moveToIndex) ? { moveToIndex } : {}),
     };
     await mutate(
       value ? `/api/v1/admin/templates/versions/${version.id}/variants/${encodeURIComponent(value.key)}` : `/api/v1/admin/templates/versions/${version.id}/variants`,
       { method: value ? "PATCH" : "POST", body: JSON.stringify({ variant }) },
-      value ? "تم تعديل نوع العقد" : "تمت إضافة نوع العقد",
+      value ? "تم تعديل نسخة العقد" : "تمت إضافة نسخة العقد",
+    );
+  }
+
+  async function saveVariantClauseSelection(variant: ContractVariantDefinition, requiredClauseKeys: string[]) {
+    if (!version) return;
+    await mutate(
+      `/api/v1/admin/templates/versions/${version.id}/variants/${encodeURIComponent(variant.key)}`,
+      { method: "PATCH", body: JSON.stringify({ variant: { requiredClauseKeys } }) },
+      "تم حفظ بنود نسخة العقد",
     );
   }
 
@@ -1469,7 +1529,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
     await mutate(`/api/v1/admin/templates/versions/${version.id}/variants/${encodeURIComponent(variant.key)}`, {
       method: "PATCH",
       body: JSON.stringify({ variant: { moveToIndex: target } }),
-    }, "تم تغيير ترتيب نوع العقد");
+    }, "تم تغيير ترتيب نسخة العقد");
   }
 
   async function moveVariant(variant: ContractVariantDefinition, index: number, direction: -1 | 1) {
@@ -1560,7 +1620,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
 
   const filteredClauses = (version.definition.legalClauses ?? []).filter((clause) => `${clause.titleAr} ${clause.key} ${clause.bodyAr}`.toLowerCase().includes(clauseSearch.toLowerCase()));
   const tabs: Array<[TabKey, string, string, ReactNode]> = [
-    ["structure", "بناء النموذج", "الأنواع والخطوات والأسئلة", <Layers3 className="h-4 w-4" key="i" />],
+    ["structure", "بناء النموذج", "نسخ العقد والخطوات والأسئلة", <Layers3 className="h-4 w-4" key="i" />],
     ["readiness", "تجهيز العميل", "ما يحتاجه قبل بدء العقد", <ClipboardCheck className="h-4 w-4" key="i" />],
     ["clauses", "صياغة العقد", "البنود القانونية الأساسية", <FilePlus2 className="h-4 w-4" key="i" />],
     ["optional", "الإضافات", "الملاحق والبنود الاختيارية", <Braces className="h-4 w-4" key="i" />],
@@ -1569,27 +1629,41 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
   ];
 
   const activeTabMeta = tabs.find(([key]) => key === activeTab);
-  const activeTabIndex = tabs.findIndex(([key]) => key === activeTab);
-  const previousTab = activeTabIndex > 0 ? tabs[activeTabIndex - 1] : null;
-  const nextTab = activeTabIndex < tabs.length - 1 ? tabs[activeTabIndex + 1] : null;
   const totalSteps = version.definition.variants.reduce((sum, variant) => sum + variant.steps.length, 0);
   const totalFields = version.definition.variants.reduce((sum, variant) => sum + variant.steps.reduce((stepSum, step) => stepSum + step.fields.length, 0), 0);
   const validationErrorCount = inspection?.errors.length ?? 0;
   const customerPreviewVariant = version.definition.variants.find((variant) => variant.key === previewVariant) ?? version.definition.variants[0];
+  const builderBreadcrumb = [
+    version.categoryNameAr || "غير مصنف",
+    version.templateNameAr || version.definition.nameAr,
+    `الإصدار ${version.versionNumber}`,
+  ];
 
   return (
-    <div className="mx-auto max-w-[1500px] space-y-6 p-5 sm:p-8">
+    <div className="mx-auto max-w-[1500px] space-y-4 p-4 sm:p-5">
       {confirmDialog}
       <header className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 xl:flex-row xl:items-center">
         <div>
           <Link href="/templates" className="mb-3 inline-flex items-center gap-2 text-xs font-bold text-slate-500 transition hover:text-[#00102e]">
             <ArrowRight className="h-4 w-4" />العودة إلى قوالب العقود
           </Link>
+          <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs font-bold text-slate-500">
+            {builderBreadcrumb.map((part, index) => (
+              <span key={`${part}-${index}`} className="inline-flex items-center gap-1.5">
+                <span className={index === builderBreadcrumb.length - 1 ? "text-[#00102e]" : ""}>{part}</span>
+                {index < builderBreadcrumb.length - 1 && <span className="text-slate-300">›</span>}
+              </span>
+            ))}
+          </div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-black text-[#00102e] sm:text-3xl">{version.definition.nameAr} — الإصدار {version.versionNumber}</h1>
+            <h1 className="text-xl font-bold text-[#00102e]">بناء نموذج العقد</h1>
             <StatusBadge value={version.status} />
           </div>
-          <p className="mt-2 text-sm font-semibold text-slate-500">
+          <p className="mt-1 text-sm font-medium leading-6 text-slate-500">
+            {version.templateNameAr || version.definition.nameAr} — الإصدار {version.versionNumber} · رتّب نسخ العقد والخطوات والأسئلة كما ستظهر للعميل.
+          </p>
+          <div className="mt-1.5 text-xs font-bold text-slate-600">{version.definition.variants.length} نسخ · {totalSteps} خطوة · {totalFields} سؤال</div>
+          <p className="mt-2 text-xs font-medium text-slate-500">
             {version.status === "published"
               ? "نسخة منشورة للعرض فقط. أنشئ إصدارًا جديدًا قبل أي تعديل."
               : version.status === "legal_review"
@@ -1642,145 +1716,148 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
         </form>
       </details>
 
-      <div className="grid items-start gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="space-y-4 xl:sticky xl:top-20">
-          <div className="rounded-3xl bg-[#00102e] p-5 text-white shadow-lg shadow-slate-950/10">
-            <div className="text-xs font-black text-[#d7a94f]">محرر القالب</div>
-            <div className="mt-2 text-xl font-black">{activeTabMeta?.[1]}</div>
-            <p className="mt-2 text-xs font-semibold leading-6 text-slate-300">{activeTabMeta?.[2]}</p>
-            <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-xl bg-white/10 p-2"><div className="text-lg font-black">{version.definition.variants.length}</div><div className="mt-0.5 text-xs font-bold text-slate-300">نوع</div></div>
-              <div className="rounded-xl bg-white/10 p-2"><div className="text-lg font-black">{totalSteps}</div><div className="mt-0.5 text-xs font-bold text-slate-300">خطوة</div></div>
-              <div className="rounded-xl bg-white/10 p-2"><div className="text-lg font-black">{totalFields}</div><div className="mt-0.5 text-xs font-bold text-slate-300">سؤال</div></div>
+      <div className="space-y-3">
+        <nav className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+          <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0 px-1">
+              <div className="text-xs font-bold text-[#986410]">مراحل بناء النموذج</div>
+              <p className="mt-0.5 text-[11px] font-medium text-slate-500">
+                {activeTabMeta?.[1]} · {activeTabMeta?.[2]}
+              </p>
+            </div>
+            <div className="flex gap-1.5 overflow-x-auto pb-1 xl:pb-0">
+              {tabs.map(([key, label, , icon], index) => {
+                const active = activeTab === key;
+                const hasErrors = key === "validation" && validationErrorCount > 0;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => void goToTab(key)}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-bold transition ${active ? "bg-[#00102e] text-white" : hasErrors ? "bg-red-50 text-red-700 hover:bg-red-100" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
+                  >
+                    <span className={active ? "text-[#d7a94f]" : ""}>{icon}</span>
+                    <span>{index + 1}. {label}</span>
+                    {key === "validation" && (
+                      <span className={`rounded-full px-1.5 text-[10px] ${validationErrorCount ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                        {validationErrorCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
+        </nav>
 
-          <nav className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
-            {tabs.map(([key, label, description, icon], index) => {
-              const active = activeTab === key;
-              const hasErrors = key === "validation" && validationErrorCount > 0;
-              return (
-                <button key={key} type="button" onClick={() => void goToTab(key)} className={`mb-1 flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-right transition last:mb-0 ${active ? "bg-[#00102e] text-white" : "text-slate-700 hover:bg-slate-50"}`}>
-                  <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${active ? "bg-white/10 text-[#d7a94f]" : hasErrors ? "bg-red-50 text-red-700" : "bg-slate-100 text-slate-500"}`}>{icon}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-black">{index + 1}. {label}</span>
-                      {key === "validation" && <span className={`rounded-full px-2 py-0.5 text-xs font-black ${validationErrorCount ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>{validationErrorCount}</span>}
-                    </span>
-                    <span className={`mt-1 block text-xs font-semibold leading-5 ${active ? "text-slate-300" : "text-slate-500"}`}>{description}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
-
-          <div className={`rounded-2xl border p-4 ${validationErrorCount ? "border-amber-200 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
-            <div className={`text-xs font-black ${validationErrorCount ? "text-amber-900" : "text-emerald-900"}`}>{validationErrorCount ? `متبقي ${validationErrorCount} مشكلة قبل المراجعة` : "القالب جاهز للمراجعة"}</div>
-            <button type="button" onClick={() => void goToTab("validation")} className={`mt-2 text-xs font-black underline underline-offset-4 ${validationErrorCount ? "text-amber-800" : "text-emerald-800"}`}>فتح فحص الجاهزية</button>
-          </div>
-        </aside>
-
-        <main className="min-w-0 space-y-5">
+        <main className="min-w-0 space-y-4">
       {activeTab === "structure" && (
         <section className="space-y-4">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <div><h2 className="text-2xl font-black text-[#00102e]">أنواع العقد وخطوات إدخال البيانات</h2><p className="mt-1 text-sm font-semibold leading-7 text-slate-500">كل نوع عقد له خطوات وأسئلة مرتبة كما ستظهر للعميل. التعديل هنا يخص الإصدار المسودة فقط.</p></div>
+            <div><h2 className="text-lg font-bold text-[#00102e]">نسخ العقد والخطوات والأسئلة</h2><p className="mt-1 text-xs font-medium leading-5 text-slate-500">التعديل هنا يخص الإصدار المسودة فقط.</p></div>
             {!readOnly && <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => setReorderMode((current) => !current)} aria-pressed={reorderMode} className={`inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-black ${reorderMode ? "border-[#986410] bg-[#986410]/10 text-[#986410]" : "border-slate-200 bg-white text-slate-700"}`}><GripVertical className="h-4 w-4" />{reorderMode ? "إنهاء الترتيب" : "ترتيب بالسحب"}</button>
-              <button type="button" onClick={() => setModal({ kind: "variant" })} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-sm font-black text-white"><Plus className="h-4 w-4" />إضافة نوع عقد</button>
+              <button type="button" onClick={() => setReorderMode((current) => !current)} aria-pressed={reorderMode} className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ${reorderMode ? "border-[#986410] bg-[#986410]/10 text-[#986410]" : "border-slate-200 bg-white text-slate-700"}`}><GripVertical className="h-4 w-4" />{reorderMode ? "إنهاء الترتيب" : "ترتيب بالسحب"}</button>
+              <button type="button" onClick={() => setModal({ kind: "variant" })} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-3.5 py-2 text-xs font-bold text-white"><Plus className="h-4 w-4" />إضافة نسخة</button>
             </div>}
           </div>
-          <details className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-            <summary className="cursor-pointer text-sm font-black text-[#00102e]">كيف يُبنى العقد؟</summary>
-            <div className="mt-3 grid gap-3 border-t border-slate-100 pt-3 text-sm font-bold leading-6 text-slate-700 md:grid-cols-3">
-              <div className="rounded-xl bg-slate-50 p-3"><span className="font-black text-[#00102e]">١. النوع</span><br />مثال: بيع ابتدائي أو إيجار.</div>
-              <div className="rounded-xl bg-slate-50 p-3"><span className="font-black text-[#00102e]">٢. الخطوات</span><br />مثل بيانات الأطراف أو بيانات الوحدة.</div>
-              <div className="rounded-xl bg-slate-50 p-3"><span className="font-black text-[#00102e]">٣. الأسئلة</span><br />البيانات التي يجيب عنها العميل داخل كل خطوة.</div>
+          <details className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+            <summary className="cursor-pointer text-sm font-bold text-[#00102e]">كيف يُبنى العقد؟</summary>
+            <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3 text-xs font-medium leading-5 text-slate-700 md:grid-cols-3">
+              <div className="rounded-xl bg-slate-50 p-2.5"><span className="font-bold text-[#00102e]">١. نسخة العقد</span><br />مثال: بيع ابتدائي أو إيجار سكني داخل نفس نوع العقد.</div>
+              <div className="rounded-xl bg-slate-50 p-2.5"><span className="font-bold text-[#00102e]">٢. الخطوات</span><br />مثل بيانات الأطراف أو بيانات الوحدة.</div>
+              <div className="rounded-xl bg-slate-50 p-2.5"><span className="font-bold text-[#00102e]">٣. الأسئلة</span><br />البيانات التي يجيب عنها العميل داخل كل خطوة.</div>
             </div>
           </details>
-          {reorderMode && !readOnly && <div className="flex items-start gap-3 rounded-2xl border border-[#986410]/30 bg-[#986410]/5 p-4 text-sm font-semibold leading-6 text-slate-700"><GripVertical className="mt-0.5 h-5 w-5 shrink-0 text-[#986410]" /><div><span className="font-black text-[#00102e]">وضع الترتيب مفعّل.</span> اسحب من المقبض لترتيب أنواع العقد، الخطوات والأسئلة. ويمكن استخدام سهمي أعلى/أسفل بعد التركيز على المقبض أو من قائمة «إدارة» على الموبايل.</div></div>}
+          {reorderMode && !readOnly && <div className="flex items-start gap-3 rounded-2xl border border-[#986410]/30 bg-[#986410]/5 p-4 text-sm font-semibold leading-6 text-slate-700"><GripVertical className="mt-0.5 h-5 w-5 shrink-0 text-[#986410]" /><div><span className="font-black text-[#00102e]">وضع الترتيب مفعّل.</span> اسحب من المقبض لترتيب نسخ العقد، الخطوات والأسئلة. ويمكن استخدام سهمي أعلى/أسفل بعد التركيز على المقبض أو من قائمة «⋯» على الموبايل.</div></div>}
 
           {version.definition.variants.map((variant, variantIndex) => {
             const expanded = expandedVariants[variant.key] ?? false;
             return (
-              <article key={variant.key} onDragOver={(event) => { if (reorderMode && dragItem?.kind === "variant") event.preventDefault(); }} onDrop={(event) => { if (!reorderMode) return; event.preventDefault(); void dropVariant(variantIndex); }} className={`overflow-hidden rounded-3xl border bg-white shadow-sm transition ${reorderMode && dragItem?.kind === "variant" && dragItem.key === variant.key ? "border-[#986410] opacity-60" : "border-slate-200"}`}>
-                <div className="flex flex-col gap-4 bg-slate-50 p-5 lg:flex-row lg:items-center lg:justify-between">
+              <article key={variant.key} onDragOver={(event) => { if (reorderMode && dragItem?.kind === "variant") event.preventDefault(); }} onDrop={(event) => { if (!reorderMode) return; event.preventDefault(); void dropVariant(variantIndex); }} className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition ${reorderMode && dragItem?.kind === "variant" && dragItem.key === variant.key ? "border-[#986410] opacity-60" : "border-slate-200"}`}>
+                <div className="flex flex-col gap-2 bg-slate-50 p-3 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex min-w-0 items-center gap-2">
-                    {reorderMode && !readOnly && <span draggable={!busy} onDragStart={(event) => { event.stopPropagation(); setDragItem({ kind: "variant", key: variant.key, index: variantIndex }); }} onDragEnd={() => setDragItem(null)} onKeyDown={(event) => { if (event.key === "ArrowUp") { event.preventDefault(); void moveVariant(variant, variantIndex, -1); } if (event.key === "ArrowDown") { event.preventDefault(); void moveVariant(variant, variantIndex, 1); } }} role="button" tabIndex={0} title="اسحب أو استخدم الأسهم لتغيير ترتيب نوع العقد" aria-label={`اسحب لترتيب ${variant.nameAr}`} className="flex h-10 w-10 shrink-0 cursor-grab items-center justify-center rounded-xl border border-[#986410]/30 bg-white text-[#986410] active:cursor-grabbing"><GripVertical className="h-5 w-5" /></span>}
-                  <button type="button" onClick={() => setExpandedVariants((current) => ({ ...current, [variant.key]: !expanded }))} className="flex min-w-0 items-center gap-4 text-right">
+                    {reorderMode && !readOnly && <span draggable={!busy} onDragStart={(event) => { event.stopPropagation(); setDragItem({ kind: "variant", key: variant.key, index: variantIndex }); }} onDragEnd={() => setDragItem(null)} onKeyDown={(event) => { if (event.key === "ArrowUp") { event.preventDefault(); void moveVariant(variant, variantIndex, -1); } if (event.key === "ArrowDown") { event.preventDefault(); void moveVariant(variant, variantIndex, 1); } }} role="button" tabIndex={0} title="اسحب أو استخدم الأسهم لتغيير ترتيب نسخة العقد" aria-label={`اسحب لترتيب ${variant.nameAr}`} className="flex h-10 w-10 shrink-0 cursor-grab items-center justify-center rounded-xl border border-[#986410]/30 bg-white text-[#986410] active:cursor-grabbing"><GripVertical className="h-5 w-5" /></span>}
+                  <button type="button" onClick={() => setExpandedVariants((current) => ({ ...current, [variant.key]: !expanded }))} className="flex min-w-0 items-center gap-3 text-right">
                     {expanded ? <ChevronUp className="h-5 w-5 shrink-0 text-slate-500" /> : <ChevronDown className="h-5 w-5 shrink-0 text-slate-500" />}
                     <div className="min-w-0">
-                      <span className="mb-1 inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-500">نوع عقد #{variantIndex + 1}</span>
-                      <h3 className="truncate text-lg font-black text-[#00102e]">{variant.nameAr}</h3>
-                      <p className="mt-1 text-sm font-bold text-slate-500">{variant.steps.length} خطوة إدخال</p>
+                      <span className="mb-1 inline-flex rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-slate-500">نسخة عقد #{variantIndex + 1}</span>
+                      <h3 className="truncate text-[15px] font-bold text-[#00102e]">{variant.nameAr}</h3>
+                      <p className="mt-1 text-xs font-medium text-slate-500">{variant.steps.length} خطوة إدخال</p>
                     </div>
                   </button>
                   </div>
                   {!readOnly && <div className="flex flex-wrap items-start gap-2">
-                    <button type="button" onClick={() => setModal({ kind: "step", variantKey: variant.key })} className="inline-flex items-center gap-1 rounded-xl bg-[#00102e] px-3 py-2 text-xs font-black text-white"><Plus className="h-3.5 w-3.5" />إضافة خطوة</button>
-                    <button type="button" onClick={() => setModal({ kind: "variant", value: variant })} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black"><Pencil className="h-3.5 w-3.5" />تعديل النوع</button>
+                    <button type="button" onClick={() => setModal({ kind: "step", variantKey: variant.key })} className="inline-flex items-center gap-1 rounded-xl bg-[#00102e] px-3 py-2 text-xs font-bold text-white"><Plus className="h-3.5 w-3.5" />إضافة خطوة</button>
+                    <button type="button" onClick={() => setModal({ kind: "variant", value: variant })} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold"><Pencil className="h-3.5 w-3.5" />تعديل النسخة</button>
                     <details className="relative">
-                      <summary className="cursor-pointer list-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 [&::-webkit-details-marker]:hidden">إدارة</summary>
-                      <div className="mt-2 flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
-                        <button type="button" disabled={variantIndex === 0 || busy} onClick={() => void moveVariant(variant, variantIndex, -1)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-30"><ArrowUp className="h-4 w-4" />أعلى</button>
-                        <button type="button" disabled={variantIndex === version.definition.variants.length - 1 || busy} onClick={() => void moveVariant(variant, variantIndex, 1)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-30"><ArrowDown className="h-4 w-4" />أسفل</button>
-                        <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/variants/${encodeURIComponent(variant.key)}`, "تم حذف نوع العقد", `حذف نوع العقد «${variant.nameAr}» من هذه المسودة؟`)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-black text-red-700"><Trash2 className="h-4 w-4" />حذف النوع</button>
+                      <summary className="cursor-pointer list-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 [&::-webkit-details-marker]:hidden">⋯</summary>
+                      <div className="absolute left-0 top-full z-30 mt-1 w-44 rounded-xl border border-slate-200 bg-white p-1.5 text-xs font-bold shadow-xl">
+                        <button type="button" disabled={variantIndex === 0 || busy} onClick={() => void moveVariant(variant, variantIndex, -1)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"><ArrowUp className="h-4 w-4" />تحريك لأعلى</button>
+                        <button type="button" disabled={variantIndex === version.definition.variants.length - 1 || busy} onClick={() => void moveVariant(variant, variantIndex, 1)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"><ArrowDown className="h-4 w-4" />تحريك لأسفل</button>
+                        <button
+                          type="button"
+                          disabled={version.definition.variants.length <= 1 || busy}
+                          title={version.definition.variants.length <= 1 ? "لا يمكن حذف النسخة الوحيدة داخل نوع العقد. عطّل نوع العقد من صفحة الأنواع بدلًا من ذلك." : undefined}
+                          onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/variants/${encodeURIComponent(variant.key)}`, "تم حذف نسخة العقد", `حذف نسخة العقد «${variant.nameAr}» من هذه المسودة؟`)}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                          <Trash2 className="h-4 w-4" />حذف النسخة
+                        </button>
                       </div>
                     </details>
                   </div>}
                 </div>
-                {expanded && <div className="space-y-4 p-5">
+                {expanded && <div className="space-y-3 p-4">
                   {variant.steps.map((step, stepIndex) => {
                     const stepId = `${variant.key}:${step.key}`;
                     const stepExpanded = expandedSteps[stepId] ?? true;
                     return (
                       <div key={step.key} onDragOver={(event) => { if (reorderMode && dragItem?.kind === "step" && dragItem.variantKey === variant.key) { event.preventDefault(); event.stopPropagation(); } }} onDrop={(event) => { if (!reorderMode) return; event.preventDefault(); event.stopPropagation(); void dropStep(variant.key, stepIndex); }} className={`overflow-hidden rounded-2xl border bg-white transition ${reorderMode && dragItem?.kind === "step" && dragItem.key === step.key ? "border-[#986410] opacity-60" : "border-slate-200"}`}>
-                        <div className="flex flex-col gap-3 border-b border-slate-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex flex-col gap-2 border-b border-slate-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex items-center gap-2">
                             {reorderMode && !readOnly && <span draggable={!busy} onDragStart={(event) => { event.stopPropagation(); setDragItem({ kind: "step", variantKey: variant.key, key: step.key, index: stepIndex }); }} onDragEnd={() => setDragItem(null)} onKeyDown={(event) => { if (event.key === "ArrowUp") { event.preventDefault(); void moveStep(variant.key, step, stepIndex, -1, variant.steps.length); } if (event.key === "ArrowDown") { event.preventDefault(); void moveStep(variant.key, step, stepIndex, 1, variant.steps.length); } }} role="button" tabIndex={0} title="اسحب أو استخدم الأسهم لتغيير ترتيب الخطوة" aria-label={`اسحب لترتيب ${step.titleAr}`} className="flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-lg border border-[#986410]/30 bg-white text-[#986410] active:cursor-grabbing"><GripVertical className="h-4 w-4" /></span>}
                           <button type="button" onClick={() => setExpandedSteps((current) => ({ ...current, [stepId]: !stepExpanded }))} className="flex items-center gap-3 text-right">
                             {stepExpanded ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
                             <div>
-                              <span className="mb-1 inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-500">خطوة #{stepIndex + 1}</span>
-                              <div className="text-base font-black text-slate-900">{step.titleAr}</div>
-                              <div className="mt-1 text-sm font-bold text-slate-500">{step.fields.length} سؤال</div>
+                              <span className="mb-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500">خطوة #{stepIndex + 1}</span>
+                              <div className="text-[15px] font-bold text-slate-900">{step.titleAr}</div>
+                              <div className="mt-0.5 text-xs font-medium text-slate-500">{step.fields.length} سؤال</div>
                             </div>
                           </button>
                           </div>
                           {!readOnly && <div className="flex flex-wrap items-start gap-2">
-                            <button type="button" onClick={() => setModal({ kind: "field", variantKey: variant.key, stepKey: step.key })} className="inline-flex items-center gap-1 rounded-xl bg-[#986410] px-3 py-2 text-xs font-black text-white"><Plus className="h-3.5 w-3.5" />إضافة سؤال</button>
-                            <button type="button" onClick={() => setModal({ kind: "step", variantKey: variant.key, value: step })} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black">تعديل الخطوة</button>
-                            <details>
-                              <summary className="cursor-pointer list-none rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 [&::-webkit-details-marker]:hidden">إدارة</summary>
-                              <div className="mt-2 flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
-                                <button type="button" disabled={stepIndex === 0 || busy} onClick={() => void moveStep(variant.key, step, stepIndex, -1, variant.steps.length)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-30"><ArrowUp className="h-4 w-4" />أعلى</button>
-                                <button type="button" disabled={stepIndex === variant.steps.length - 1 || busy} onClick={() => void moveStep(variant.key, step, stepIndex, 1, variant.steps.length)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-30"><ArrowDown className="h-4 w-4" />أسفل</button>
-                                <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/variants/${encodeURIComponent(variant.key)}/steps/${encodeURIComponent(step.key)}`, "تم حذف الخطوة", `حذف خطوة «${step.titleAr}» وكل حقولها؟`)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700"><Trash2 className="h-3.5 w-3.5" />حذف الخطوة</button>
+                            <button type="button" onClick={() => setModal({ kind: "field", variantKey: variant.key, stepKey: step.key })} className="inline-flex items-center gap-1 rounded-xl bg-[#986410] px-3 py-2 text-xs font-bold text-white"><Plus className="h-3.5 w-3.5" />إضافة سؤال</button>
+                            <button type="button" onClick={() => setModal({ kind: "step", variantKey: variant.key, value: step })} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold">تعديل الخطوة</button>
+                            <details className="relative">
+                              <summary className="cursor-pointer list-none rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 [&::-webkit-details-marker]:hidden">⋯</summary>
+                              <div className="absolute left-0 top-full z-30 mt-1 w-44 rounded-xl border border-slate-200 bg-white p-1.5 text-xs font-bold shadow-xl">
+                                <button type="button" disabled={stepIndex === 0 || busy} onClick={() => void moveStep(variant.key, step, stepIndex, -1, variant.steps.length)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"><ArrowUp className="h-4 w-4" />تحريك لأعلى</button>
+                                <button type="button" disabled={stepIndex === variant.steps.length - 1 || busy} onClick={() => void moveStep(variant.key, step, stepIndex, 1, variant.steps.length)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"><ArrowDown className="h-4 w-4" />تحريك لأسفل</button>
+                                <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/variants/${encodeURIComponent(variant.key)}/steps/${encodeURIComponent(step.key)}`, "تم حذف الخطوة", `حذف خطوة «${step.titleAr}» وكل حقولها؟`)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-red-700 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />حذف الخطوة</button>
                               </div>
                             </details>
                           </div>}
                         </div>
                         {stepExpanded && <div>
                           {step.fields.map((field, fieldIndex) => (
-                            <div key={field.key} onDragOver={(event) => { if (reorderMode && dragItem?.kind === "field" && dragItem.variantKey === variant.key && dragItem.stepKey === step.key) { event.preventDefault(); event.stopPropagation(); } }} onDrop={(event) => { if (!reorderMode) return; event.preventDefault(); event.stopPropagation(); void dropField(variant.key, step.key, fieldIndex); }} className={`flex flex-col gap-3 border-b border-slate-100 p-4 last:border-b-0 xl:flex-row xl:items-center xl:justify-between ${reorderMode && dragItem?.kind === "field" && dragItem.key === field.key ? "bg-[#986410]/5 opacity-60" : ""}`}>
+                            <div key={field.key} onDragOver={(event) => { if (reorderMode && dragItem?.kind === "field" && dragItem.variantKey === variant.key && dragItem.stepKey === step.key) { event.preventDefault(); event.stopPropagation(); } }} onDrop={(event) => { if (!reorderMode) return; event.preventDefault(); event.stopPropagation(); void dropField(variant.key, step.key, fieldIndex); }} className={`flex flex-col gap-2 border-b border-slate-100 px-3 py-2.5 last:border-b-0 xl:flex-row xl:items-center xl:justify-between ${reorderMode && dragItem?.kind === "field" && dragItem.key === field.key ? "bg-[#986410]/5 opacity-60" : ""}`}>
                               <div className="flex min-w-0 items-start gap-3">
                                 {reorderMode && !readOnly && <span draggable={!busy} onDragStart={(event) => { event.stopPropagation(); setDragItem({ kind: "field", variantKey: variant.key, stepKey: step.key, key: field.key, index: fieldIndex }); }} onDragEnd={() => setDragItem(null)} onKeyDown={(event) => { if (event.key === "ArrowUp") { event.preventDefault(); void moveField(variant.key, step.key, field, fieldIndex, -1, step.fields.length); } if (event.key === "ArrowDown") { event.preventDefault(); void moveField(variant.key, step.key, field, fieldIndex, 1, step.fields.length); } }} role="button" tabIndex={0} title="اسحب أو استخدم الأسهم لتغيير ترتيب السؤال" aria-label={`اسحب لترتيب ${field.labelAr}`} className="mt-0.5 flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-lg border border-[#986410]/30 bg-white text-[#986410] active:cursor-grabbing"><GripVertical className="h-4 w-4" /></span>}
-                                <span className="mt-0.5 flex h-8 min-w-8 items-center justify-center rounded-full bg-slate-100 px-2 text-xs font-black text-slate-600">#{fieldIndex + 1}</span>
+                                <span className="mt-0.5 flex h-8 min-w-8 items-center justify-center rounded-full bg-slate-100 px-2 text-xs font-bold text-slate-600">#{fieldIndex + 1}</span>
                                 <div className="min-w-0">
-                                  <div className="text-base font-black text-slate-900">{field.labelAr}</div>
-                                  {field.helpText && <p className="mt-1 text-sm leading-6 text-slate-500">{field.helpText}</p>}
+                                  <div className="text-sm font-bold text-slate-900">{field.labelAr}</div>
                                 </div>
                               </div>
                               <div className="flex flex-wrap items-center gap-2">
                                 <FieldBadge field={field} />
-                                {!readOnly && <button type="button" onClick={() => setModal({ kind: "field", variantKey: variant.key, stepKey: step.key, value: field })} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700"><Pencil className="h-3.5 w-3.5" />تعديل السؤال</button>}
-                                {canEditGuidance && <button type="button" onClick={() => setModal({ kind: "fieldHelp", variantKey: variant.key, stepKey: step.key, value: field })} className="rounded-xl border border-amber-200 px-3 py-2 text-xs font-black text-amber-800">مساعدة (!)</button>}
-                                {!readOnly && <details>
-                                  <summary className="cursor-pointer list-none rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-500 [&::-webkit-details-marker]:hidden">إدارة</summary>
-                                  <div className="mt-2 flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
-                                    <button type="button" disabled={fieldIndex === 0 || busy} onClick={() => void moveField(variant.key, step.key, field, fieldIndex, -1, step.fields.length)} className="inline-flex items-center gap-1 rounded-lg border bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-30"><ArrowUp className="h-3.5 w-3.5" />أعلى</button>
-                                    <button type="button" disabled={fieldIndex === step.fields.length - 1 || busy} onClick={() => void moveField(variant.key, step.key, field, fieldIndex, 1, step.fields.length)} className="inline-flex items-center gap-1 rounded-lg border bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-30"><ArrowDown className="h-3.5 w-3.5" />أسفل</button>
-                                    <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/fields/${encodeURIComponent(field.key)}`, "تم حذف الحقل", `حذف السؤال «${field.labelAr}»؟`, { variantKey: variant.key, stepKey: step.key })} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700"><Trash2 className="h-3.5 w-3.5" />حذف السؤال</button>
+                                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${field.helpText ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{field.helpText ? "مساعدة ✓" : "بدون مساعدة"}</span>
+                                {!readOnly && <button type="button" onClick={() => setModal({ kind: "field", variantKey: variant.key, stepKey: step.key, value: field })} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700"><Pencil className="h-3.5 w-3.5" />تعديل</button>}
+                                {!readOnly && <details className="relative">
+                                  <summary className="cursor-pointer list-none rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-500 [&::-webkit-details-marker]:hidden">⋯</summary>
+                                  <div className="absolute left-0 top-full z-30 mt-1 w-44 rounded-xl border border-slate-200 bg-white p-1.5 text-xs font-bold shadow-xl">
+                                    <button type="button" disabled={fieldIndex === 0 || busy} onClick={() => void moveField(variant.key, step.key, field, fieldIndex, -1, step.fields.length)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"><ArrowUp className="h-3.5 w-3.5" />تحريك لأعلى</button>
+                                    <button type="button" disabled={fieldIndex === step.fields.length - 1 || busy} onClick={() => void moveField(variant.key, step.key, field, fieldIndex, 1, step.fields.length)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"><ArrowDown className="h-3.5 w-3.5" />تحريك لأسفل</button>
+                                    <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/fields/${encodeURIComponent(field.key)}`, "تم حذف الحقل", `حذف السؤال «${field.labelAr}»؟`, { variantKey: variant.key, stepKey: step.key })} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-red-700 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" />حذف السؤال</button>
                                   </div>
                                 </details>}
                               </div>
@@ -1791,12 +1868,12 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
                       </div>
                     );
                   })}
-                  {!variant.steps.length && <div className="rounded-xl bg-amber-50 p-5 text-center text-sm font-bold text-amber-900"><div>هذا النوع لا يحتوي خطوات بعد.</div>{!readOnly && <button type="button" onClick={() => setModal({ kind: "step", variantKey: variant.key })} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-black text-white"><Plus className="h-4 w-4" />إضافة أول خطوة</button>}</div>}
+                  {!variant.steps.length && <div className="rounded-xl bg-amber-50 p-5 text-center text-sm font-bold text-amber-900"><div>هذه النسخة لا تحتوي خطوات بعد.</div>{!readOnly && <button type="button" onClick={() => setModal({ kind: "step", variantKey: variant.key })} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-black text-white"><Plus className="h-4 w-4" />إضافة أول خطوة</button>}</div>}
                 </div>}
               </article>
             );
           })}
-          {!version.definition.variants.length && <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center"><Layers3 className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-3 text-sm font-black text-slate-600">ابدأ بنوع العقد الذي سيختاره العميل.</p>{!readOnly && <button type="button" onClick={() => setModal({ kind: "variant" })} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-sm font-black text-white"><Plus className="h-4 w-4" />إضافة أول نوع عقد</button>}</div>}
+          {!version.definition.variants.length && <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center"><Layers3 className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-3 text-sm font-black text-slate-600">ابدأ بإضافة نسخة العقد التي سيختارها العميل داخل هذا القالب.</p>{!readOnly && <button type="button" onClick={() => setModal({ kind: "variant" })} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-sm font-black text-white"><Plus className="h-4 w-4" />إضافة أول نسخة</button>}</div>}
         </section>
       )}
 
@@ -1812,7 +1889,15 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
 
       {activeTab === "clauses" && (
         <section className="space-y-4">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h2 className="text-xl font-black text-[#00102e]">البنود القانونية</h2><p className="mt-1 text-xs font-semibold text-slate-500">النص المنشور لا يتغير بأثر رجعي. استخدم المتغيرات بالشكل {"{{field_key}}"}.</p></div>{!readOnly && <button type="button" onClick={() => setModal({ kind: "clause" })} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-3 text-xs font-black text-white"><Plus className="h-4 w-4" />إضافة بند</button>}</div>
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h2 className="text-lg font-bold text-[#00102e]">البنود القانونية</h2><p className="mt-1 text-xs font-semibold text-slate-500">النص المنشور لا يتغير بأثر رجعي. استخدم المتغيرات بالشكل {"{{field_key}}"}.</p></div>{!readOnly && <button type="button" onClick={() => setModal({ kind: "clause" })} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-3 text-xs font-black text-white"><Plus className="h-4 w-4" />إضافة بند</button>}</div>
+          <VariantClauseSelectionPanel
+            key={version.definition.variants.map((variant) => `${variant.key}:${(variant.requiredClauseKeys ?? []).join("|")}`).join(";")}
+            variants={version.definition.variants}
+            clauses={version.definition.legalClauses ?? []}
+            readOnly={readOnly}
+            busy={busy}
+            onSave={(variant, requiredClauseKeys) => void saveVariantClauseSelection(variant, requiredClauseKeys)}
+          />
           <input value={clauseSearch} onChange={(event: ChangeEvent<HTMLInputElement>) => setClauseSearch(event.target.value)} placeholder="ابحث باسم المادة أو جزء من النص" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#986410]" />
           <div className="space-y-3">{filteredClauses.map((clause) => { const clauseIndex = (version.definition.legalClauses ?? []).findIndex((item) => item.key === clause.key); return <article key={clause.key} className={`rounded-2xl border bg-white p-5 ${clause.enabled === false ? "border-slate-200 opacity-60" : "border-slate-200"}`}><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-black text-[#00102e]">{clause.titleAr}</h3><span className={`rounded-full px-2 py-1 text-xs font-black ${clause.enabled === false ? "bg-slate-100 text-slate-600" : "bg-emerald-100 text-emerald-700"}`}>{clause.enabled === false ? "معطّل" : "مفعّل"}</span></div><details className="mt-1"><summary className="cursor-pointer text-xs font-bold text-slate-500">تفاصيل تقنية</summary><div className="mt-1 font-mono text-xs text-slate-500">{clause.key}</div></details>{clause.sourceDocumentName && <div className="mt-1 text-xs font-bold text-slate-500">المصدر: {clause.sourceDocumentName}{clause.sourcePageStart ? ` — ص ${clause.sourcePageStart}${clause.sourcePageEnd && clause.sourcePageEnd !== clause.sourcePageStart ? ` إلى ${clause.sourcePageEnd}` : ""}` : ""}</div>}</div>{!readOnly && <div className="flex flex-wrap gap-2"><button type="button" disabled={clauseIndex <= 0 || busy} onClick={() => void moveClause(clause, clauseIndex, -1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأعلى" aria-label="تحريك البند لأعلى"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" disabled={clauseIndex < 0 || clauseIndex >= (version.definition.legalClauses?.length ?? 1) - 1 || busy} onClick={() => void moveClause(clause, clauseIndex, 1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأسفل" aria-label="تحريك البند لأسفل"><ArrowDown className="h-3.5 w-3.5" /></button><button type="button" onClick={() => setModal({ kind: "clause", value: clause })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-black"><Pencil className="h-3.5 w-3.5" />تعديل</button>{clause.enabled !== false && <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/clauses/${encodeURIComponent(clause.key)}`, "تم تعطيل البند", `تعطيل البند «${clause.titleAr}» في هذه المسودة؟`)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-black text-red-700">تعطيل</button>}</div>}</div>{clause.guidance && <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-900"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">!</span><span>{clause.guidance}</span></div>}{canEditGuidance && <button type="button" onClick={() => setModal({ kind: "clauseGuidance", value: clause })} className="mt-3 rounded-lg border border-amber-200 px-3 py-2 text-xs font-black text-amber-800">{clause.guidance ? "تعديل الإرشاد" : "إضافة إرشاد (!)"}</button>}<p className="mt-4 whitespace-pre-wrap text-sm leading-8 text-slate-700">{clause.bodyAr}</p></article> })}{!filteredClauses.length && <div className="rounded-2xl bg-slate-50 p-8 text-center text-xs font-bold text-slate-500">لا توجد بنود مطابقة.</div>}</div>
         </section>
@@ -1820,45 +1905,35 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
 
       {activeTab === "optional" && (
         <section className="space-y-4">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><h2 className="text-xl font-black text-[#00102e]">الإضافات والملاحق الاختيارية</h2><p className="mt-1 text-xs font-semibold text-slate-500">مثل جدول الأقساط أو محضر الاستلام والجرد، ويمكن إصدارها داخل العقد أو كمستند مستقل.</p></div>{!readOnly && <button type="button" onClick={() => setModal({ kind: "optional" })} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-3 text-xs font-black text-white"><Plus className="h-4 w-4" />إضافة ملحق أو خيار</button>}</div>
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><h2 className="text-lg font-bold text-[#00102e]">الإضافات والملاحق الاختيارية</h2><p className="mt-1 text-xs font-semibold text-slate-500">مثل جدول الأقساط أو محضر الاستلام والجرد، ويمكن إصدارها داخل العقد أو كمستند مستقل.</p></div>{!readOnly && <button type="button" onClick={() => setModal({ kind: "optional" })} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-3 text-xs font-black text-white"><Plus className="h-4 w-4" />إضافة ملحق أو خيار</button>}</div>
           <div className="grid gap-4 lg:grid-cols-2">{version.definition.optionalClauses.map((optional) => <article key={optional.key} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex items-start justify-between gap-3"><div><h3 className="font-black text-[#00102e]">{optional.nameAr}</h3><details className="mt-1"><summary className="cursor-pointer text-xs font-bold text-slate-500">تفاصيل تقنية</summary><div className="mt-1 font-mono text-xs text-slate-500">{optional.key}</div></details></div><span className="rounded-full bg-violet-100 px-2 py-1 text-xs font-black text-violet-800">{optional.outputMode === "separate_annex" ? "مستند مستقل" : "داخل العقد"}</span></div><p className="mt-3 text-sm leading-7 text-slate-600">{optional.description || "—"}</p><div className="mt-4 space-y-2 text-xs font-bold text-slate-500"><div>متاح لـ: {optional.applicableVariantKeys.map((key) => version.definition.variants.find((item) => item.key === key)?.nameAr ?? key).join("، ") || "غير محدد"}</div><div>الخطوات المضافة: {optional.insertedSteps.length}</div><div>البنود القانونية: {optional.legalClauseKeys.length}</div></div>{!readOnly && <div className="mt-4 flex gap-2"><button type="button" onClick={() => setModal({ kind: "optional", value: optional })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-black"><Pencil className="h-3.5 w-3.5" />تعديل</button><button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/optional-clauses/${encodeURIComponent(optional.key)}`, "تم حذف الإضافة", `حذف الإضافة «${optional.nameAr}» من هذه المسودة؟`)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-black text-red-700">حذف</button></div>}</article>)}{!version.definition.optionalClauses.length && <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-xs font-bold text-slate-500 lg:col-span-2">لا توجد إضافات أو ملاحق اختيارية.</div>}</div>
         </section>
       )}
 
       {activeTab === "preview" && (
         <section className="space-y-5">
-          <div><h2 className="text-xl font-black text-[#00102e]">معاينة تجريبية قبل النشر</h2><p className="mt-1 text-xs font-semibold text-slate-500">يملأ النظام بيانات تجريبية تلقائيًا ويعرض البنود الناتجة حتى تراجع ترتيبها والمتغيرات الناقصة.</p></div>
-          <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 lg:grid-cols-3"><label className="text-xs font-black text-slate-600">نوع العقد<select value={previewVariant} onChange={(event: ChangeEvent<HTMLSelectElement>) => { setPreviewVariant(event.target.value); setPreviewOptionals([]); setPreview(null); }} className="mt-2 w-full rounded-xl border border-slate-200 p-3 font-normal">{version.definition.variants.map((variant) => <option key={variant.key} value={variant.key}>{variant.nameAr}</option>)}</select></label><div className="lg:col-span-2"><div className="text-xs font-black text-slate-600">الإضافات المراد اختبارها</div><div className="mt-2 flex flex-wrap gap-2">{version.definition.optionalClauses.filter((optional) => optional.applicableVariantKeys.includes(previewVariant)).map((optional) => <label key={optional.key} className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold"><input type="checkbox" checked={previewOptionals.includes(optional.key)} onChange={(event: ChangeEvent<HTMLInputElement>) => setPreviewOptionals((current) => event.target.checked ? [...current, optional.key] : current.filter((key) => key !== optional.key))} />{optional.nameAr}</label>)}{!version.definition.optionalClauses.some((optional) => optional.applicableVariantKeys.includes(previewVariant)) && <span className="text-xs text-slate-500">لا توجد إضافات لهذا النوع.</span>}</div></div><div className="lg:col-span-3"><button type="button" disabled={!previewVariant || busy} onClick={() => void generatePreview()} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-[#d7a94f]"><Eye className="h-4 w-4" />إنشاء المعاينة</button></div></div>
+          <div><h2 className="text-lg font-bold text-[#00102e]">معاينة تجريبية قبل النشر</h2><p className="mt-1 text-xs font-semibold text-slate-500">يملأ النظام بيانات تجريبية تلقائيًا ويعرض البنود الناتجة حتى تراجع ترتيبها والمتغيرات الناقصة.</p></div>
+          <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 lg:grid-cols-3"><label className="text-xs font-black text-slate-600">نسخة العقد<select value={previewVariant} onChange={(event: ChangeEvent<HTMLSelectElement>) => { setPreviewVariant(event.target.value); setPreviewOptionals([]); setPreview(null); }} className="mt-2 w-full rounded-xl border border-slate-200 p-3 font-normal">{version.definition.variants.map((variant) => <option key={variant.key} value={variant.key}>{variant.nameAr}</option>)}</select></label><div className="lg:col-span-2"><div className="text-xs font-black text-slate-600">الإضافات المراد اختبارها</div><div className="mt-2 flex flex-wrap gap-2">{version.definition.optionalClauses.filter((optional) => optional.applicableVariantKeys.includes(previewVariant)).map((optional) => <label key={optional.key} className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold"><input type="checkbox" checked={previewOptionals.includes(optional.key)} onChange={(event: ChangeEvent<HTMLInputElement>) => setPreviewOptionals((current) => event.target.checked ? [...current, optional.key] : current.filter((key) => key !== optional.key))} />{optional.nameAr}</label>)}{!version.definition.optionalClauses.some((optional) => optional.applicableVariantKeys.includes(previewVariant)) && <span className="text-xs text-slate-500">لا توجد إضافات لهذه النسخة.</span>}</div></div><div className="lg:col-span-3"><button type="button" disabled={!previewVariant || busy} onClick={() => void generatePreview()} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-[#d7a94f]"><Eye className="h-4 w-4" />إنشاء المعاينة</button></div></div>
           {preview && <div className="space-y-4">{(preview.missingVariables.length > 0 || preview.missingClauseKeys.length > 0) && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900"><div>بيانات لم تُربط داخل النص: {preview.missingVariables.map((key) => availableClauseFields.find((field) => field.key === key)?.label ?? key).join("، ") || "لا يوجد"}</div><div className="mt-1">بنود غير موجودة: {preview.missingClauseKeys.map((key) => version.definition.legalClauses?.find((clause) => clause.key === key)?.titleAr ?? key).join("، ") || "لا يوجد"}</div></div>}<div className="rounded-2xl border border-slate-200 bg-white p-6">{preview.clauses.map((clause) => <article key={clause.key} className="border-b border-slate-100 py-5 first:pt-0 last:border-b-0 last:pb-0"><h3 className="text-center text-base font-black text-[#00102e]">{clause.titleAr}</h3><p className="mt-3 whitespace-pre-wrap text-justify text-sm leading-8 text-slate-700">{clause.bodyAr}</p></article>)}{!preview.clauses.length && <p className="text-center text-sm font-bold text-slate-500">لم ينتج عن الاختيارات الحالية أي بنود.</p>}</div></div>}
         </section>
       )}
 
       {activeTab === "validation" && inspection && (
         <section className="space-y-5">
-          <div><h2 className="text-xl font-black text-[#00102e]">فحص جاهزية الإصدار</h2><p className="mt-1 text-xs font-semibold text-slate-500">النشر يتوقف تلقائيًا عند وجود أخطاء؛ التحذيرات لا تمنع النشر لكنها تحتاج مراجعة.</p></div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">{Object.entries({ "أنواع العقد": inspection.stats.variants, "الخطوات": inspection.stats.steps, "الحقول": inspection.stats.fields, "البنود": inspection.stats.legalClauses, "الإضافات": inspection.stats.optionalClauses }).map(([label, value]) => <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 text-center"><div className="text-2xl font-black text-[#00102e]">{value}</div><div className="mt-1 text-xs font-bold text-slate-500">{label}</div></div>)}</div>
+          <div><h2 className="text-lg font-bold text-[#00102e]">فحص جاهزية الإصدار</h2><p className="mt-1 text-xs font-semibold text-slate-500">النشر يتوقف تلقائيًا عند وجود أخطاء؛ التحذيرات لا تمنع النشر لكنها تحتاج مراجعة.</p></div>
+          <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600">
+            {inspection.stats.variants} نسخ · {inspection.stats.steps} خطوة · {inspection.stats.fields} سؤال · {inspection.stats.legalClauses} بند · {inspection.stats.optionalClauses} إضافة
+          </div>
           {!inspection.errors.length && <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800"><CheckCircle2 className="h-6 w-6" /><div><div className="font-black">لا توجد أخطاء تمنع النشر</div><div className="mt-1 text-xs font-semibold">راجع التحذيرات والمعاينة القانونية قبل الاعتماد النهائي.</div></div></div>}
           {!!inspection.errors.length && <div className="space-y-2"><h3 className="font-black text-red-800">أخطاء يجب معالجتها ({inspection.errors.length})</h3>{inspection.errors.map((item, index) => <div key={`${item.code}-${index}`} className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-start"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-700" /><div className="min-w-0 flex-1"><div className="text-sm font-black text-red-900">{item.messageAr}</div><details className="mt-2"><summary className="cursor-pointer text-xs font-bold text-red-700">تفاصيل تقنية</summary><div className="mt-1 break-all font-mono text-xs text-red-500">{item.code} · {item.path}</div></details></div><button type="button" onClick={() => void goToTab(tabForInspectionPath(item.path))} className="shrink-0 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-800">اذهب للمشكلة</button></div>)}</div>}
           {!!inspection.warnings.length && <div className="space-y-2"><h3 className="font-black text-amber-800">ملاحظات للمراجعة ({inspection.warnings.length})</h3>{inspection.warnings.map((item, index) => <div key={`${item.code}-${index}`} className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" /><div><div className="text-sm font-black text-amber-900">{item.messageAr}</div><details className="mt-2"><summary className="cursor-pointer text-xs font-bold text-amber-800">تفاصيل تقنية</summary><div className="mt-1 font-mono text-xs text-amber-600">{item.code} · {item.path}</div></details></div></div>)}</div>}
+          {version.status === "draft" && canEdit && (
+            <div className="flex justify-end">
+              <button type="button" disabled={busy || readinessDirty || Boolean(inspection.errors.length)} onClick={() => void submitForReview()} className="rounded-xl bg-[#986410] px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">إرسال للمراجعة القانونية</button>
+            </div>
+          )}
         </section>
       )}
-
-          <div className="sticky bottom-3 z-20 mt-8 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl shadow-slate-950/10 backdrop-blur">
-            <button type="button" disabled={!previousTab} onClick={() => previousTab && void goToTab(previousTab[0])} className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-30">
-              السابق{previousTab ? `: ${previousTab[1]}` : ""}
-            </button>
-            <div className="hidden text-center sm:block">
-              <div className="text-xs font-black text-slate-500">المرحلة {activeTabIndex + 1} من {tabs.length}</div>
-              <div className="mt-0.5 text-xs font-black text-[#00102e]">{activeTabMeta?.[1]}</div>
-            </div>
-            {nextTab ? (
-              <button type="button" onClick={() => void goToTab(nextTab[0])} className="rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-black text-white">التالي: {nextTab[1]}</button>
-            ) : version.status === "draft" && canEdit ? (
-              <button type="button" disabled={busy || readinessDirty || Boolean(inspection?.errors.length)} onClick={() => void submitForReview()} className="rounded-xl bg-[#986410] px-4 py-2.5 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">إرسال للمراجعة القانونية</button>
-            ) : (
-              <span className="rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-black text-slate-500">نهاية مسار القالب</span>
-            )}
-          </div>
 
         </main>
       </div>
@@ -1876,7 +1951,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
             </div>
 
             <div className="border-b border-slate-200 bg-white px-5 py-4">
-              <label className="block text-xs font-bold text-slate-600">نوع العقد
+              <label className="block text-xs font-bold text-slate-600">نسخة العقد
                 <select value={customerPreviewVariant?.key ?? ""} onChange={(event: ChangeEvent<HTMLSelectElement>) => { setPreviewVariant(event.target.value); setPreviewOptionals([]); setPreview(null); }} className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal outline-none focus:border-[#986410]">
                   {version.definition.variants.map((variant) => <option key={variant.key} value={variant.key}>{variant.nameAr}</option>)}
                 </select>
@@ -1904,11 +1979,11 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
                     </section>
                   ))}
 
-                  {!customerPreviewVariant.steps.length && <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm font-medium text-slate-500">لا توجد خطوات في نوع العقد ده حتى الآن.</div>}
+                  {!customerPreviewVariant.steps.length && <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm font-medium text-slate-500">لا توجد خطوات في هذه النسخة حتى الآن.</div>}
                   <p className="px-1 text-xs font-medium leading-5 text-slate-500">الحقول الشرطية قد تظهر أو تختفي للعميل حسب إجاباته. معاينة البنود القانونية النهائية تظل في مرحلة «تجربة العقد».</p>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm font-medium text-slate-500">أضف نوع عقد أولًا لعرض رحلة العميل.</div>
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm font-medium text-slate-500">أضف نسخة عقد أولًا لعرض رحلة العميل.</div>
               )}
             </div>
           </aside>
@@ -1931,7 +2006,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
       )}
 
       {modal?.kind === "variant" && (
-        <ModalShell title={modal.value ? "تعديل نوع العقد" : "إضافة نوع عقد"} onClose={() => setModal(null)} wide>
+        <ModalShell title={modal.value ? "تعديل نسخة العقد" : "إضافة نسخة"} onClose={() => setModal(null)}>
           <VariantSettingsForm
             version={version}
             value={modal.value}

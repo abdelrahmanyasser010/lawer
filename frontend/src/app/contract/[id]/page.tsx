@@ -17,11 +17,11 @@ import {
   RefreshCw,
   Scale,
   Share2,
-  Upload,
+  CreditCard,
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import VodafoneCashModal from "@/components/checkout/VodafoneCashModal";
+import GatewayCheckoutModal from "@/components/checkout/GatewayCheckoutModal";
 import ActionDialog from "@/components/ui/ActionDialog";
 import ZShareModal from "@/components/sharing/ZShareModal";
 import LegalDocumentSheet, { formatLegalValue, legalLabelDictionary } from "@/components/contract/LegalDocumentSheet";
@@ -60,7 +60,7 @@ export default function ContractPage() {
   const [documents, setDocuments] = useState<ContractDocumentFile[]>([]);
   const [finalizeConfirmOpen, setFinalizeConfirmOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"document" | "data" | "history">("document");
+  const [activeTab, setActiveTab] = useState<"document" | "data">("document");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -153,10 +153,10 @@ export default function ContractPage() {
   const platformFee = Number(item.original_price_egp || item.payment_amount_egp || 100);
 
   let primaryMobileAction = null;
-  if (item.status === "pending_payment" && item.payment_status !== "pending_verification") {
+  if (item.status === "pending_payment" && !["approved", "paid"].includes(item.payment_status || "")) {
     primaryMobileAction = (
       <button type="button" onClick={() => setPaymentOpen(true)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-4 py-3.5 text-sm font-black text-white shadow-md active:scale-95 transition">
-        <Upload className="h-4 w-4 text-[#d9a84e]" /> إرفاق إيصال الدفع
+        <CreditCard className="h-4 w-4 text-[#d9a84e]" /> ادفع دلوقتي
       </button>
     );
   } else if (isSelfService && item.status === "client_review" && item.permissions.canFinalize) {
@@ -275,38 +275,18 @@ export default function ContractPage() {
 
           {/* Contextual Next Action: Pending Payment */}
           {item.status === "pending_payment" && (
-            <div className={`mt-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border p-3 ${
-              item.payment_status === "rejected" ? "bg-red-50 border-red-200 text-red-950" :
-              item.payment_status === "needs_client_info" ? "bg-amber-50 border-amber-200 text-amber-950" :
-              item.payment_status === "pending_verification" ? "bg-blue-50 border-blue-200 text-blue-950" :
-              "bg-amber-50/90 border-amber-200 text-amber-950"
-            }`}>
-              <div className="space-y-0.5 flex-1">
+            <div className="mt-3.5 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/90 p-3 text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1 space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-[#00102e] text-white">
-                    الخطوة المطلوبة الآن
-                  </span>
-                  <span className="text-[11px] font-black">
-                    {item.payment_status === "pending_verification" ? "إيصال سداد الرسوم قيد المراجعة" : "استكمال سداد رسوم إعداد العقد"}
-                  </span>
+                  <span className="rounded-md bg-[#00102e] px-1.5 py-0.5 text-[9px] font-black text-white">الخطوة المطلوبة الآن</span>
+                  <span className="text-[11px] font-black">سداد رسوم إعداد العقد</span>
                 </div>
-                <p className="text-[11px] leading-5 opacity-90">
-                  {item.payment_status === "pending_verification"
-                    ? "تم استلام إيصال التحويل ويجري مراجعته لتثبيت النسخة المعتمدة."
-                    : `يرجى إرفاق إيصال تحويل رسوم الإعداد (${platformFee} ج.م) ليتم اعتماد النسخة النهائية للعقد.`}
-                </p>
+                <p className="text-[11px] leading-5 opacity-90">ادفع {platformFee.toLocaleString("ar-EG")} ج.م من خلال بوابة الدفع الإلكترونية. تأكيد السيرفر هو المرجع النهائي لحالة الدفع.</p>
               </div>
-
-              {item.payment_status !== "pending_verification" && (
-                <button
-                  type="button"
-                  onClick={() => setPaymentOpen(true)}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#00102e] px-3.5 py-1.5 text-xs font-black text-white hover:bg-[#00102e]/90 shadow-sm transition shrink-0"
-                >
-                  <Upload className="h-3.5 w-3.5 text-[#d9a84e]" />
-                  <span>إرفاق إيصال سداد الرسوم</span>
-                </button>
-              )}
+              <button type="button" onClick={() => setPaymentOpen(true)} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#00102e] px-3.5 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-[#00102e]/90">
+                <CreditCard className="h-3.5 w-3.5 text-[#d9a84e]" />
+                <span>ادفع دلوقتي</span>
+              </button>
             </div>
           )}
 
@@ -419,19 +399,6 @@ export default function ContractPage() {
                   <Scale className="h-3.5 w-3.5" />
                   <span>البيانات الأساسية للعقد</span>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("history")}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition ${
-                    activeTab === "history"
-                      ? "bg-[#00102e] text-white shadow-sm"
-                      : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  <Clock3 className="h-3.5 w-3.5" />
-                  <span>سجل نسخ العقد</span>
-                </button>
               </div>
 
               <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">
@@ -521,37 +488,6 @@ export default function ContractPage() {
             )}
 
             {/* Tab 3: Detailed Versions Timeline */}
-            {activeTab === "history" && (
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
-                <h3 className="text-xs sm:text-sm font-black text-[#00102e] border-b border-slate-100 pb-1.5">
-                  سجل نسخ العقد وتاريخ التعديلات
-                </h3>
-                <div className="mt-3 space-y-2.5">
-                  {item.versions.map((ver) => (
-                    <div key={ver.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <strong className="text-[11px] font-black text-slate-800">النسخة {ver.versionNumber}</strong>
-                          <span className="rounded-full bg-blue-50 border border-blue-200/60 px-2 py-0.5 text-[9px] font-black text-blue-700">
-                            {contractStatusLabels[ver.status] || ver.status}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-[10px] text-slate-500">
-                          تم الحفظ في: {formatDate(ver.createdAt)}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab("document")}
-                        className="rounded-xl bg-[#00102e] px-3 py-1 text-xs font-bold text-white hover:bg-[#00102e]/90 transition"
-                      >
-                        معاينة
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Sidebar Column: Actions & Meta */}
@@ -615,6 +551,20 @@ export default function ContractPage() {
               )}
             </section>
 
+            {item.lawyer_review_add_on?.enabled && (
+              <section className="rounded-2xl border border-[#986410]/25 bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div><h2 className="text-xs sm:text-sm font-black text-[#00102e]">مراجعة محامي قبل الإصدار</h2><p className="mt-1 text-[10px] leading-5 text-slate-500">الخدمة مرتبطة بالعقد ده ومش مراجعة عقد خارجي.</p></div>
+                  {item.lawyer_review_add_on.priceEgp !== null && item.lawyer_review_add_on.priceEgp !== undefined && <span className="rounded-full bg-[#986410]/10 px-2 py-1 text-[10px] font-black text-[#986410]">{Number(item.lawyer_review_add_on.priceEgp).toLocaleString("ar-EG")} ج.م</span>}
+                </div>
+                <div className="mt-3 rounded-xl bg-slate-50 p-3">
+                  <span className="text-[10px] font-bold text-slate-400">الحالة</span>
+                  <strong className="mt-1 block text-[11px] text-[#00102e]">{item.lawyer_review_add_on.customerFacingStatus || item.lawyer_review_add_on.status || "قيد المتابعة"}</strong>
+                  {item.lawyer_review_add_on.assignedLawyer?.displayName && <p className="mt-2 text-[10px] text-slate-600">المحامي المسؤول: <b>{item.lawyer_review_add_on.assignedLawyer.displayName}</b>{item.lawyer_review_add_on.assignedLawyer.specialization ? ` — ${item.lawyer_review_add_on.assignedLawyer.specialization}` : ""}</p>}
+                </div>
+              </section>
+            )}
+
             {/* 2. Platform Fee / Payment Card */}
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <h2 className="text-xs sm:text-sm font-black text-[#00102e]">رسوم إعداد العقد</h2>
@@ -631,10 +581,10 @@ export default function ContractPage() {
                 <div className="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-200/60 pt-2">
                   <span>حالة الرسوم:</span>
                   <span className="font-bold text-slate-800">
-                    {item.payment_status === "approved"
+                    {item.payment_status === "approved" || item.payment_status === "paid"
                       ? "تم سداد الرسوم"
-                      : item.payment_status === "pending_verification"
-                      ? "الإيصال قيد المراجعة"
+                      : item.payment_status === "processing"
+                      ? "جاري تأكيد عملية الدفع"
                       : "لم يتم السداد بعد"}
                   </span>
                 </div>
@@ -655,35 +605,23 @@ export default function ContractPage() {
                 </div>
               )}
 
-              {item.status === "pending_payment" && item.payment_status !== "pending_verification" && (
-                <button
-                  type="button"
-                  onClick={() => setPaymentOpen(true)}
-                  className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#00102e] hover:bg-[#00102e]/90 py-2 text-xs font-black text-white shadow-sm transition"
-                >
-                  <Upload className="h-3.5 w-3.5 text-[#d9a84e]" />
-                  <span>إرفاق إيصال سداد الرسوم</span>
+              {item.status === "pending_payment" && !["approved", "paid"].includes(item.payment_status || "") && (
+                <button type="button" onClick={() => setPaymentOpen(true)} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] py-2 text-xs font-black text-white shadow-sm transition hover:bg-[#00102e]/90">
+                  <CreditCard className="h-3.5 w-3.5 text-[#d9a84e]" />
+                  <span>ادفع دلوقتي</span>
                 </button>
               )}
             </section>
 
-            {/* 3. Versions History Widget */}
+            {/* Current/final version only — keep technical version history internal */}
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-xs sm:text-sm font-black text-[#00102e]">سجل نسخ العقد</h2>
-              <div className="mt-2.5 space-y-2">
-                {item.versions.map((ver) => (
-                  <div key={ver.id} className="rounded-xl border border-slate-100 bg-slate-50 p-2.5">
-                    <div className="flex items-center justify-between gap-2 text-[11px]">
-                      <strong className="font-black text-slate-800">النسخة {ver.versionNumber}</strong>
-                      <span className="rounded bg-slate-200/70 px-1.5 py-0.5 text-[9px] font-bold text-slate-600">
-                        {contractStatusLabels[ver.status] || ver.status}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-[10px] text-slate-400">
-                      {formatDate(ver.createdAt)}
-                    </p>
-                  </div>
-                ))}
+              <h2 className="text-xs sm:text-sm font-black text-[#00102e]">النسخة الحالية</h2>
+              <div className="mt-2.5 rounded-xl border border-slate-100 bg-slate-50 p-3 text-[11px]">
+                <div className="flex items-center justify-between gap-2">
+                  <strong className="font-black text-slate-800">{item.status === "issued" ? "النسخة الصادرة" : "آخر نسخة محفوظة"}</strong>
+                  <span className="rounded bg-slate-200/70 px-1.5 py-0.5 text-[9px] font-bold text-slate-600">{contractStatusLabels[item.status] || item.status}</span>
+                </div>
+                <p className="mt-1 text-[10px] leading-5 text-slate-500">النسخ الفنية السابقة محفوظة داخليًا عند الحاجة، والواجهة تعرض لك النسخة الحالية المعتمدة للتعامل.</p>
               </div>
             </section>
 
@@ -735,14 +673,16 @@ export default function ContractPage() {
         allowEdit={item.status === "client_review" && item.editWindow.active}
       />
 
-      <VodafoneCashModal
+      <GatewayCheckoutModal
         isOpen={paymentOpen}
         onClose={() => setPaymentOpen(false)}
         orderTitle={contractTitle}
         amountEgp={platformFee}
         contractId={item.id}
         serialNumber={item.serial_number}
-        onSubmitted={() => { void load(); }}
+        purpose="self_service_issue"
+        lineItems={[{ key: "self_service", label: "سعر العقد", amountEgp: platformFee }]}
+        onPaid={() => { setPaymentOpen(false); setNotice("تم تأكيد الدفع بنجاح."); void load(); }}
       />
     </div>
   );

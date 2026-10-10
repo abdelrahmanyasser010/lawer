@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 use App\Exceptions\ApiException;
 use App\Services\AuditService;
+use App\Services\LegalAcceptanceService;
 use App\Services\NotificationService;
 use App\Services\PasswordService;
 use App\Services\SessionService;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 final class AuthController extends Controller
 {
     use ApiResponse;
-    public function __construct(private SessionService $sessions, private NotificationService $notifications, private AuditService $audit, private PasswordService $passwords) {}
+    public function __construct(private SessionService $sessions, private NotificationService $notifications, private AuditService $audit, private PasswordService $passwords,private LegalAcceptanceService $legalAcceptances) {}
 
     public function register(Request $request)
     {
@@ -30,6 +31,10 @@ final class AuthController extends Controller
             'whatsappNumber' => ['nullable','string','max:30'],
             'whatsappServiceConsent' => ['nullable','boolean'],
             'agreedToTerms' => ['accepted'],
+            'legalAcceptances'=>['nullable','array','max:4'],
+            'legalAcceptances.*.documentType'=>['required_with:legalAcceptances','string','max:80'],
+            'legalAcceptances.*.publishedVersion'=>['required_with:legalAcceptances','integer','min:1'],
+            'legalAcceptances.*.context'=>['nullable','in:registration'],
         ]);
         $email = strtolower(trim($data['email']));
         if (($data['accountType'] ?? 'individual') === 'business' && empty($data['companyName'])) throw new ApiException(422, 'اسم الشركة مطلوب', 'VALIDATION_ERROR', ['field' => 'companyName']);
@@ -45,6 +50,7 @@ final class AuthController extends Controller
                 'whatsapp_service_consent_at' => !empty($data['whatsappServiceConsent']) ? now() : null,
                 'status' => 'active', 'created_at' => now(), 'updated_at' => now(),
             ]);
+            $legalAcceptances=$this->legalAcceptances->recordRegistration((int)$id,$data['legalAcceptances']??[],$request);
             $code = Security::numericCode(6);
             DB::table('email_verification_tokens')->insert([
                 'user_id' => $id, 'token_hash' => Security::sha256($id.':'.$code),
@@ -53,7 +59,7 @@ final class AuthController extends Controller
             ]);
             $user = DB::table('users')->where('id', $id)->first();
             $this->notifications->email($email, 'verify_email_otp', 'رمز تأكيد بريدك الإلكتروني في Z draft', ['name' => $user->name, 'verificationCode' => $code, 'expiresMinutes' => config('zdraft.otp_ttl_minutes')]);
-            $this->audit->write($request, 'auth.registered', 'user', $id, null, ['email' => $email, 'accountType' => $data['accountType'] ?? 'individual'], $id);
+            $this->audit->write($request, 'auth.registered', 'user', $id, null, ['email' => $email, 'accountType' => $data['accountType'] ?? 'individual','legalAcceptances'=>$legalAcceptances], $id);
             return ['user' => $user, 'code' => $code];
         });
         [$sessionCookie,$csrfCookie,$csrfToken] = $this->sessions->create((int) $result['user']->id, $request);

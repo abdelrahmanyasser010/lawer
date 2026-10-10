@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import VodafoneCashModal from "@/components/checkout/VodafoneCashModal";
+import GatewayCheckoutModal from "@/components/checkout/GatewayCheckoutModal";
 import {
   Lock, ArrowRight, ArrowLeft,
   ShieldCheck, CheckCircle2, Zap, ExternalLink, FileText, AlertTriangle, AlertCircle,
@@ -26,23 +26,8 @@ import { usePublicCatalog } from "@/hooks/usePublicCatalog";
 import ActionDialog from "@/components/ui/ActionDialog";
 import LegalDocumentSheet from "@/components/contract/LegalDocumentSheet";
 import MobileWizardPreview from "./MobileWizardPreview";
-
-/* ── Admin-configurable help text + video per field (from backend/dashboard) ── */
-const fieldHelp: Record<string, { help?: string; video?: string }> = {
-  landlord_name:        { help: "يُقصد بالاسم الرباعي: الاسم الأول + اسم الأب + اسم الجد + اسم العائلة كما هو مدون في بطاقة الرقم القومي بالضبط." },
-  landlord_national_id: { help: "الرقم القومي المكون من 14 رقماً والمدون على وجه بطاقة الرقم القومي. تأكد من عدم وجود مسافات." },
-  landlord_phone:       { help: "رقم هاتف محمول مصري يبدأ بـ 01 ومكون من 11 رقماً." },
-  landlord_address:     { help: "العنوان كما هو مدون في بطاقة الرقم القومي (المحافظة - المركز - القرية/المدينة - الشارع)." },
-  tenant_name:          { help: "اسم المستأجر الرباعي كما هو مدون في بطاقة الرقم القومي." },
-  tenant_national_id:   { help: "الرقم القومي للمستأجر مكون من 14 رقماً." },
-  tenant_phone:         { help: "رقم هاتف المستأجر للتواصل." },
-  tenant_address:       { help: "العنوان الحالي للمستأجر (عنوان إقامته الآن وليس عنوان الشقة المؤجرة)." },
-  property_address:     { help: "العنوان الدقيق للعين المؤجرة: الشارع ورقم العمارة والدور ورقم الشقة." },
-  property_area:        { help: "المساحة بالمتر المربع كما هي مدونة في عقد الملكية أو رخصة البناء." },
-  rent_amount:          { help: "القيمة الإيجارية المتفق عليها عن الفترة المحددة في العقد (شهر أو سنة)، مستقلة عن مبلغ التأمين وأي رسوم خارجية." },
-  deposit_amount:       { help: "مبلغ التأمين المسترد عند انتهاء العقد وتسليم العين المؤجرة بحالة سليمة." },
-  annual_increase_rate: { help: "تظهر هذه النسبة فقط إذا تم تفعيل الزيادة الدورية، وعندها تصبح النسبة إلزامية." },
-};
+import PartyReusePanel, { isPartyWizardStep } from "./PartyReusePanel";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const highlightClass = "ring-2 ring-[#986410] bg-[#986410]/5 rounded-xl transition-all duration-300";
 const normalClass = "rounded-xl border border-slate-200 bg-slate-50 transition-all duration-300";
@@ -57,6 +42,7 @@ export default function WizardPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user: currentUser, loading: authLoading } = useCurrentUser();
   const slug = params.slug as string;
   const requestedContractId = Number(searchParams.get("contractId") || 0);
   const requestedVariantKey = searchParams.get("variant")?.trim() || "";
@@ -206,8 +192,13 @@ export default function WizardPage() {
 
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [finalPreviewOpen, setFinalPreviewOpen] = useState(false);
+  const [finalPreviewAccepted, setFinalPreviewAccepted] = useState(false);
+  const [lawyerReviewEnabled, setLawyerReviewEnabled] = useState(false);
+  const [lawyerReviewNote, setLawyerReviewNote] = useState("");
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const [partyReusePreferences, setPartyReusePreferences] = useState<Record<string, boolean>>({});
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Privacy migration: old browser-persistent caches may contain identity data.
@@ -216,6 +207,23 @@ export default function WizardPage() {
     localStorage.removeItem("zdraft-wizard-storage-v2");
     localStorage.removeItem(`zdraft_saved_draft_${slug}`);
   }, [slug]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const key = `zdraft_party_reuse_${contractSlug}_${requestedContractId || "new"}`;
+    try {
+      const raw = window.sessionStorage.getItem(key);
+      setPartyReusePreferences(raw ? JSON.parse(raw) : {});
+    } catch {
+      setPartyReusePreferences({});
+    }
+  }, [contractSlug, requestedContractId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const key = `zdraft_party_reuse_${contractSlug}_${requestedContractId || "new"}`;
+    try { window.sessionStorage.setItem(key, JSON.stringify(partyReusePreferences)); } catch { /* session persistence is best-effort */ }
+  }, [contractSlug, partyReusePreferences, requestedContractId]);
 
   // ─── AUTO-SCROLL LIVE PREVIEW ON STEP TRANSITION ──────────────────────────
   useEffect(() => {
@@ -361,7 +369,7 @@ export default function WizardPage() {
     setAutoSaveStatus("جاري المزامنة مع السيرفر...");
     autosaveTimerRef.current = setTimeout(async () => {
       try {
-        const saved = await saveDraftSnapshot(draft);
+        const saved = await saveDraftSnapshot(draft, partyReusePreferences);
         if (saved && saved.id) {
           setBackendDraftReference(contractSlug, saved);
           setAutoSaveStatus("تم الحفظ في السيرفر ✓");
@@ -378,7 +386,7 @@ export default function WizardPage() {
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [draft?.fieldValues, draft?.variantKey, draft?.selectedOptionalClauseKeys, draft?.currentStepKey, contractSlug, draft, formData, setBackendDraftReference]);
+  }, [draft?.fieldValues, draft?.variantKey, draft?.selectedOptionalClauseKeys, draft?.currentStepKey, contractSlug, draft, formData, partyReusePreferences, setBackendDraftReference]);
 
 
 
@@ -388,16 +396,27 @@ export default function WizardPage() {
     ?? templateDefinition?.nameAr
     ?? defaultContractTitle(slug);
 
+  const catalogVariant = catalog.templates
+    .find((template) => template.slug === contractSlug)
+    ?.variants.find((variant) => variant.key === draft?.variantKey);
+  const configuredVariantPrice = draft?.variantKey
+    ? (draft.creationMode === "lawyer_assisted"
+        ? (catalogVariant?.lawyerAssistedPriceEgp ?? templateDefinition?.variantPricing?.[draft.variantKey]?.lawyerAssistedPriceEgp ?? 0)
+        : (catalogVariant?.selfServicePriceEgp ?? templateDefinition?.variantPricing?.[draft.variantKey]?.selfServicePriceEgp ?? 0))
+    : 0;
   const priceEgp = backendContract?.original_price_egp !== undefined && Number(backendContract.original_price_egp) > 0
     ? Number(backendContract.original_price_egp)
-    : draft?.variantKey
-    ? (draft.creationMode === "lawyer_assisted"
-        ? (templateDefinition?.variantPricing?.[draft.variantKey]?.lawyerAssistedPriceEgp ?? 599)
-        : (templateDefinition?.variantPricing?.[draft.variantKey]?.selfServicePriceEgp ?? 59))
-    : 0;
+    : configuredVariantPrice;
   const selfServicePriceConfigured = priceEgp > 0;
+  const lawyerReviewAddOnAvailable = draft?.creationMode === "self_service" && Boolean(catalogVariant?.lawyerReviewAddOn?.enabled);
+  const lawyerReviewAddOnPrice = lawyerReviewAddOnAvailable ? Number(catalogVariant?.lawyerReviewAddOn?.priceEgp || 0) : 0;
+  const checkoutTotalEgp = priceEgp + (lawyerReviewEnabled ? lawyerReviewAddOnPrice : 0);
 
   const coreIdentityLocked = Boolean(backendContract?.core_identity_locked || draft?.coreIdentityLocked);
+
+  useEffect(() => {
+    setFinalPreviewAccepted(false);
+  }, [draft?.fieldValues, draft?.selectedOptionalClauseKeys, lawyerReviewEnabled]);
 
   const toggleOptionalClause = (clauseKey: string) => {
     if (coreIdentityLocked) {
@@ -496,6 +515,29 @@ export default function WizardPage() {
       });
   }), [activeSteps, draft?.attachmentRefs, formData, resolvedWizard]);
 
+  const reviewDataGroups = useMemo(() => (resolvedWizard?.steps ?? []).map((step) => {
+    const stepIndex = activeSteps.findIndex((item) => item.key === step.key);
+    const stepNumber = stepIndex >= 0 ? stepIndex + 1 : 1;
+    const rows = step.fields.flatMap((field) => {
+      const raw = field.type === "attachment" ? draft?.attachmentRefs[field.key] : formData[field.key];
+      if (field.type === "attachment") {
+        const count = Array.isArray(raw) ? raw.length : 0;
+        if (!count) return [];
+        return [{ key: field.key, label: resolveWizardFieldLabel(field, formData), value: `${count} مرفق`, stepNumber }];
+      }
+      if (field.type === "repeater") {
+        const count = Array.isArray(raw) ? raw.length : 0;
+        if (!count) return [];
+        return [{ key: field.key, label: resolveWizardFieldLabel(field, formData), value: `${count} بند`, stepNumber }];
+      }
+      if (raw === null || raw === undefined || raw === "") return [];
+      const value = formatWizardFieldValue(field, raw, formData);
+      if (!value || value === "—") return [];
+      return [{ key: field.key, label: resolveWizardFieldLabel(field, formData), value, stepNumber }];
+    });
+    return { key: step.key, title: step.titleAr, stepNumber, rows };
+  }).filter((group) => group.rows.length > 0), [activeSteps, draft?.attachmentRefs, formData, resolvedWizard]);
+
   const jumpToField = (stepNumber: number, fieldKey: string, fieldLabel: string) => {
     setCurrentStep(stepNumber);
     setPreviewTab("document");
@@ -574,7 +616,7 @@ export default function WizardPage() {
 
   const persistDraft = async () => {
     if (!draft) throw new Error("لا توجد مسودة قابلة للحفظ");
-    const saved = await saveDraftSnapshot(draft);
+    const saved = await saveDraftSnapshot(draft, partyReusePreferences);
     setBackendDraftReference(contractSlug, saved);
     setCheckoutContract({ id: saved.id, serialNumber: saved.serialNumber });
     setAutoSaveStatus("تم حفظ المسودة في حسابك ✓");
@@ -614,8 +656,13 @@ export default function WizardPage() {
       if (firstIssue) setStoredStepKey(contractSlug, firstIssue.stepKey);
       return;
     }
+    if (!finalPreviewAccepted) {
+      showNotice("راجع نسخة العقد كاملة وأكد أن كل حاجة تمام قبل الدفع.");
+      setFinalPreviewOpen(true);
+      return;
+    }
     if (!declarationAccepted) {
-      showNotice("يجب قراءة الإقرار القانوني والموافقة عليه بنفسك قبل المتابعة للدفع.");
+      showNotice("راجع الشروط والإقرار ووافق عليها قبل المتابعة للدفع.");
       return;
     }
     try {
@@ -759,6 +806,9 @@ export default function WizardPage() {
         variant={selectedVariantDefinition}
         fieldValues={formData}
         attachmentRefs={draft.attachmentRefs}
+        requireAuth={!currentUser}
+        authLoading={authLoading}
+        authNextUrl={`/wizard/${contractSlug}?${searchParams.toString()}`}
         onContinue={() => setReadinessAccepted(true)}
       />
     );
@@ -880,6 +930,15 @@ export default function WizardPage() {
 
           {/* ─── RIGHT: FORM ─── */}
           <div id="wizard-form" className="xl:col-span-5 space-y-5 scroll-mt-24">
+            {activeStep && !isReviewStep && isPartyWizardStep(activeStep.key) && (
+              <PartyReusePanel
+                step={activeStep}
+                fieldValues={formData}
+                onFieldChange={(fieldKey, value) => setStoredFieldValue(contractSlug, fieldKey, value)}
+                saveForFuture={Boolean(partyReusePreferences[activeStep.key])}
+                onSaveForFutureChange={(value) => setPartyReusePreferences((current) => ({ ...current, [activeStep.key]: value }))}
+              />
+            )}
             {activeStep && !isReviewStep && (
               <DynamicOptionalStep
                 step={activeStep}
@@ -902,148 +961,91 @@ export default function WizardPage() {
             {/* REVIEW STEP */}
             {isReviewStep && (
               <div className="space-y-4 rounded-2xl border border-[#986410]/30 bg-[#986410]/5 p-5">
-                <div className="flex items-center gap-3 border-b border-[#986410]/20 pb-3">
-                  <ShieldCheck className="h-6 w-6 text-[#00102e]" />
+                <div className="flex items-start gap-3 border-b border-[#986410]/20 pb-4">
+                  <ShieldCheck className="mt-0.5 h-6 w-6 shrink-0 text-[#00102e]" />
                   <div>
-                    <h3 className="text-sm font-extrabold text-[#00102e]">مراجعة واعتماد العقد</h3>
-                    <p className="text-xs text-slate-600 mt-0.5">راجع بيانات العقد ثم اقرأ الإقرار وادفع</p>
+                    <h3 className="text-base font-black text-[#00102e]">راجع بياناتك</h3>
+                    <p className="mt-1 text-xs leading-6 text-slate-600">اتأكد إن كل حاجة صح قبل ما تشوف النسخة النهائية من العقد.</p>
                   </div>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-white p-3.5">
-                  <p className="text-[11px] font-semibold leading-5 text-slate-500">لا يوجد أي ملحق إجباري ولا يُضاف شيء تلقائيًا؛ اختر ما تحتاجه فقط، وسيُطبع كل اختيار كقالب فارغ مستقل.</p>
-                  <div className="mt-2.5"><OptionalClauseSelector compact template={templateDefinition} variantKey={draft.variantKey!} selectedClauseKeys={draft.selectedOptionalClauseKeys} fieldValues={draft.fieldValues} onToggle={toggleOptionalClause} /></div>
-                </div>
-                {selectedAnnexDefinitions.length > 0 && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                    <div className="text-[11px] font-black text-emerald-800">الملاحق المختارة</div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {selectedAnnexDefinitions.map((clause) => <span key={clause.key} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-emerald-800">{clause.nameAr}</span>)}
-                    </div>
-                  </div>
-                )}
-                <details open className="rounded-xl border border-slate-200 bg-white p-4 text-xs">
-                  <summary className="cursor-pointer font-black text-[#00102e]">
-                    البيانات الإجبارية — {requiredReviewItems.filter((item) => item.complete).length}/{requiredReviewItems.length} مكتملة
-                  </summary>
-                  <div className="mt-3 max-h-80 space-y-2 overflow-y-auto pl-1">
-                    {requiredReviewItems.map(({ key, label, value, complete, stepNumber, stepTitle }) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => jumpToField(stepNumber, key, label)}
-                        title={`الانتقال إلى خطوة ${stepNumber}: ${stepTitle}`}
-                        className={`w-full text-right flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition cursor-pointer ${
-                          complete
-                            ? "border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/70"
-                            : "border-red-200 bg-red-50/80 hover:bg-red-100 shadow-xs"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-slate-700 font-medium truncate text-xs">{label}</span>
-                          <span className="text-[10px] text-slate-400 font-bold shrink-0">({stepTitle})</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className={`text-left font-bold text-xs ${complete ? "text-emerald-800" : "text-red-600"}`}>
-                            {complete ? value : "⚠ مطلوب"}
-                          </span>
-                          <ArrowLeft className="h-3 w-3 text-slate-400" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </details>
-
-                <details className="rounded-xl border border-slate-200 bg-white p-4 text-xs">
-                  <summary className="cursor-pointer font-black text-[#00102e]">
-                    البنود القانونية — {clauseReview.required.filter((item) => item.active).length}/{clauseReview.required.length} بندًا إجباريًا ظاهرًا
-                  </summary>
-                  <p className="mt-2 text-[11px] leading-5 text-slate-500">تظهر النصوص الكاملة في معاينة العقد. البنود الشرطية تُفعّل أو تُستبعد تلقائيًا وفق اختياراتك.</p>
-                  <div className="mt-3 max-h-80 space-y-1.5 overflow-y-auto pl-1">
-                    {clauseReview.required.map((clause) => (
-                      <div key={clause.key} className={`flex items-start justify-between gap-3 rounded-lg border px-3 py-2 ${clause.active ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"}`}>
-                        <span className="text-slate-700">{clause.title}</span>
-                        <span className={`shrink-0 text-[10.5px] font-bold ${clause.active ? "text-emerald-700" : "text-slate-500"}`}>
-                          {clause.active ? "مضاف للعقد" : clause.conditional ? "غير مفعّل حسب البيانات" : "غير ظاهر — يلزم مراجعة"}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  {clauseReview.optional.length > 0 && (
-                    <div className="mt-4 border-t border-slate-200 pt-3">
-                      <div className="mb-2 text-[11px] font-black text-[#00102e]">البنود والملاحق الاختيارية المتاحة</div>
-                      <div className="space-y-1.5">
-                        {clauseReview.optional.map((clause) => (
-                          <div key={clause.key} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2">
-                            <span>{clause.title}</span>
-                            <span className={`text-[10.5px] font-bold ${clause.selected ? "text-emerald-700" : "text-slate-500"}`}>
-                              {clause.selected ? "تم اختياره" : "غير مختار"}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </details>
 
                 {dynamicValidationIssues.length > 0 && (
-                  <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs space-y-2.5">
-                    <div className="flex items-center gap-2 font-black text-red-800 text-sm">
-                      <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
-                      <span>يلزم تصحيح {dynamicValidationIssues.length} {dynamicValidationIssues.length === 1 ? "ملاحظة" : "ملاحظات"} للمتابعة للدفع:</span>
-                    </div>
-                    <div className="space-y-1.5 pt-0.5">
-                      {dynamicValidationIssues.map((issue, idx) => {
-                        const stepIndex = activeSteps.findIndex((s) => s.key === issue.stepKey);
+                  <div className="rounded-xl border border-red-300 bg-red-50 p-4">
+                    <div className="flex items-center gap-2 text-sm font-black text-red-800"><AlertTriangle className="h-4 w-4" />فيه {dynamicValidationIssues.length} {dynamicValidationIssues.length === 1 ? "حاجة محتاجة تكملها" : "حاجات محتاجة تكملها"}</div>
+                    <div className="mt-3 space-y-2">
+                      {dynamicValidationIssues.slice(0, 8).map((issue, idx) => {
+                        const stepIndex = activeSteps.findIndex((item) => item.key === issue.stepKey);
                         const stepNumber = stepIndex >= 0 ? stepIndex + 1 : 1;
-                        const stepTitle = activeSteps[stepIndex]?.titleAr || "الخطوة";
-                        return (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => jumpToField(stepNumber, issue.fieldKey, issue.labelAr)}
-                            title={`انقر لتصحيح الخطأ في خطوة ${stepNumber}: ${stepTitle}`}
-                            className="w-full text-right flex items-center justify-between gap-2 rounded-lg bg-white border border-red-200 p-2.5 text-xs text-red-900 hover:bg-red-100/60 transition cursor-pointer shadow-2xs"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="font-bold text-red-600 shrink-0">⚠</span>
-                              <span className="font-medium truncate">{issue.labelAr}</span>
-                              <span className="text-[10px] text-slate-400 font-bold shrink-0">({stepTitle})</span>
-                            </div>
-                            <span className="shrink-0 text-[11px] font-bold text-red-700 flex items-center gap-1">
-                              تصحيح <ArrowLeft className="h-3 w-3" />
-                            </span>
-                          </button>
-                        );
+                        return <button key={`${issue.fieldKey}-${idx}`} type="button" onClick={() => jumpToField(stepNumber, issue.fieldKey, issue.labelAr)} className="flex w-full items-center justify-between gap-3 rounded-lg border border-red-200 bg-white px-3 py-2 text-right text-xs font-bold text-red-800 hover:bg-red-100"><span>{issue.labelAr}</span><span className="shrink-0">كمّل البيانات</span></button>;
                       })}
                     </div>
                   </div>
                 )}
 
-                {renderDeclarationConsent()}
-
-                <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <span className="text-xs text-slate-500">رسوم الصياغة والاعتماد:</span>
-                    <div className="text-xl font-extrabold text-[#00102e]">
-                      {selfServicePriceConfigured ? `${priceEgp} ج.م فقط` : "السعر غير محدد"}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => void openCheckoutIfReady()}
-                    disabled={!isContractReadyForPayment || !selfServicePriceConfigured}
-                    className={`w-full rounded-xl px-5 py-3 text-xs font-bold transition-colors shadow-md sm:w-auto whitespace-nowrap ${
-                      isContractReadyForPayment && selfServicePriceConfigured
-                        ? "bg-[#00102e] text-[#986410] hover:bg-[#0a1f4d] cursor-pointer"
-                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                    }`}
-                  >
-                    {!selfServicePriceConfigured
-                      ? "السعر غير محدد من الإدارة"
-                      : isContractReadyForPayment
-                      ? `حفظ المسودة والمتابعة للدفع — ${priceEgp} ج.م`
-                      : `استكمل المطلوب (${dynamicValidationIssues.length} ملاحظة)`}
-                  </button>
+                <div className="space-y-3">
+                  {reviewDataGroups.map((group) => (
+                    <section key={group.key} className="rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
+                        <h4 className="text-xs font-black text-[#00102e]">{group.title}</h4>
+                        <button type="button" onClick={() => setCurrentStep(group.stepNumber)} className="rounded-lg border border-slate-200 px-2.5 py-1 text-[10px] font-black text-[#986410] hover:bg-slate-50">تعديل</button>
+                      </div>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {group.rows.map((row) => (
+                          <button key={row.key} type="button" onClick={() => jumpToField(row.stepNumber, row.key, row.label)} className="rounded-lg bg-slate-50 p-2.5 text-right hover:bg-slate-100">
+                            <span className="block text-[9px] font-bold text-slate-500">{row.label}</span>
+                            <strong className="mt-1 block break-words text-[11px] font-black text-[#00102e]">{row.value}</strong>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  ))}
                 </div>
+
+                {clauseReview.optional.some((item) => item.selected) && (
+                  <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                    <h4 className="text-xs font-black text-emerald-900">إضافات اخترتها للعقد</h4>
+                    <div className="mt-2 flex flex-wrap gap-2">{clauseReview.optional.filter((item) => item.selected).map((item) => <span key={item.key} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-emerald-800">{item.title}</span>)}</div>
+                  </section>
+                )}
+
+                <button type="button" disabled={!isContractReadyForPayment} onClick={() => setFinalPreviewOpen(true)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-5 py-3.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300">
+                  <FileText className="h-4 w-4 text-[#d9a84e]" />راجع العقد كامل
+                </button>
+
+                {finalPreviewAccepted && (
+                  <div className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
+                    <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" /><div><h4 className="text-xs font-black text-emerald-950">كل حاجة تمام؟</h4><p className="mt-1 text-[11px] leading-5 text-emerald-900">راجعنا البيانات والعقد. لو محتاج تعديل تقدر ترجع لأي خطوة قبل الدفع.</p></div></div>
+
+                    {lawyerReviewAddOnAvailable && (
+                      <div className="rounded-xl border border-[#986410]/25 bg-white p-4">
+                        <label className="flex cursor-pointer items-start justify-between gap-4">
+                          <div>
+                            <span className="block text-xs font-black text-[#00102e]">مراجعة محامي قبل إصدار العقد</span>
+                            <span className="mt-1 block text-[10px] leading-5 text-slate-500">فعّلها لو حابب محامي يراجع العقد والبيانات قبل الإصدار.</span>
+                            <span className="mt-2 block text-[10px] font-bold leading-5 text-[#986410]">محتاج مراجعة محامي إمتى؟ لو العقد فيه تفاصيل خاصة، مبلغ كبير، أو في بند مش مطمّن له.</span>
+                          </div>
+                          <span className={`relative mt-1 h-6 w-11 shrink-0 rounded-full transition ${lawyerReviewEnabled ? "bg-[#00102e]" : "bg-slate-300"}`}>
+                            <input type="checkbox" className="sr-only" checked={lawyerReviewEnabled} onChange={(event) => setLawyerReviewEnabled(event.target.checked)} />
+                            <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${lawyerReviewEnabled ? "right-6" : "right-1"}`} />
+                          </span>
+                        </label>
+                        {lawyerReviewEnabled && <label className="mt-3 block text-[10px] font-black text-slate-600">في حاجة معينة عايز المحامي يركز عليها؟ <span className="text-slate-400">اختياري</span><textarea value={lawyerReviewNote} onChange={(event) => setLawyerReviewNote(event.target.value)} rows={2} placeholder="اكتبها هنا..." className="mt-1.5 w-full rounded-xl border border-slate-200 p-3 text-xs outline-none focus:border-[#986410]" /></label>}
+                      </div>
+                    )}
+
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="flex items-center justify-between text-xs"><span className="text-slate-500">سعر العقد</span><strong className="text-[#00102e]">{priceEgp.toLocaleString("ar-EG")} ج.م</strong></div>
+                      {lawyerReviewEnabled && <div className="mt-2 flex items-center justify-between text-xs"><span className="text-slate-500">مراجعة محامي قبل الإصدار</span><strong className="text-[#00102e]">{lawyerReviewAddOnPrice.toLocaleString("ar-EG")} ج.م</strong></div>}
+                      <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3"><span className="text-xs font-black text-[#00102e]">الإجمالي</span><strong className="text-lg font-black text-[#986410]">{checkoutTotalEgp.toLocaleString("ar-EG")} ج.م</strong></div>
+                    </div>
+
+                    {renderDeclarationConsent()}
+
+                    <button onClick={() => void openCheckoutIfReady()} disabled={!selfServicePriceConfigured || !declarationAccepted} className={`w-full rounded-xl px-5 py-3.5 text-sm font-black transition ${selfServicePriceConfigured && declarationAccepted ? "bg-[#00102e] text-white hover:bg-[#0a1f4d]" : "bg-slate-200 text-slate-400"}`}>
+                      {!selfServicePriceConfigured ? "السعر غير محدد من الإدارة" : lawyerReviewEnabled ? `ادفع ${checkoutTotalEgp.toLocaleString("ar-EG")} ج.م وابدأ مراجعة المحامي` : `ادفع ${checkoutTotalEgp.toLocaleString("ar-EG")} ج.م وأصدر عقدك`}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1158,6 +1160,26 @@ export default function WizardPage() {
 
       {mobilePreviewControls}
 
+      {finalPreviewOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#00102e]/80 p-3 backdrop-blur-sm" dir="rtl">
+          <section className="flex max-h-[96vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-6">
+              <div><h2 className="text-base font-black text-[#00102e]">راجع العقد كامل</h2><p className="mt-1 text-[10px] font-bold text-slate-500">دي النسخة اللي مبنية على البيانات اللي أدخلتها قبل الدفع والإصدار.</p></div>
+              <button type="button" onClick={() => setFinalPreviewOpen(false)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-500">رجوع</button>
+            </div>
+            <div className="flex-1 overflow-y-auto bg-slate-100 p-3 sm:p-6">
+              <LegalDocumentSheet serialNumber={displaySerial} templateSlug={contractSlug} variantKey={draft.variantKey} selectedOptionalClauseKeys={draft.selectedOptionalClauseKeys} templateNameAr={contractTitle} fieldValues={formData} status="draft" />
+            </div>
+            <div className="border-t border-slate-200 bg-white p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div><h3 className="text-sm font-black text-[#00102e]">كل حاجة تمام؟</h3><p className="mt-1 text-[10px] leading-5 text-slate-500">لو البيانات والعقد مظبوطين، كمّل لخيارات الإصدار والدفع.</p></div>
+                <div className="flex gap-2"><button type="button" onClick={() => setFinalPreviewOpen(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-xs font-black text-slate-600">رجوع لتعديل البيانات</button><button type="button" onClick={() => { setFinalPreviewAccepted(true); setFinalPreviewOpen(false); }} className="rounded-xl bg-[#00102e] px-5 py-2.5 text-xs font-black text-white">تمام، كمّل</button></div>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
       <ActionDialog
         open={Boolean(actionDialog)}
         title={actionDialog?.title}
@@ -1168,7 +1190,24 @@ export default function WizardPage() {
         onConfirm={() => { const callback = actionDialog?.onConfirm; if (callback) callback(); else setActionDialog(null); }}
       />
       <Footer />
-      <VodafoneCashModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} orderTitle={contractTitle} amountEgp={priceEgp} contractId={checkoutContract?.id ?? draft?.backendContractId} serialNumber={checkoutContract?.serialNumber ?? draft?.serialNumber} />
+      <GatewayCheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        orderTitle={contractTitle}
+        amountEgp={checkoutTotalEgp}
+        contractId={checkoutContract?.id ?? draft?.backendContractId}
+        serialNumber={checkoutContract?.serialNumber ?? draft?.serialNumber}
+        purpose={lawyerReviewEnabled ? "self_service_with_lawyer_review" : "self_service_issue"}
+        lineItems={[
+          { key: "contract", label: "سعر العقد", amountEgp: priceEgp },
+          ...(lawyerReviewEnabled ? [{ key: "lawyer_review", label: "مراجعة محامي قبل الإصدار", amountEgp: lawyerReviewAddOnPrice }] : []),
+        ]}
+        metadata={{ lawyerReviewEnabled, lawyerReviewNote: lawyerReviewNote.trim() || null }}
+        onPaid={() => {
+          const id = checkoutContract?.id ?? draft?.backendContractId;
+          if (id) router.push(`/contract/${id}?payment=success`);
+        }}
+      />
     </div>
   );
 }

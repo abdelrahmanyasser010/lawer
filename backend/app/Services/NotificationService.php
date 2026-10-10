@@ -10,13 +10,14 @@ final class NotificationService
             [$recipient, $templateKey, $subject, json_encode($payload, JSON_UNESCAPED_UNICODE)]
         );
     }
-    public function notify(int $recipientUserId, string $type, string $title, string $message, ?string $actionUrl = null, array $payload = [], bool $sendEmail = true): void
+    public function notify(int $recipientUserId, string $type, string $title, string $message, ?string $actionUrl = null, array $payload = [], string $importance = 'normal'): void
     {
+        $importance=$importance==='important'?'important':'normal';
         DB::insert(
-            'INSERT INTO dashboard_notifications (recipient_user_id,notification_type,title,message,action_url,payload_json) VALUES (?,?,?,?,?,?::jsonb)',
-            [$recipientUserId,$type,$title,$message,$actionUrl,json_encode($payload, JSON_UNESCAPED_UNICODE)]
+            'INSERT INTO dashboard_notifications (recipient_user_id,notification_type,title,message,action_url,payload_json,importance) VALUES (?,?,?,?,?,?::jsonb,?)',
+            [$recipientUserId,$type,$title,$message,$actionUrl,json_encode($payload, JSON_UNESCAPED_UNICODE),$importance]
         );
-        if (!$sendEmail) return;
+        if ($importance !== 'important') return;
         $recipient = DB::selectOne(
             "SELECT u.name,u.email,u.email_verified_at,EXISTS(SELECT 1 FROM staff_profiles sp WHERE sp.user_id=u.id AND sp.staff_status='active') AS is_staff FROM users u WHERE u.id=? AND u.status='active' LIMIT 1",
             [$recipientUserId]
@@ -32,12 +33,12 @@ final class NotificationService
             'actionUrl' => $absolute, 'notificationType' => $type,
         ]));
     }
-    public function notifySuperAdmins(string $type, string $title, string $message, ?string $actionUrl = null, array $payload = [], ?int $excludeUserId = null): void
+    public function notifySuperAdmins(string $type, string $title, string $message, ?string $actionUrl = null, array $payload = [], ?int $excludeUserId = null, string $importance = 'normal'): void
     {
         $admins = DB::select(
             "SELECT DISTINCT u.id FROM users u JOIN staff_profiles sp ON sp.user_id=u.id JOIN staff_role_assignments sra ON sra.user_id=u.id JOIN roles r ON r.id=sra.role_id WHERE r.role_key='super_admin' AND u.status='active' AND sp.staff_status='active' AND (?::bigint IS NULL OR u.id<>?)",
             [$excludeUserId,$excludeUserId]
         );
-        foreach ($admins as $admin) $this->notify((int) $admin->id, $type, $title, $message, $actionUrl, $payload);
+        foreach ($admins as $admin) $this->notify((int) $admin->id, $type, $title, $message, $actionUrl, $payload, $importance);
     }
 }

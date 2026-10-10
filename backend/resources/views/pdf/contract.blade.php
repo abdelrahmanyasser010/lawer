@@ -274,6 +274,7 @@ body {
 
 <div class="signatures">
   <div class="signatures-title">التوقيعات</div>
+  {{-- Default party roles such as الطرف الأول and الطرف الثاني are prepared by TemplateEngineService. --}}
   <table class="signature-table">
     <tr>
       @foreach($parties as $party)

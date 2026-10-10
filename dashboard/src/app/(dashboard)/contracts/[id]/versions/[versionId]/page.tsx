@@ -174,11 +174,11 @@ export default function ContractVersionEditorPage() {
         <div>
           <Link href={`/contracts/${contractId}`} className="inline-flex items-center gap-1 text-xs font-black text-slate-500 hover:text-[#986410]"><ArrowRight className="h-4 w-4"/> تفاصيل العقد</Link>
           <h1 className="mt-2 text-2xl font-black text-[#00102e]">{contract.title}</h1>
-          <p className="mt-1 font-mono text-xs font-bold text-slate-400">{contract.serial_number} · إصدار #{versionId}</p>
+          <p className="mt-1 font-mono text-xs font-bold text-slate-500">{contract.serial_number} · إصدار #{versionId}</p>
         </div>
         <div className="flex items-center gap-3">
           <button type="button" onClick={()=>router.push(`/contracts/${contractId}`)} className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-black text-slate-700">إلغاء</button>
-          <button type="button" disabled={saving} onClick={()=>void save()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00102e] px-6 py-2.5 text-xs font-black text-[#d9a84e] shadow-md hover:bg-[#00102e]/90 disabled:opacity-50"><Save className="h-4 w-4 text-[#986410]"/>{saving ? "جارٍ الحفظ..." : "حفظ التعديلات"}</button>
+          <button type="button" disabled={saving} onClick={()=>void save()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00102e] px-6 py-2.5 text-xs font-black text-[#d7a94f] shadow-md hover:bg-[#00102e]/90 disabled:opacity-50"><Save className="h-4 w-4 text-[#986410]"/>{saving ? "جارٍ الحفظ..." : "حفظ التعديلات"}</button>
         </div>
       </header>
 
@@ -198,7 +198,7 @@ export default function ContractVersionEditorPage() {
                     <input type="checkbox" checked={draft.selectedOptionalClauseKeys.includes(clause.key)} onChange={()=>toggleOptional(clause.key)} className="mt-1 h-4 w-4 accent-[#986410]"/>
                     <span>
                       <span className="block text-xs font-black text-[#00102e]">{clause.nameAr}</span>
-                      <span className="mt-0.5 block text-[10px] font-bold leading-5 text-slate-500">{clause.description}</span>
+                      <span className="mt-0.5 block text-xs font-bold leading-5 text-slate-500">{clause.description}</span>
                     </span>
                   </label>
                 ))}
@@ -237,7 +237,7 @@ export default function ContractVersionEditorPage() {
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={()=>router.push(`/contracts/${contractId}`)} className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-xs font-black text-slate-700">رجوع بدون حفظ</button>
-            <button type="button" disabled={saving} onClick={()=>void save()} className="inline-flex items-center gap-2 rounded-2xl bg-[#00102e] px-8 py-3 text-xs font-black text-[#d9a84e] shadow-lg hover:bg-[#00102e]/90 disabled:opacity-50"><Save className="h-4 w-4 text-[#986410]"/>حفظ التعديلات</button>
+            <button type="button" disabled={saving} onClick={()=>void save()} className="inline-flex items-center gap-2 rounded-2xl bg-[#00102e] px-8 py-3 text-xs font-black text-[#d7a94f] shadow-lg hover:bg-[#00102e]/90 disabled:opacity-50"><Save className="h-4 w-4 text-[#986410]"/>حفظ التعديلات</button>
           </div>
         </div>
 
@@ -246,7 +246,7 @@ export default function ContractVersionEditorPage() {
           <div className="sticky top-20 rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-200 bg-[#00102e] px-4 py-3 text-white">
               <span className="text-xs font-black text-white">ورقة العقد الحية (A4)</span>
-              <span className="text-[10px] font-bold text-[#d9a84e]">
+              <span className="text-xs font-bold text-[#d7a94f]">
                 {activeField ? `تعديل: ${activeField.labelAr}` : "تحديث مباشر أثناء التعديل"}
               </span>
             </div>

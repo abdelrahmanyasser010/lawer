@@ -1,12 +1,12 @@
 export const contractStatusLabels: Record<string, string> = {
   draft: "مسودة",
-  pending_payment: "بانتظار مراجعة الدفع",
+  pending_payment: "مطلوب الدفع",
   pending_review: "قيد مراجعة المكتب",
   internal_review: "قيد المراجعة والتدقيق",
   assigned: "قيد متابعة المكتب",
   in_progress: "قيد الإعداد",
   client_review: "متاح للمراجعة",
-  revision_requested: "تعديلات مطلوبة",
+  revision_requested: "جاري تحديث النسخة",
   approved: "تمت مراجعة النسخة",
   locked: "تم تثبيت النسخة",
   issued: "صادر",
@@ -16,34 +16,16 @@ export const contractStatusLabels: Record<string, string> = {
 
 
 function pendingPaymentAction(paymentStatus?: string | null, target: "contract" | "request" = "contract"): { label: string; actionText: string } {
-  if (paymentStatus === "pending_verification" || paymentStatus === "replaced") {
-    return {
-      label: "الإيصال قيد المراجعة الآن. سنحدّث الحالة بعد اعتماد الإدارة.",
-      actionText: "متابعة حالة الدفع",
-    };
+  if (["processing", "created"].includes(paymentStatus || "")) {
+    return { label: "عملية الدفع قيد التأكيد. سنحدّث الحالة تلقائيًا بعد تأكيد بوابة الدفع.", actionText: "متابعة حالة الدفع" };
   }
-  if (paymentStatus === "needs_client_info") {
-    return {
-      label: "مطلوب توضيح أو إثبات دفع بديل حتى نكمل المراجعة.",
-      actionText: "رفع إثبات بديل",
-    };
+  if (["approved", "paid", "admin_recorded"].includes(paymentStatus || "")) {
+    return { label: target === "request" ? "تم تأكيد الدفع والطلب تحت المتابعة." : "تم تأكيد الدفع والعقد تحت المتابعة.", actionText: target === "request" ? "متابعة الطلب" : "متابعة العقد" };
   }
-  if (paymentStatus === "rejected") {
-    return {
-      label: "تعذر اعتماد إثبات الدفع السابق. ارفع إثباتًا صحيحًا للمتابعة.",
-      actionText: "رفع إثبات جديد",
-    };
+  if (["failed", "cancelled"].includes(paymentStatus || "")) {
+    return { label: "عملية الدفع السابقة لم تكتمل. تقدر تحاول الدفع مرة تانية.", actionText: "حاول تاني" };
   }
-  if (paymentStatus === "approved") {
-    return {
-      label: target === "request" ? "تم اعتماد الدفع، والطلب تحت المتابعة." : "تم اعتماد الدفع، والعقد تحت المتابعة.",
-      actionText: target === "request" ? "متابعة الطلب" : "متابعة العقد",
-    };
-  }
-  return {
-    label: target === "request" ? "ارفع إثبات الدفع لتأكيد الطلب وبدء المتابعة." : "ارفع إثبات الدفع لحفظ العقد وبدء دورة الاعتماد.",
-    actionText: "رفع إثبات الدفع",
-  };
+  return { label: target === "request" ? "ادفع المبلغ المطلوب إلكترونيًا علشان يبدأ الطلب." : "ادفع رسوم العقد إلكترونيًا علشان نكمل الإصدار.", actionText: "ادفع دلوقتي" };
 }
 
 export function getContractNextAction(status: string, paymentStatus?: string | null): { label: string; actionText: string } {
@@ -91,11 +73,10 @@ export const requestStatusLabels: Record<string, string> = {
   awaiting_payment: "بانتظار مراجعة الدفع",
   new: "تم استلام الطلب",
   assigned: "قيد متابعة المكتب",
-  awaiting_client_info: "بانتظار مستندات منك",
   meeting_scheduled: "تم تحديد موعد التواصل",
   in_progress: "قيد التنفيذ",
   client_review: "نسخة جاهزة للمراجعة",
-  revision_requested: "تعديلات مطلوبة",
+  revision_requested: "جاري تحديث النسخة",
   completed: "مكتمل",
   cancelled: "ملغى",
 };
@@ -112,24 +93,23 @@ export const communicationLabels: Record<string, string> = {
 };
 
 export const paymentStatusLabels: Record<string, string> = {
-  pending_verification: "الإيصال قيد المراجعة",
-  needs_client_info: "مطلوب توضيح بخصوص الدفع",
-  replaced: "تم استبدال الإثبات",
-  approved: "تم اعتماد الدفع",
-  rejected: "تعذر اعتماد الدفع",
+  created: "تم بدء عملية الدفع",
+  processing: "جاري تأكيد الدفع",
+  paid: "تم الدفع",
+  approved: "تم الدفع",
+  failed: "الدفع لم يكتمل",
+  cancelled: "تم إلغاء محاولة الدفع",
+  admin_recorded: "تم تسجيل الدفعة",
+  refund_pending: "جاري رد المبلغ",
+  refunded: "تم رد المبلغ",
+  partially_refunded: "تم رد جزء من المبلغ",
   waived: "معفى من الدفع",
-  paid_outside: "تم التحصيل خارج المنصة",
 };
 
 export function getRequestNextAction(status: string, paymentStatus?: string | null): { label: string; actionText: string } {
   switch (status) {
     case "awaiting_payment":
       return pendingPaymentAction(paymentStatus, "request");
-    case "awaiting_client_info":
-      return {
-        label: "بانتظار رفع مستندات أو بيانات إضافية.",
-        actionText: "رفع المستندات",
-      };
     case "meeting_scheduled":
       return {
         label: "تم تثبيت موعد التواصل مع المحامي.",
@@ -143,12 +123,12 @@ export function getRequestNextAction(status: string, paymentStatus?: string | nu
       };
     case "client_review":
       return {
-        label: "النسخة جاهزة للمراجعة وإبداء الملاحظات.",
+        label: "النسخة جاهزة للمراجعة. لو محتاج تعديل تواصل مع المحامي بالطريقة المتفق عليها.",
         actionText: "مراجعة الملف",
       };
     case "completed":
       return {
-        label: "تم تسليم كافة مخرجات المراجعة بنجاح.",
+        label: "تم تسليم نتيجة الخدمة بنجاح.",
         actionText: "عرض التفاصيل",
       };
     default:

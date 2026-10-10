@@ -31,6 +31,28 @@ return [
     'clamav' => ['enabled' => filter_var(env('CLAMAV_ENABLED', false), FILTER_VALIDATE_BOOL), 'binary' => env('CLAMAV_BINARY', 'clamscan')],
     'weasyprint_binary' => env('WEASYPRINT_BINARY', '/usr/bin/weasyprint'),
     'pdf_timeout_seconds' => (int) env('PDF_TIMEOUT_SECONDS', 120),
+    'payment_gateway' => [
+        'provider' => strtolower((string) env('PAYMENT_GATEWAY_PROVIDER', '')),
+        'currency' => env('PAYMENT_GATEWAY_CURRENCY', 'EGP'),
+        'return_url' => env('PAYMENT_GATEWAY_RETURN_URL', rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/').'/payments/return'),
+        'webhook_url' => env('PAYMENT_GATEWAY_WEBHOOK_URL', rtrim((string) env('APP_URL', 'http://localhost:8000'), '/').'/api/v1/payments/webhooks/{provider}'),
+        'paymob' => [
+            'base_url' => rtrim((string) env('PAYMOB_BASE_URL', 'https://accept.paymob.com'), '/'),
+            'secret_key' => env('PAYMOB_SECRET_KEY'),
+            'public_key' => env('PAYMOB_PUBLIC_KEY'),
+            'hmac_secret' => env('PAYMOB_HMAC_SECRET'),
+            'integration_ids' => array_values(array_filter(array_map('trim', explode(',', (string) env('PAYMOB_INTEGRATION_IDS', ''))))),
+            'expiration_seconds' => (int) env('PAYMOB_INTENTION_EXPIRATION_SECONDS', 3600),
+        ],
+        'kashier' => [
+            'base_url' => rtrim((string) env('KASHIER_BASE_URL', env('KASHIER_MODE', 'test') === 'live' ? 'https://api.kashier.io' : 'https://test-api.kashier.io'), '/'),
+            'secret_key' => env('KASHIER_SECRET_KEY'),
+            'payment_api_key' => env('KASHIER_PAYMENT_API_KEY'),
+            'merchant_id' => env('KASHIER_MERCHANT_ID'),
+            'auth_merchant_id' => env('KASHIER_AUTH_MERCHANT_ID'),
+            'allowed_methods' => env('KASHIER_ALLOWED_METHODS', 'card,wallet'),
+        ],
+    ],
     'features' => [
         'team_management' => filter_var(env('FEATURE_TEAM_MANAGEMENT', false), FILTER_VALIDATE_BOOL),
         'assignment' => filter_var(env('FEATURE_ASSIGNMENT', false), FILTER_VALIDATE_BOOL),

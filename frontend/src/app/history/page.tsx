@@ -14,7 +14,9 @@ type RequestItem = { id: number; serialNumber: string; requestType: string; titl
 type Payment = { id: number; serialNumber: string; amountEgp: number; status: string; paymentMethod: string; contractId?: number; serviceRequestId?: number; createdAt: string; adminNotes?: string };
 
 const paymentMethodLabels: Record<string, string> = {
-  vodafone_cash: "Vodafone Cash",
+  gateway: "بوابة الدفع الإلكترونية",
+  electronic: "بوابة الدفع الإلكترونية",
+  vodafone_cash: "دفع قديم — Vodafone Cash",
   manual: "دفع يدوي",
   cash: "نقدًا",
   bank_transfer: "تحويل بنكي",
@@ -53,7 +55,7 @@ export default function HistoryPage() {
 
   const tabs: [Tab, string, number, typeof FileText][] = [
     ["contracts", "العقود", contracts.length, FileText],
-    ["requests", "الاستشارات", requests.length, HelpCircle],
+    ["requests", "خدمات المحامين", requests.length, HelpCircle],
     ["payments", "المدفوعات", payments.length, CreditCard],
   ];
 
@@ -62,7 +64,7 @@ export default function HistoryPage() {
       <Navbar />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
         <h1 className="text-3xl font-black text-slate-950">سجل الحساب</h1>
-        <p className="mt-1 text-sm text-slate-600">العقود والاستشارات والمدفوعات المحفوظة داخل حسابك.</p>
+        <p className="mt-1 text-sm text-slate-600">العقود وطلبات خدمات المحامين والمدفوعات المسجلة داخل حسابك.</p>
 
         {loading ? (
           <div className="mt-8 rounded-2xl border bg-white p-12"><Loader2 className="mx-auto h-7 w-7 animate-spin text-blue-700" /></div>

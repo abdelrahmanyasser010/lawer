@@ -36,7 +36,7 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
   if (!user) return <div className="flex min-h-screen items-center justify-center bg-slate-50" dir="rtl"><div className="text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-[#986410]"/><div className="mt-3 text-xs font-black text-slate-500">{error || "جاري التحقق من صلاحية الدخول..."}</div></div></div>;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]" dir="rtl">
+    <div className="admin-shell min-h-screen bg-[#f6f8fb]" dir="rtl">
       <div className="flex min-h-screen flex-col lg:flex-row">
         <AdminSidebar />
         <div className="min-w-0 flex-1">

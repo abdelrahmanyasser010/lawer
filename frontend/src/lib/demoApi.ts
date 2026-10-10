@@ -9,6 +9,9 @@ import type {
   PublicCatalog,
   ServiceRequestDetails,
   ServiceRequestSummary,
+  SavedParty,
+  CustomerDashboard,
+  LegalContentDocument,
 } from "@/types/customer";
 
 export const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
@@ -70,6 +73,16 @@ const catalogTemplates = Object.values(localTemplateRegistry)
         selfServicePriceEgp: pricing.selfServicePriceEgp,
         lawyerAssistedPriceEgp: pricing.lawyerAssistedPriceEgp,
         lawyerDepositEgp: 100,
+        selfServiceEnabled: true,
+        lawyerDraftingEnabled: true,
+        tags: [],
+        suitability: {
+          shortDescription: variant.description ?? "",
+          suitableFor: [],
+          notSuitableFor: [],
+        },
+        lawyerDrafting: { helpfulDocuments: [] },
+        lawyerReviewAddOn: { enabled: true, priceEgp: 100 },
       };
     }),
   }));
@@ -90,9 +103,6 @@ const catalog: PublicCatalog = {
     supportPhone: "01000000000",
     supportEmail: "zlegaleg@gmail.com",
   },
-  payment: {
-    vodafoneCashNumber: "01000000000",
-  },
   policies: {
     selfServiceEditHours: 24,
     communicationChannels: ["zoom", "whatsapp"],
@@ -111,6 +121,14 @@ const demoProfile: CustomerProfile = {
   companyName: null,
   emailVerifiedAt: iso(-240),
   createdAt: iso(-360),
+  reusableData: {
+    fullName: demoUser.name,
+    name: demoUser.name,
+    phone: "01000000000",
+    email: demoUser.email,
+    nationality: "مصري",
+    partyType: "individual"
+  },
 };
 
 const contractSummaries: ContractSummary[] = [
@@ -126,6 +144,10 @@ const contractSummaries: ContractSummary[] = [
     updatedAt: iso(-2),
     templateSlug: "apartment_sale",
     templateNameAr: "عقد بيع وحدة سكنية",
+    customerFacingStatus: "مطلوب الدفع لإصدار العقد",
+    requiresCustomerAction: true,
+    nextCustomerAction: { type: "pay", label: "ادفع دلوقتي", actionUrl: "/contract/101" },
+    deliveryStatus: "not_ready",
   },
   {
     id: 102,
@@ -139,6 +161,10 @@ const contractSummaries: ContractSummary[] = [
     updatedAt: iso(-8),
     templateSlug: "rental",
     templateNameAr: "عقد إيجار سكني أو تجاري",
+    customerFacingStatus: "العقد جاهز لمراجعتك",
+    requiresCustomerAction: true,
+    nextCustomerAction: { type: "review", label: "راجع العقد", actionUrl: "/contract/102" },
+    deliveryStatus: "ready",
   },
 ];
 
@@ -189,6 +215,14 @@ function contractDetails(id: string): ContractDetails {
     payment_amount_egp: 139,
     payment_admin_notes: null,
     payment_serial_number: isRental ? "PAY-2026-00077" : null,
+    lawyer_review_add_on: isRental ? {
+      enabled: true,
+      priceEgp: 100,
+      status: "completed",
+      customerFacingStatus: "مراجعة المحامي خلصت — راجع النسخة قبل الإصدار",
+      assignedLawyer: { id: 25, displayName: "أ/ كريم عادل", specialization: "مراجعة العقود" },
+      customerNote: "راجع بند مدة الإيجار.",
+    } : null,
     versions: [
       { id: 1001, versionNumber: 1, status: isRental ? "client_review" : "draft", createdAt: iso(-10), lockedAt: null, documentHash: null, pdfPath: null },
     ],
@@ -216,7 +250,9 @@ const requests: ServiceRequestSummary[] = [
     id: 501,
     serialNumber: "REQ-2026-00001",
     requestType: "contract_review",
-    title: "مراجعة عقد إيجار قبل التوقيع",
+    requestPurpose: "review",
+    contractTypeText: "عقد إيجار محل تجاري",
+    title: "مراجعة عقد — إيجار محل تجاري",
     status: "awaiting_payment",
     priority: "normal",
     paymentStatus: null,
@@ -228,21 +264,98 @@ const requests: ServiceRequestSummary[] = [
     meetingProvider: "whatsapp",
     meetingUrl: null,
     linkedContractId: null,
-    assignedLawyerName: null,
+    assignedLawyerName: "أ/ محمد علي",
+    assignedLawyer: { id: 21, displayName: "أ/ محمد علي", specialization: "عقود ومعاملات" },
     deliverablesCount: 0,
     lastUpdate: iso(-1),
     createdAt: iso(-6),
     updatedAt: iso(-1),
+    customerFacingStatus: "مطلوب سداد الدفعة الأولى",
+    requiresCustomerAction: true,
+    nextCustomerAction: { type: "pay", label: "ادفع دلوقتي", actionUrl: "/requests/501" },
+    deliveryStatus: "not_ready",
+  },
+  {
+    id: 502,
+    serialNumber: "REQ-2026-00002",
+    requestType: "contract_drafting",
+    title: "صياغة عقد شراكة",
+    status: "client_review",
+    priority: "normal",
+    paymentStatus: "partially_paid",
+    paymentAmountEgp: 1200,
+    paymentStage: "working",
+    communicationChannel: "whatsapp",
+    linkedContractId: null,
+    assignedLawyerName: "أ/ سارة محمود",
+    assignedLawyer: { id: 22, displayName: "أ/ سارة محمود", specialization: "عقود الشركات" },
+    deliverablesCount: 1,
+    lastUpdate: iso(-4),
+    createdAt: iso(-72),
+    updatedAt: iso(-4),
+    customerFacingStatus: "مسودة العقد جاهزة لمراجعتك",
+    requiresCustomerAction: true,
+    nextCustomerAction: { type: "review_draft", label: "راجع المسودة", actionUrl: "/requests/502#deliverables" },
+    deliveryStatus: "ready",
   },
 ];
 
 function requestDetails(id: string): ServiceRequestDetails {
+  const drafting = id === "502";
+  if (drafting) {
+    return {
+      id: 502,
+      serialNumber: "REQ-2026-00002",
+      requestType: "contract_drafting",
+      title: "صياغة عقد شراكة",
+      description: "محتاج عقد شراكة بين شخصين لتأسيس نشاط تجاري جديد.",
+      templateSlug: "freelancer",
+      variantKey: "website_development",
+      lawyerTotalPriceEgp: 3000,
+      lawyerDepositEgp: 1200,
+      lawyerRemainingEgp: 1800,
+      approvedPaidEgp: 1200,
+      outstandingEgp: 1800,
+      paymentStage: "working",
+      status: "client_review",
+      priority: "normal",
+      communicationChannel: "whatsapp",
+      assignedLawyerName: "أ/ سارة محمود",
+      assignedLawyer: { id: 22, displayName: "أ/ سارة محمود", specialization: "عقود الشركات" },
+      paymentStatus: "partially_paid",
+      paymentAmountEgp: 1200,
+      customerFacingStatus: "مسودة العقد جاهزة لمراجعتك",
+      requiresCustomerAction: true,
+      nextCustomerAction: { type: "review_draft", label: "راجع المسودة", actionUrl: "/requests/502#deliverables" },
+      deliveryStatus: "ready",
+      currentDeliverable: { id: 901, type: "draft", versionNumber: 2, title: "مسودة عقد الشراكة", fileName: "partnership-draft-v2.pdf", fileType: "application/pdf", publishedAt: iso(-4) },
+      createdAt: iso(-72),
+      updatedAt: iso(-4),
+      events: [
+        { id: 11, eventType: "request_created", notes: "تم استلام طلبك", createdAt: iso(-72) },
+        { id: 12, eventType: "payment_confirmed", notes: "تم تأكيد الدفعة الأولى", createdAt: iso(-70) },
+        { id: 13, eventType: "lawyer_assigned", notes: "تم تعيين المحامي المسؤول", createdAt: iso(-68) },
+        { id: 14, eventType: "draft_ready", notes: "مسودة العقد جاهزة لمراجعتك", createdAt: iso(-4) },
+      ],
+      attachments: [],
+      deliverables: [{ id: 901, type: "draft", versionNumber: 2, title: "مسودة عقد الشراكة", notes: "آخر نسخة بعد التواصل على WhatsApp", isFinal: false, publishedAt: iso(-4), attachmentId: 9901, fileName: "partnership-draft-v2.pdf", fileType: "application/pdf", sizeBytes: 228000 }],
+      permissions: { canUploadFiles: false, canRequestRevision: false, canConfirmReceipt: false },
+    };
+  }
   return {
     id: Number(id) || 501,
     serialNumber: "REQ-2026-00001",
     requestType: "contract_review",
-    title: "مراجعة عقد إيجار قبل التوقيع",
-    description: "طلب مراجعة وتدقيق قانوني لبنود عقد إيجار تجاري قبل التوقيع والاعتماد.",
+    requestPurpose: "review",
+    contractTypeText: "عقد إيجار محل تجاري",
+    title: "مراجعة عقد — إيجار محل تجاري",
+    description: "عايز المحامي يركز على مدة التجديد وشروط الإنهاء.",
+    serviceTotalPriceEgp: 300,
+    serviceDepositEgp: 100,
+    serviceRemainingEgp: 200,
+    approvedPaidEgp: 0,
+    outstandingEgp: 300,
+    paymentStage: "deposit",
     status: "awaiting_payment",
     priority: "normal",
     communicationChannel: "whatsapp",
@@ -251,32 +364,76 @@ function requestDetails(id: string): ServiceRequestDetails {
     meetingProvider: "whatsapp",
     meetingUrl: null,
     meetingLocation: null,
-    assignedLawyerName: null,
+    assignedLawyerName: "أ/ محمد علي",
+    assignedLawyer: { id: 21, displayName: "أ/ محمد علي", specialization: "عقود ومعاملات" },
     linkedContractId: null,
     linkedContractSerial: null,
     linkedContractTitle: null,
-    paymentStatus: null,
+    paymentStatus: "unpaid",
     paymentAmountEgp: 100,
     paymentAdminNotes: null,
+    customerFacingStatus: "مطلوب سداد الدفعة الأولى",
+    requiresCustomerAction: true,
+    nextCustomerAction: { type: "pay", label: "ادفع دلوقتي", actionUrl: "/requests/501" },
+    deliveryStatus: "not_ready",
     createdAt: iso(-6),
     updatedAt: iso(-1),
     events: [
-      { id: 1, eventType: "request_created", notes: "تم إنشاء الطلب التجريبي", createdAt: iso(-6) },
+      { id: 1, eventType: "request_created", notes: "تم استلام طلبك", createdAt: iso(-6) },
+      { id: 2, eventType: "lawyer_assigned", notes: "تم تعيين المحامي المسؤول", createdAt: iso(-5) },
     ],
-    attachments: [],
+    attachments: [{ id: 7010, fileName: "lease-contract.pdf", fileType: "application/pdf", sizeBytes: 212000, createdAt: iso(-6) }],
     deliverables: [],
-    permissions: {
-      canUploadFiles: true,
-      canRequestRevision: false,
-      canConfirmReceipt: false,
-    },
+    permissions: { canUploadFiles: false, canRequestRevision: false, canConfirmReceipt: false },
   };
 }
 
 const notifications: CustomerNotification[] = [
-  { id: 1, type: "payment", title: "إثبات الدفع قيد المراجعة", message: "هذه رسالة ديمو توضح شكل إشعارات العميل.", actionUrl: "/contracts", readAt: null, createdAt: iso(-2) },
-  { id: 2, type: "contract", title: "العقد جاهز للمراجعة", message: "يمكن للعميل مراجعة النسخة قبل الإصدار النهائي.", actionUrl: "/contract/102", readAt: iso(-1), createdAt: iso(-12) },
+  { id: 1, type: "payment", title: "مطلوب سداد دفعة", message: "عندك دفعة مطلوبة علشان نكمل الطلب.", actionUrl: "/requests/501", importance: "important", readAt: null, createdAt: iso(-2) },
+  { id: 2, type: "contract", title: "العقد جاهز لمراجعتك", message: "راجع النسخة الحالية قبل الإصدار النهائي.", actionUrl: "/contract/102", importance: "important", readAt: iso(-1), createdAt: iso(-12) },
+  { id: 3, type: "service", title: "مسودة العقد جاهزة", message: "المحامي رفع آخر مسودة لعقد الشراكة.", actionUrl: "/requests/502#deliverables", importance: "normal", readAt: null, createdAt: iso(-4) },
 ];
+
+
+const savedParties: SavedParty[] = [
+  {
+    id: 31,
+    displayName: "علي حسن",
+    partyKind: "individual",
+    data: { name: "علي حسن", fullName: "علي حسن", nationalId: "29801011234567", nationality: "مصري", address: "مدينة نصر، القاهرة", phone: "01011112222", email: "ali@example.com", partyType: "individual" },
+    sourceContractId: 102,
+    sourceContractTitle: "عقد إيجار شقة سكنية",
+    lastUsedAt: iso(-8),
+    createdAt: iso(-240),
+    updatedAt: iso(-8),
+  },
+  {
+    id: 32,
+    displayName: "شركة النور للتجارة",
+    partyKind: "organization",
+    data: { companyName: "شركة النور للتجارة", name: "شركة النور للتجارة", address: "التجمع الخامس، القاهرة", phone: "0222222222", email: "info@alnour.example", commercialRegister: "123456", taxNumber: "987654321", partyType: "company" },
+    sourceContractId: 88,
+    sourceContractTitle: "عقد تقديم خدمات",
+    lastUsedAt: iso(-720),
+    createdAt: iso(-1400),
+    updatedAt: iso(-720),
+  },
+];
+
+const legalContent: Record<string, LegalContentDocument> = {
+  about_us: { key: "about_us", title: "من نحن", body: "Z Draft منصة تساعدك على إعداد ومتابعة معاملاتك التعاقدية بصورة أسهل، مع إمكانية الاستعانة بمحامٍ عند الحاجة.", publishedVersion: 1, publishedAt: iso(-720) },
+  terms_and_conditions: { key: "terms_and_conditions", title: "الشروط والأحكام", body: "باستخدام المنصة أنت تقر بصحة البيانات التي تقدمها وتفهم نطاق الخدمة المختارة. تفاصيل الخدمات والأسعار تظهر لك قبل الدفع.", publishedVersion: 3, publishedAt: iso(-168) },
+  privacy_policy: { key: "privacy_policy", title: "سياسة الخصوصية", body: "نستخدم بياناتك لتقديم الخدمة وإدارة العقود والطلبات المرتبطة بحسابك، مع تطبيق صلاحيات وصول مناسبة للملفات والطلبات.", publishedVersion: 2, publishedAt: iso(-240) },
+  refund_cancellation_policy: { key: "refund_cancellation_policy", title: "سياسة الإلغاء والاسترداد", body: "يمكن إلغاء الطلب غير المدفوع بسهولة. بعد الدفع، يتم التعامل مع الإلغاء والاسترداد وفق حالة تنفيذ الخدمة وسياسة المنصة، ويظهر لك وضع أي استرداد بوضوح.", publishedVersion: 1, publishedAt: iso(-96) },
+};
+
+function customerDashboard(): CustomerDashboard {
+  const requiredActions = [
+    ...contractSummaries.filter((x) => x.requiresCustomerAction && x.nextCustomerAction).map((x) => ({ id: `contract-${x.id}`, sourceType: "contract" as const, sourceId: x.id, title: x.title || x.templateNameAr, status: x.customerFacingStatus || x.status, action: x.nextCustomerAction! })),
+    ...requests.filter((x) => x.requiresCustomerAction && x.nextCustomerAction).map((x) => ({ id: `request-${x.id}`, sourceType: "service_request" as const, sourceId: x.id, title: x.title, status: x.customerFacingStatus || x.status, action: x.nextCustomerAction! })),
+  ];
+  return { requiredActions, recentContracts: contractSummaries.slice(0, 3), recentServiceRequests: requests.slice(0, 3) };
+}
 
 export async function demoApiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   await new Promise((resolve) => globalThis.setTimeout(resolve, 120));
@@ -295,6 +452,19 @@ export async function demoApiRequest<T>(path: string, init: RequestInit = {}): P
   }
   if (pathname.startsWith("/api/v1/auth/")) return { ok: true, verified: true, reset: true, changed: true } as T;
   if (pathname === "/api/v1/users/profile") return (method === "PATCH" ? { ...demoProfile, ...(bodyObject(init.body) as object) } : demoProfile) as T;
+  if (pathname === "/api/v1/saved-parties") return savedParties as T;
+  if (pathname.match(/^\/api\/v1\/saved-parties\/\d+$/)) {
+    const id = Number(pathname.split("/").pop());
+    if (method === "DELETE") return { deleted: true } as T;
+    const item = savedParties.find((x) => x.id === id) || savedParties[0];
+    return (method === "PATCH" ? { ...item, ...(bodyObject(init.body) as object) } : item) as T;
+  }
+  if (pathname === "/api/v1/customer/dashboard") return customerDashboard() as T;
+  if (pathname.startsWith("/api/v1/public/legal-content/")) {
+    const key = decodeURIComponent(pathname.split("/").pop() || "terms_and_conditions");
+    return (legalContent[key] || legalContent.terms_and_conditions) as T;
+  }
+  if (pathname === "/api/v1/legal-acceptances") return { accepted: true } as T;
   if (pathname === "/api/v1/contracts/my") return contractSummaries as T;
   if (pathname.match(/^\/api\/v1\/contracts\/\d+$/)) return contractDetails(pathname.split("/").pop() || "101") as T;
   if (pathname.match(/^\/api\/v1\/contracts\/\d+\/documents$/)) return demoDocuments() as T;
@@ -311,8 +481,8 @@ export async function demoApiRequest<T>(path: string, init: RequestInit = {}): P
   if (pathname === "/api/v1/service-requests") return { id: 501, serialNumber: "REQ-2026-00001" } as T;
   if (pathname.startsWith("/api/v1/service-requests/")) return { ok: true } as T;
   if (pathname === "/api/v1/attachments") return { id: Math.floor(Math.random() * 10000), fileName: "document.pdf" } as T;
-  if (pathname === "/api/v1/payments/instructions") return { vodafoneCashNumber: "01000000000" } as T;
-  if (pathname === "/api/v1/payments/receipts") return { id: 701, serialNumber: "PAY-2026-00001", status: "pending_verification" } as T;
+  if (pathname === "/api/v1/payments/checkout") return { paymentAttemptId: `demo-${Date.now()}`, status: "paid", redirectRequired: false, transactionReference: "DEMO-PAY-2026-001" } as T;
+  if (pathname.match(/^\/api\/v1\/payments\/attempts\/[^/]+$/)) return { status: "paid", transactionReference: "DEMO-PAY-2026-001" } as T;
   if (pathname === "/api/v1/payments/my") return [] as T;
   if (pathname === "/api/v1/notifications") return { items: notifications, unreadCount: notifications.filter((item) => !item.readAt).length } as T;
   if (pathname.startsWith("/api/v1/notifications/")) return { ok: true } as T;

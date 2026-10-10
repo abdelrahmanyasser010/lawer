@@ -162,7 +162,7 @@ export default function AccountPage() {
                 {staff.name}
               </h2>
 
-              <p className="text-[10px] font-bold text-slate-400">
+              <p className="text-xs font-bold text-slate-500">
                 {staff.email} · {staff.roleLabel}
               </p>
             </div>
@@ -275,7 +275,7 @@ export default function AccountPage() {
                         {deviceLabel(session.userAgent)}
                       </div>
 
-                      <div className="text-[10px] font-bold text-slate-400">
+                      <div className="text-xs font-bold text-slate-500">
                         {session.ipAddress || "IP غير متاح"} ·{" "}
                         {session.lastSeenAt
                           ? new Date(session.lastSeenAt).toLocaleString("ar-EG")
@@ -285,14 +285,14 @@ export default function AccountPage() {
                   </div>
 
                   {session.current ? (
-                    <span className="rounded-full bg-white px-2 py-1 text-[9px] font-black text-emerald-700">
+                    <span className="rounded-full bg-white px-2 py-1 text-xs font-black text-emerald-700">
                       حالي
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => void revoke(session.id)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-3 py-2 text-[10px] font-black text-rose-700"
+                      className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-black text-rose-700"
                     >
                       <LogOut className="h-3.5 w-3.5" />
                       إلغاء
@@ -303,13 +303,13 @@ export default function AccountPage() {
             })}
 
             {sessions.length === 0 && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center text-xs font-bold text-slate-400">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center text-xs font-bold text-slate-500">
                 لا توجد جلسات فعالة ظاهرة.
               </div>
             )}
           </div>
 
-          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-bold leading-6 text-amber-900">
+          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-900">
             <KeyRound className="ml-1 inline h-4 w-4" />
             الأساس مجهز لإضافة 2FA لاحقًا لحساب السوبر أدمن دون تغيير نظام
             الجلسات.

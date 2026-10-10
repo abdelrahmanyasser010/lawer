@@ -4,22 +4,34 @@ import type { DashboardUser } from "./apiClient";
 export const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 
-const demoVariantPricing: Record<string, Record<string, { selfServicePriceEgp: number; lawyerAssistedPriceEgp: number }>> = {
+const demoVariantPricing: Record<string, Record<string, { selfServicePriceEgp: number; lawyerAssistedPriceEgp: number; lawyerReviewAddOnPriceEgp:number }>> = {
   rental: {
-    residential_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 499 },
-    commercial_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 599 },
-    administrative_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 549 },
+    residential_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 499, lawyerReviewAddOnPriceEgp: 199 },
+    commercial_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 599, lawyerReviewAddOnPriceEgp: 199 },
+    administrative_lease: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 549, lawyerReviewAddOnPriceEgp: 199 },
   },
   apartment_sale: {
-    preliminary_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 899 },
-    registrable_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 999 },
-    inherited_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 1099 },
+    preliminary_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 899, lawyerReviewAddOnPriceEgp: 249 },
+    registrable_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 999, lawyerReviewAddOnPriceEgp: 249 },
+    inherited_sale: { selfServicePriceEgp: 139, lawyerAssistedPriceEgp: 1099, lawyerReviewAddOnPriceEgp: 299 },
   },
   freelancer: {
-    visual_identity_design: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 599 },
-    website_development: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 799 },
-    social_media_management: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 699 },
+    visual_identity_design: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 599, lawyerReviewAddOnPriceEgp: 199 },
+    website_development: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 799, lawyerReviewAddOnPriceEgp: 199 },
+    social_media_management: { selfServicePriceEgp: 59, lawyerAssistedPriceEgp: 699, lawyerReviewAddOnPriceEgp: 199 },
   },
+};
+
+const templateCategories = [
+  { id: 1, slug: "sale", nameAr: "بيع", description: "عقود بيع العقارات والمنقولات.", isActive: true, sortOrder: 10, templatesCount: 1 },
+  { id: 2, slug: "rental", nameAr: "إيجار", description: "عقود إيجار الوحدات السكنية والتجارية.", isActive: true, sortOrder: 20, templatesCount: 1 },
+  { id: 3, slug: "services", nameAr: "خدمات", description: "عقود الخدمات والعمل الحر.", isActive: true, sortOrder: 30, templatesCount: 1 },
+];
+
+const demoTemplateCategoryBySlug: Record<string, (typeof templateCategories)[number]> = {
+  apartment_sale: templateCategories[0],
+  rental: templateCategories[1],
+  freelancer: templateCategories[2],
 };
 
 function withDemoPricing<T extends { slug: string; variants: Array<{ key: string }> }>(definition: T) {
@@ -79,8 +91,14 @@ const templates = Object.values(localTemplateRegistry).map((definition, index) =
   description: definition.description,
   priceEgp: 0,
   isActive: definition.variants.length > 0,
+  selfServiceEnabled: definition.variants.length > 0,
+  lawyerDraftingEnabled: true,
+  categoryId: demoTemplateCategoryBySlug[definition.slug]?.id ?? null,
+  categorySlug: demoTemplateCategoryBySlug[definition.slug]?.slug ?? null,
+  categoryNameAr: demoTemplateCategoryBySlug[definition.slug]?.nameAr ?? null,
+  categoryDescription: demoTemplateCategoryBySlug[definition.slug]?.description ?? null,
   variants: definition.variants.map((variant) => {
-    const pricing = demoVariantPricing[definition.slug]?.[variant.key] ?? { selfServicePriceEgp: 0, lawyerAssistedPriceEgp: 0 };
+    const pricing = demoVariantPricing[definition.slug]?.[variant.key] ?? { selfServicePriceEgp: 0, lawyerAssistedPriceEgp: 0, lawyerReviewAddOnPriceEgp: 0 };
     return { key: variant.key, nameAr: variant.nameAr, description: variant.description ?? "", ...pricing };
   }),
   currentPublishedVersionId: (index + 1) * 100,
@@ -96,10 +114,6 @@ const templates = Object.values(localTemplateRegistry).map((definition, index) =
     },
   ],
 }));
-
-const templateCategories = [
-  { id: 1, slug: "general", nameAr: "عقود عامة", description: "التصنيف الافتراضي للقوالب الحالية.", isActive: true, sortOrder: 0, templatesCount: templates.length },
-];
 
 const team = [
   { id: 1, publicId: "STF-SUPERADMIN", name: "Z draft Super Admin", email: "admin.demo@zdraft.local", phone: "01023817658", status: "active", staffStatus: "active", jobTitle: "مالك النظام", lastLoginAt: iso(-1), roles: ["super_admin"] },
@@ -123,14 +137,16 @@ const contracts = [
 ];
 
 const requests = [
-  { id: 501, serialNumber: "REQ-2026-DEMO01", requestType: "contract_drafting", title: "إعداد عقد بيع مع محامي", status: "awaiting_payment", priority: "normal", createdAt: iso(-6), dueAt: iso(18), clientName: "أحمد محمد حسن", clientPhone: "01023817658", assignedLawyerName: "أ. مريم سامي" },
-  { id: 502, serialNumber: "REV-2026-DEMO02", requestType: "contract_review", title: "مراجعة عقد إيجار قبل التجديد", status: "in_progress", priority: "high", createdAt: iso(-12), dueAt: iso(5), clientName: "علي حسن", clientPhone: "01011111111", assignedLawyerName: "أ. مريم سامي" },
-  { id: 503, serialNumber: "REV-2026-DEMO03", requestType: "contract_review", title: "مراجعة عقد قديم قبل التوقيع", status: "new", priority: "normal", createdAt: iso(-18), dueAt: iso(30), clientName: "منى محمود", clientPhone: "01022222222", assignedLawyerName: "" },
+  { id: 501, serialNumber: "REQ-2026-DEMO01", requestType: "contract_drafting", requestPurpose: null, title: "صياغة عقد بيع", selectedContractTypeName:"عقد بيع وحدة سكنية", contractTypeText:null, status: "awaiting_payment", customerFacingStatus:"مطلوب سداد الدفعة الأولى", paymentStatus:"unpaid", deliveryStatus:"not_ready", nextCustomerAction:{label:"ادفع الدفعة الأولى"}, priority: "normal", createdAt: iso(-6), updatedAt:iso(-2), dueAt: iso(18), clientName: "أحمد محمد حسن", clientPhone: "01023817658", assignedLawyerId:2, assignedLawyerName: "أ. مريم سامي" },
+  { id: 502, serialNumber: "REV-2026-DEMO02", requestType: "contract_review", requestPurpose: "review", contractTypeText: "عقد إيجار محل تجاري", selectedContractTypeName:null, title: "مراجعة عقد — إيجار محل تجاري", status: "in_progress", customerFacingStatus:"المحامي بيشتغل على طلبك", paymentStatus:"partially_paid", deliveryStatus:"not_ready", nextCustomerAction:null, priority: "high", createdAt: iso(-12), updatedAt:iso(-1), dueAt: iso(5), clientName: "علي حسن", clientPhone: "01011111111", assignedLawyerId:2, assignedLawyerName: "أ. مريم سامي" },
+  { id: 503, serialNumber: "REV-2026-DEMO03", requestType: "contract_review", requestPurpose: "consultation", contractTypeText: "عقد شراكة", selectedContractTypeName:null, title: "استشارة بخصوص عقد — شراكة", status: "new", customerFacingStatus:"تم استلام طلبك", paymentStatus:"paid", deliveryStatus:"not_ready", nextCustomerAction:null, priority: "normal", createdAt: iso(-18), updatedAt:iso(-3), dueAt: iso(30), clientName: "منى محمود", clientPhone: "01022222222", assignedLawyerId:null, assignedLawyerName: "" },
+  { id: 504, serialNumber: "SSR-2026-DEMO04", requestType: "self_service_lawyer_review", requestPurpose:null, contractTypeText:null, selectedContractTypeName:"عقد إيجار سكني", title:"مراجعة محامي قبل إصدار عقد إيجار", status:"assigned", customerFacingStatus:"العقد عند المحامي للمراجعة", paymentStatus:"paid", deliveryStatus:"not_ready", nextCustomerAction:null, priority:"normal", createdAt:iso(-9), updatedAt:iso(-1), dueAt:iso(10), clientName:"سارة علي", clientPhone:"01033333333", assignedLawyerId:2, assignedLawyerName:"أ. مريم سامي" },
 ];
 
 const payments = [
-  { id: 701, clientId: 1, serialNumber: "PAY-2026-DEMO01", amountEgp: 139, status: "pending_verification", senderPhone: "01023817658", receiptAttachmentId: 9001, contractId: 101, serviceRequestId: null, createdAt: iso(-1), clientName: "أحمد محمد حسن", clientEmail: "client.demo@zdraft.local", clientPhone: "01023817658" },
-  { id: 702, clientId: 2, serialNumber: "PAY-2026-DEMO02", amountEgp: 100, status: "approved", senderPhone: "01011111111", receiptAttachmentId: 9002, contractId: null, serviceRequestId: 502, createdAt: iso(-20), clientName: "علي حسن", clientEmail: "ali.demo@zdraft.local", clientPhone: "01011111111" },
+  { id: 701, clientId: 1, serialNumber: "PAY-2026-DEMO01", amountEgp: 388, status: "paid", source:"gateway", provider:"demo_gateway", transactionReference:"GW-8A91DEMO", providerReference:"PVD-90001", paymentStage:"full", contractId: 101, serviceRequestId: null, createdAt: iso(-1), clientName: "أحمد محمد حسن", clientEmail: "client.demo@zdraft.local" },
+  { id: 702, clientId: 2, serialNumber: "PAY-2026-DEMO02", amountEgp: 100, status: "paid", source:"gateway", provider:"demo_gateway", transactionReference:"GW-7B22DEMO", providerReference:"PVD-90002", paymentStage:"initial", contractId: null, serviceRequestId: 502, serviceRequestSerial:"REV-2026-DEMO02", serviceRequestTitle:"مراجعة عقد — إيجار محل تجاري", createdAt: iso(-20), clientName: "علي حسن", clientEmail: "ali.demo@zdraft.local" },
+  { id: 703, clientId: 2, serialNumber: "PAY-2026-DEMO03", amountEgp: 200, status: "paid", source:"admin_manual_collection", provider:null, transactionReference:"OFFLINE-123", providerReference:null, paymentStage:"balance", contractId:null, serviceRequestId:502, serviceRequestSerial:"REV-2026-DEMO02", serviceRequestTitle:"مراجعة عقد — إيجار محل تجاري", createdAt:iso(-2), clientName:"علي حسن", clientEmail:"ali.demo@zdraft.local", recordedByName:"أحمد المالية", adminNotes:"تحصيل استثنائي للدفعة المتبقية" },
 ];
 
 const settings = [
@@ -140,7 +156,6 @@ const settings = [
   { key: "office.review_whatsapp_number", value: "201023817658", isSecret: false, updatedAt: iso(-24) },
   { key: "office.support_whatsapp_number", value: "201023817658", isSecret: false, updatedAt: iso(-24) },
   { key: "office.support_phone", value: "01023817658", isSecret: false, updatedAt: iso(-24) },
-  { key: "payments.vodafone_cash_number", value: "01023817658", isSecret: false, updatedAt: iso(-24) },
   { key: "services.contract_review.fee_egp", value: 300, isSecret: false, updatedAt: iso(-24) },
   { key: "services.contract_review.deposit_egp", value: 100, isSecret: false, updatedAt: iso(-24) },
   { key: "services.contract_drafting.deposit_egp", value: 100, isSecret: false, updatedAt: iso(-24) },
@@ -148,6 +163,14 @@ const settings = [
   { key: "notifications.whatsapp_mode", value: "manual_wa_me", isSecret: false, updatedAt: iso(-24) },
   { key: "notifications.web_push_enabled", value: false, isSecret: false, updatedAt: iso(-24) },
 ];
+
+const legalContent = [
+  { key:"about_us", title:"من نحن", body:"Z Draft منصة تساعد الأفراد على إنشاء العقود ومتابعة الخدمات القانونية بصورة أبسط.", isPublished:true, publishedVersion:1, publishedAt:iso(-500), updatedAt:iso(-24) },
+  { key:"terms_and_conditions", title:"الشروط والأحكام", body:"هذه نسخة تجريبية من الشروط والأحكام وتُدار من لوحة التحكم.", isPublished:true, publishedVersion:3, publishedAt:iso(-200), updatedAt:iso(-24) },
+  { key:"privacy_policy", title:"سياسة الخصوصية", body:"هذه نسخة تجريبية من سياسة الخصوصية وتُدار من لوحة التحكم.", isPublished:true, publishedVersion:2, publishedAt:iso(-180), updatedAt:iso(-24) },
+  { key:"refund_cancellation_policy", title:"سياسة الإلغاء والاسترداد", body:"هذه نسخة تجريبية من سياسة الإلغاء والاسترداد وتُدار من لوحة التحكم.", isPublished:true, publishedVersion:2, publishedAt:iso(-160), updatedAt:iso(-24) },
+];
+const reviewSchedule = { timezone:"Africa/Cairo", windows:[{id:1,weekday:0,startTime:"10:00",endTime:"16:00",slotMinutes:60,totalCapacity:6,zoomCapacity:3,whatsappCapacity:3,isActive:true}], exceptions:[] };
 
 export async function demoDashboardRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   await new Promise((resolve) => globalThis.setTimeout(resolve, 120));
@@ -161,9 +184,16 @@ export async function demoDashboardRequest<T>(path: string, init: RequestInit = 
   if (pathname.startsWith("/api/v1/auth/")) return { ok: true, reset: true, changed: true, revoked: true } as T;
 
   if (pathname === "/api/v1/dashboard/summary") return summary() as T;
-  if (pathname === "/api/v1/dashboard/work-queue") return requests as T;
+  if (pathname === "/api/v1/dashboard/work-queue") {
+    let rows=[...requests]; const q=(url.searchParams.get("search")||"").toLowerCase(); const queue=url.searchParams.get("queue"); const type=url.searchParams.get("serviceType")||url.searchParams.get("requestType"); const lawyer=url.searchParams.get("assignedLawyerId"); const pay=url.searchParams.get("paymentStatus"); const from=url.searchParams.get("from"); const to=url.searchParams.get("to"); const onlyMine=url.searchParams.get("onlyMine")==="true";
+    if(type)rows=rows.filter(x=>x.requestType===type); if(lawyer)rows=rows.filter(x=>String(x.assignedLawyerId||"")===lawyer); if(onlyMine)rows=rows.filter(x=>x.assignedLawyerId===2); if(pay)rows=rows.filter(x=>x.paymentStatus===pay); if(from)rows=rows.filter(x=>new Date(x.updatedAt||x.createdAt).getTime()>=new Date(`${from}T00:00:00`).getTime()); if(to)rows=rows.filter(x=>new Date(x.updatedAt||x.createdAt).getTime()<=new Date(`${to}T23:59:59`).getTime()); if(q)rows=rows.filter(x=>`${x.serialNumber} ${x.clientName} ${x.title} ${x.contractTypeText||""} ${x.selectedContractTypeName||""}`.toLowerCase().includes(q));
+    if(queue==="new")rows=rows.filter(x=>x.status==="new"); if(queue==="unassigned")rows=rows.filter(x=>!x.assignedLawyerId); if(queue==="with_lawyer")rows=rows.filter(x=>Boolean(x.assignedLawyerId)&&!["completed","cancelled"].includes(x.status)); if(queue==="awaiting_payment")rows=rows.filter(x=>["unpaid","partially_paid"].includes(x.paymentStatus)); if(queue==="ready_delivery")rows=rows.filter(x=>x.deliveryStatus==="ready"); if(queue==="completed")rows=rows.filter(x=>x.status==="completed"); if(queue==="cancelled")rows=rows.filter(x=>x.status==="cancelled");
+    return rows as T;
+  }
   if (pathname === "/api/v1/admin/reports/overview") return demoReports(url.searchParams.get("period")) as T;
   if (pathname === "/api/v1/admin/reports/customer-export") return { rows: demoClients(url).map((client) => ({ ...client, approvedPaymentsEgp: client.id === 1 ? 249 : 0 })) } as T;
+  if (pathname.match(/^\/api\/v1\/admin\/payments\/\d+\/refund$/) && method === "POST") return { ok:true, status:"refund_pending" } as T;
+  if (pathname.match(/^\/api\/v1\/admin\/service-requests\/\d+\/record-remaining-payment$/) && method === "POST") return { ok:true, status:"paid" } as T;
   if (pathname === "/api/v1/admin/payments") {
     const statusFiltered = filterByStatus(payments, url.searchParams.get("status"));
     const search = (url.searchParams.get("search") || "").trim().toLowerCase();
@@ -182,7 +212,7 @@ export async function demoDashboardRequest<T>(path: string, init: RequestInit = 
   if (previewMatch) return contractVersionPreview(Number(previewMatch[1]), Number(previewMatch[2])) as T;
   if (pathname.match(/^\/api\/v1\/admin\/contracts\/\d+/)) return { ok: true, versionId: 1001, versionNumber: 2 } as T;
   if (pathname.match(/^\/api\/v1\/contracts\/\d+\/shares$/)) return { shareUrl: "https://customer-demo.vercel.app/shared/demo-share-token" } as T;
-  if (pathname === "/api/v1/admin/service-requests") return requests.filter((item) => item.requestType === url.searchParams.get("type")) as T;
+  if (pathname === "/api/v1/admin/service-requests") return requests.filter((item) => !url.searchParams.get("type") || item.requestType === url.searchParams.get("type")) as T;
   if (pathname.match(/^\/api\/v1\/service-requests\/\d+$/)) return demoRequestDetails(Number(pathname.split("/").pop())) as T;
   if (pathname.startsWith("/api/v1/admin/service-requests/")) return { ok: true } as T;
   if (pathname === "/api/v1/admin/users") return demoClients(url) as T;
@@ -202,6 +232,11 @@ export async function demoDashboardRequest<T>(path: string, init: RequestInit = 
   if (pathname === "/api/v1/templates/apartment_sale/definition") return withDemoPricing(localTemplateRegistry.apartment_sale) as T;
   if (pathname === "/api/v1/templates/rental/definition") return withDemoPricing(localTemplateRegistry.rental) as T;
   if (pathname === "/api/v1/templates/freelancer/definition") return withDemoPricing(localTemplateRegistry.freelancer) as T;
+  if (pathname === "/api/v1/admin/legal-content" && method === "GET") return legalContent as T;
+  if (pathname.startsWith("/api/v1/admin/legal-content/") && method === "PUT") return { ok:true, publishedVersion:4 } as T;
+  if (pathname === "/api/v1/admin/review-schedule" && method === "GET") return reviewSchedule as T;
+  if (pathname === "/api/v1/admin/review-schedule" && method === "PUT") return { ok:true } as T;
+  if (pathname.startsWith("/api/v1/admin/review-schedule/exceptions")) return { ok:true } as T;
   if (pathname === "/api/v1/admin/settings") return (method === "GET" ? settings : { ok: true }) as T;
   if (pathname === "/api/v1/admin/audit/verify") return { valid: true, checked: auditRows().length, total: auditRows().length, fullyVerified: auditRows().length, legacyUnverifiable: 0, firstBroken: null } as T;
   if (pathname === "/api/v1/admin/audit") { const rows = auditRows(); return { items: rows, pagination: { page: 1, perPage: 50, total: rows.length, pages: 1 } } as T; }
@@ -227,7 +262,7 @@ function summary() {
   return {
     contracts: { total: contracts.length, active: 2, issued: 1, office: contracts.filter((item) => item.sourceChannel === "office").length },
     requests: { total: requests.length, needs_attention: 1, unassigned: 1, awaiting_client: 1, meetings_today: 1, overdue: 0 },
-    payments: { pending: payments.filter((item) => item.status === "pending_verification").length, approved_month: 249 },
+    payments: { pending: payments.filter((item) => item.status === "pending").length, approved_month: payments.filter((item)=>item.status==="paid").reduce((sum,item)=>sum+item.amountEgp,0) },
     notifications: { unread: 2 },
   };
 }
@@ -289,11 +324,15 @@ function contractVersionPreview(id: number, versionId: number) {
 function templateVersion(id: number) {
   const index = Math.max(0, Math.floor(id / 100) - 1);
   const definition = Object.values(localTemplateRegistry)[index] || localTemplateRegistry.rental;
+  const category = demoTemplateCategoryBySlug[definition.slug];
   return {
     id,
     templateId: index + 1,
     versionNumber: definition.version,
     status: definition.variants.length > 0 ? "published" : "draft",
+    templateNameAr: definition.nameAr,
+    categoryId: category?.id ?? null,
+    categoryNameAr: category?.nameAr ?? null,
     definition,
     changeSummary: "نسخة ديمو للمعاينة",
     legalReference: "Shared template engine",
@@ -387,22 +426,27 @@ function demoReports(periodValue: string | null) {
 function demoRequestDetails(id: number) {
   const row = requests.find((item) => item.id === id) || requests[0];
   const meeting = row as typeof row & { meetingUrl?: string };
+  const total=row.requestType==="contract_drafting"?899:row.requestType==="contract_review"?300:249;
+  const deposit=row.requestType==="contract_drafting"?100:row.requestType==="contract_review"?100:249;
+  const paid=row.paymentStatus==="paid"?total:row.paymentStatus==="partially_paid"?deposit:0;
   return {
     ...row,
-    description: "طلب تجريبي يعرض دورة العمل الكاملة بين العميل ومكتب المحاماة.",
-    templateSlug: "apartment_sale",
+    description: row.requestType==="contract_review" ? (row.requestPurpose==="consultation"?"العميل يريد استشارة قانونية بخصوص العقد المرفوع.":"العميل يريد مراجعة العقد المرفوع.") : row.requestType==="self_service_lawyer_review"?"مراجعة محامي قبل إصدار عقد تم إنشاؤه داخل Z Draft.":"صياغة عقد بواسطة محامي مع متابعة التفاصيل عبر واتساب.",
+    templateSlug: row.requestType==="contract_drafting"?"apartment_sale":null,
     communicationChannel: "whatsapp",
-    preferredContactAt: iso(12), meetingAt: row.dueAt ?? null, meetingProvider: meeting.meetingUrl ? "zoom" : null, meetingUrl: meeting.meetingUrl ?? null,
-    meetingLocation: null, assignedLawyerId: row.assignedLawyerName ? 2 : null, clientUserId: 1,
-    clientWhatsappNumber: row.clientPhone, dueAt: row.dueAt, linkedContractId: null, linkedContractSerial: null,
-    linkedContractTitle: null, paymentStatus: row.status === "awaiting_payment" ? "pending_verification" : "approved",
-    paymentAmountEgp: 100, paymentAdminNotes: null, updatedAt: iso(-1),
+    preferredContactAt: iso(12), meetingAt: row.dueAt ?? null, meetingProvider: meeting.meetingUrl ? "zoom" : "whatsapp", meetingUrl: meeting.meetingUrl ?? null,
+    meetingLocation: null, assignedLawyerId: row.assignedLawyerId ?? null, clientUserId: 1,
+    clientWhatsappNumber: row.clientPhone, clientWhatsappConsentAt:iso(-300), linkedContractId: row.requestType==="self_service_lawyer_review"?102:null, linkedContractSerial:row.requestType==="self_service_lawyer_review"?"SCP-2026-RNT-000102":null,
+    linkedContractTitle: row.requestType==="self_service_lawyer_review"?"عقد إيجار شقة سكنية":null,
+    paymentAmountEgp: paid, serviceTotalPriceEgp:total, serviceDepositEgp:deposit, serviceRemainingEgp:Math.max(0,total-deposit), approvedPaidEgp:paid, outstandingEgp:Math.max(0,total-paid), paymentStage:paid>=total?"paid":paid>0?"balance":"initial",
+    paymentAdminNotes: null, allowedStatusTransitions:["assigned","in_progress","client_review","completed","cancelled"], updatedAt: row.updatedAt || iso(-1),
+    selfServiceLawyerReview: row.requestType==="self_service_lawyer_review"?{enabled:true,priceEgp:249,customerNote:"راجع بند مدة الإيجار قبل الإصدار.",issuanceBlocked:true}:null,
     events: [
-      { id: 1, eventType: "request_created", notes: "تم إنشاء الطلب", payload: {}, createdAt: row.createdAt },
-      { id: 2, eventType: "assigned", notes: "تم إسناد الطلب للمحامي", payload: { lawyerId: 2 }, createdAt: iso(-4) },
+      { id: 1, eventType: "request_created", notes: "تم استلام الطلب", payload: {}, createdAt: row.createdAt },
+      ...(row.assignedLawyerId?[{ id: 2, eventType: "assigned", notes: "تم تعيين المحامي المسؤول", payload: { lawyerId: row.assignedLawyerId }, createdAt: iso(-4) }]:[]),
     ],
-    attachments: [{ id: 9001, fileName: "contract-source.pdf", fileType: "application/pdf", sizeBytes: 245000, createdAt: iso(-5) }],
-    deliverables: [],
+    attachments: row.requestType==="contract_review"?[{ id: 9001, fileName: "contract-source.pdf", fileType: "application/pdf", sizeBytes: 245000, createdAt: iso(-5) }]:[],
+    deliverables: row.requestType==="contract_drafting"?[{attachmentId:9100,fileName:"draft-v2.pdf",fileType:"application/pdf",sizeBytes:312000,publishedAt:iso(-2),title:"المسودة الحالية",type:"draft",versionNumber:2,isFinal:false,notes:"آخر مسودة متاحة للعميل"}]:[],
     permissions: { canUploadFiles: false, canRequestRevision: false, canConfirmReceipt: false },
   };
 }
@@ -413,7 +457,7 @@ function demoCustomerDetails(id: number) {
     profile: { ...client, emailVerifiedAt: iso(-220), updatedAt: iso(-1), activeSessions: 1, attachmentsCount: 3, approvedPaymentsEgp: 249 },
     contracts: contracts.filter((item) => item.clientName === client.name).map((item) => ({ ...item, priceEgp: 139, templateNameAr: item.templateNameAr, issuedAt: item.status === "issued" ? iso(-12) : null })),
     requests: requests.filter((item) => item.clientName === client.name),
-    payments: payments.filter((item) => item.clientName === client.name).map((item) => ({ ...item, paymentMethod: "vodafone_cash", reviewedAt: item.status === "approved" ? iso(-10) : null })),
+    payments: payments.filter((item) => item.clientName === client.name).map((item) => ({ ...item, paymentMethod: item.source || "gateway", reviewedAt: item.status === "paid" ? iso(-10) : null })),
     activity: auditRows(),
   };
 }

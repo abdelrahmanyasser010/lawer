@@ -26,6 +26,8 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const nextUrl = safeInternalRedirect(params.get("next"), "/dashboard");
+  const registerHref = `/register?next=${encodeURIComponent(nextUrl)}`;
 
   async function login(event: React.FormEvent) {
     event.preventDefault();
@@ -34,8 +36,7 @@ function LoginContent() {
     try {
       await frontendApi.login(email, password);
       window.dispatchEvent(new Event("zdraft-auth-changed"));
-      const next = params.get("next");
-      window.location.href = safeInternalRedirect(next, "/contracts");
+      window.location.href = nextUrl;
     } catch (caught) {
       setError(caught instanceof ApiClientError ? caught.message : "تعذر تسجيل الدخول الآن.");
       setLoading(false);
@@ -57,7 +58,7 @@ function LoginContent() {
         <div className="w-full max-w-md">
           <div className="mb-8 lg:hidden"><BrandLogo compact /></div>
           <h2 className="text-2xl font-black text-[#00102e]">تسجيل الدخول</h2>
-          <p className="mt-2 text-sm text-slate-500">ليس لديك حساب؟ <Link href="/register" className="font-black text-[#986410]">إنشاء حساب جديد</Link></p>
+          <p className="mt-2 text-sm text-slate-500">ليس لديك حساب؟ <Link href={registerHref} className="font-black text-[#986410]">إنشاء حساب جديد</Link></p>
 
           {error && <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">{error}</div>}
           <form onSubmit={login} className="mt-6 space-y-4">
@@ -70,7 +71,7 @@ function LoginContent() {
             </label>
             <button disabled={loading} className="w-full rounded-2xl bg-[#00102e] py-3.5 text-sm font-black text-white transition hover:bg-[#071b43] disabled:opacity-60">{loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}</button>
           </form>
-          <p className="mt-5 text-center text-[11px] leading-6 text-slate-400">باستخدام الحساب أنت توافق على <Link href="/declaration" className="font-bold text-[#986410]">شروط الاستخدام والإقرار القانوني</Link> و<Link href="/privacy" className="font-bold text-[#986410]">سياسة الخصوصية</Link>.</p>
+          <p className="mt-5 text-center text-[11px] leading-6 text-slate-400">باستخدام الحساب أنت توافق على <Link href="/terms" className="font-bold text-[#986410]">الشروط والأحكام</Link> و<Link href="/privacy" className="font-bold text-[#986410]">سياسة الخصوصية</Link>.</p>
           <Link href="/" className="mt-7 flex items-center justify-center gap-2 text-xs font-bold text-slate-500"><ArrowLeft className="h-4 w-4" /> العودة إلى الصفحة الرئيسية</Link>
         </div>
       </main>

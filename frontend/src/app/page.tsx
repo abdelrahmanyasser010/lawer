@@ -177,7 +177,7 @@ export default function HomePage() {
               </div>
               <h3 className="mt-6 sm:mt-8 text-lg sm:text-[22px] font-black">إعداد بواسطة محام</h3>
               <p className="mt-3 sm:mt-4 text-[11px] sm:text-[13px] font-medium leading-[1.7] sm:leading-[1.8] text-slate-600">
-                ارفع المستندات، واطلب من محامي متخصص إعداد عقد مفصل ومخصص يحمي كافة حقوقك القانونية.
+                اختار نوع العقد واحكيلنا احتياجك ببساطة، ومحامي متخصص يتواصل معاك ويكمل التفاصيل لحد النسخة النهائية.
               </p>
               <div className="mt-auto pt-6 sm:pt-8 w-full">
                 <Link href="/create-contract?mode=lawyer_assisted" className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] text-[12px] sm:text-[13px] font-black text-white transition hover:bg-[#001a42]">
