@@ -38,6 +38,7 @@ return [
         'webhook_url' => env('PAYMENT_GATEWAY_WEBHOOK_URL', rtrim((string) env('APP_URL', 'http://localhost:8000'), '/').'/api/v1/payments/webhooks/{provider}'),
         'paymob' => [
             'base_url' => rtrim((string) env('PAYMOB_BASE_URL', 'https://accept.paymob.com'), '/'),
+            'api_key' => env('PAYMOB_API_KEY'),
             'secret_key' => env('PAYMOB_SECRET_KEY'),
             'public_key' => env('PAYMOB_PUBLIC_KEY'),
             'hmac_secret' => env('PAYMOB_HMAC_SECRET'),
