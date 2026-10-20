@@ -20,18 +20,17 @@ export const dashboardFeatures: Record<DashboardFeature, boolean> = {
   assignment: publicFlag(process.env.NEXT_PUBLIC_ENABLE_ASSIGNMENT, false),
   officeContractCreation: true,
   contractEditing: true,
-  templateManagement: publicFlag(process.env.NEXT_PUBLIC_ENABLE_TEMPLATE_MANAGEMENT, false),
+  templateManagement: true,
 };
 
 export function isDashboardFeatureEnabled(feature?: DashboardFeature): boolean {
   if (!feature) return true;
-  if (feature === "officeContractCreation" || feature === "contractEditing") return true;
+  if (feature === "officeContractCreation" || feature === "contractEditing" || feature === "templateManagement") return true;
   return dashboardFeatures[feature];
 }
 
 export function disabledFeatureForPath(pathname: string): DashboardFeature | null {
   if (pathname.startsWith("/team") || pathname.startsWith("/lawyers") || pathname.startsWith("/roles")) return dashboardFeatures.teamManagement ? null : "teamManagement";
-  if (pathname.startsWith("/templates")) return dashboardFeatures.templateManagement ? null : "templateManagement";
   return null;
 }
 
