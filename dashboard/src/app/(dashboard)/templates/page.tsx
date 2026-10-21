@@ -390,7 +390,7 @@ export default function TemplatesPage() {
           <button onClick={() => setCategoryDialog({ mode: "create" })} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold">
             <Plus className="h-4 w-4" />إضافة تصنيف
           </button>
-          <button onClick={() => openTemplateDialog()} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-sm font-bold text-[#d7a94f]">
+          <button onClick={openTemplateDialogForCurrentFilter} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-sm font-bold text-[#d7a94f]">
             <Plus className="h-4 w-4" />إضافة نوع عقد
           </button>
         </div>
@@ -443,9 +443,6 @@ export default function TemplatesPage() {
                   <Edit3 className="h-3.5 w-3.5" />تعديل التصنيف
                 </button>
               )}
-              <button onClick={openTemplateDialogForCurrentFilter} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#00102e] px-3.5 py-2 text-xs font-bold text-[#d7a94f]">
-                <Plus className="h-3.5 w-3.5" />إضافة نوع عقد
-              </button>
             </div>
           </div>
         </div>
