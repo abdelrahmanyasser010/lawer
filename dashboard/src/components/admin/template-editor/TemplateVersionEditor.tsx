@@ -1639,6 +1639,8 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
     `الإصدار ${version.versionNumber}`,
   ];
 
+  const isSingleVariant = version.definition.variants.length <= 1;
+
   return (
     <div className="mx-auto max-w-[1500px] space-y-4 p-4 sm:p-5">
       {confirmDialog}
@@ -1660,9 +1662,13 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
             <StatusBadge value={version.status} />
           </div>
           <p className="mt-1 text-sm font-medium leading-6 text-slate-500">
-            {version.templateNameAr || version.definition.nameAr} — الإصدار {version.versionNumber} · رتّب نسخ العقد والخطوات والأسئلة كما ستظهر للعميل.
+            {version.templateNameAr || version.definition.nameAr} — الإصدار {version.versionNumber} · {isSingleVariant ? "رتّب الخطوات والأسئلة كما ستظهر للعميل." : "رتّب نسخ العقد والخطوات والأسئلة كما ستظهر للعميل."}
           </p>
-          <div className="mt-1.5 text-xs font-bold text-slate-600">{version.definition.variants.length} نسخ · {totalSteps} خطوة · {totalFields} سؤال</div>
+          <div className="mt-1.5 text-xs font-bold text-slate-600">
+            {isSingleVariant
+              ? `${totalSteps} خطوة · ${totalFields} سؤال · ${version.definition.legalClauses?.length ?? 0} بند قانوني`
+              : `${version.definition.variants.length} نسخ · ${totalSteps} خطوة · ${totalFields} سؤال`}
+          </div>
           <p className="mt-2 text-xs font-medium text-slate-500">
             {version.status === "published"
               ? "نسخة منشورة للعرض فقط. أنشئ إصدارًا جديدًا قبل أي تعديل."
@@ -1754,33 +1760,46 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
       {activeTab === "structure" && (
         <section className="space-y-4">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <div><h2 className="text-lg font-bold text-[#00102e]">نسخ العقد والخطوات والأسئلة</h2><p className="mt-1 text-xs font-medium leading-5 text-slate-500">التعديل هنا يخص الإصدار المسودة فقط.</p></div>
+            <div>
+              <h2 className="text-lg font-bold text-[#00102e]">{isSingleVariant ? "هيكل العقد والأسئلة" : "نسخ العقد والخطوات والأسئلة"}</h2>
+              <p className="mt-1 text-xs font-medium leading-5 text-slate-500">التعديل هنا يخص الإصدار المسودة فقط.</p>
+            </div>
             {!readOnly && <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => setReorderMode((current) => !current)} aria-pressed={reorderMode} className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ${reorderMode ? "border-[#986410] bg-[#986410]/10 text-[#986410]" : "border-slate-200 bg-white text-slate-700"}`}><GripVertical className="h-4 w-4" />{reorderMode ? "إنهاء الترتيب" : "ترتيب بالسحب"}</button>
-              <button type="button" onClick={() => setModal({ kind: "variant" })} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-3.5 py-2 text-xs font-bold text-white"><Plus className="h-4 w-4" />إضافة نسخة</button>
+              {!isSingleVariant && <button type="button" onClick={() => setModal({ kind: "variant" })} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-3.5 py-2 text-xs font-bold text-white"><Plus className="h-4 w-4" />إضافة نسخة</button>}
             </div>}
           </div>
           <details className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
             <summary className="cursor-pointer text-sm font-bold text-[#00102e]">كيف يُبنى العقد؟</summary>
             <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3 text-xs font-medium leading-5 text-slate-700 md:grid-cols-3">
-              <div className="rounded-xl bg-slate-50 p-2.5"><span className="font-bold text-[#00102e]">١. نسخة العقد</span><br />مثال: بيع ابتدائي أو إيجار سكني داخل نفس نوع العقد.</div>
-              <div className="rounded-xl bg-slate-50 p-2.5"><span className="font-bold text-[#00102e]">٢. الخطوات</span><br />مثل بيانات الأطراف أو بيانات الوحدة.</div>
-              <div className="rounded-xl bg-slate-50 p-2.5"><span className="font-bold text-[#00102e]">٣. الأسئلة</span><br />البيانات التي يجيب عنها العميل داخل كل خطوة.</div>
+              {isSingleVariant ? (
+                <>
+                  <div className="rounded-xl bg-slate-50 p-2.5"><span className="font-bold text-[#00102e]">١. الخطوات</span><br />أقسام العقد مثل بيانات الأطراف أو بيانات الوحدة/الخدمة.</div>
+                  <div className="rounded-xl bg-slate-50 p-2.5"><span className="font-bold text-[#00102e]">٢. الأسئلة</span><br />البيانات التي يجيب عنها العميل داخل كل خطوة.</div>
+                  <div className="rounded-xl bg-slate-50 p-2.5"><span className="font-bold text-[#00102e]">٣. البنود القانونية</span><br />تُربط بمتغيرات الأسئلة وتُنتج وثيقة العقد النهائية.</div>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-xl bg-slate-50 p-2.5"><span className="font-bold text-[#00102e]">١. نسخة العقد</span><br />مثال: بيع ابتدائي أو إيجار سكني داخل نفس نوع العقد.</div>
+                  <div className="rounded-xl bg-slate-50 p-2.5"><span className="font-bold text-[#00102e]">٢. الخطوات</span><br />مثل بيانات الأطراف أو بيانات الوحدة.</div>
+                  <div className="rounded-xl bg-slate-50 p-2.5"><span className="font-bold text-[#00102e]">٣. الأسئلة</span><br />البيانات التي يجيب عنها العميل داخل كل خطوة.</div>
+                </>
+              )}
             </div>
           </details>
           {reorderMode && !readOnly && <div className="flex items-start gap-3 rounded-2xl border border-[#986410]/30 bg-[#986410]/5 p-4 text-sm font-semibold leading-6 text-slate-700"><GripVertical className="mt-0.5 h-5 w-5 shrink-0 text-[#986410]" /><div><span className="font-black text-[#00102e]">وضع الترتيب مفعّل.</span> اسحب من المقبض لترتيب نسخ العقد، الخطوات والأسئلة. ويمكن استخدام سهمي أعلى/أسفل بعد التركيز على المقبض أو من قائمة «⋯» على الموبايل.</div></div>}
 
           {version.definition.variants.map((variant, variantIndex) => {
-            const expanded = expandedVariants[variant.key] ?? false;
+            const expanded = isSingleVariant ? (expandedVariants[variant.key] ?? true) : (expandedVariants[variant.key] ?? false);
             return (
               <article key={variant.key} onDragOver={(event) => { if (reorderMode && dragItem?.kind === "variant") event.preventDefault(); }} onDrop={(event) => { if (!reorderMode) return; event.preventDefault(); void dropVariant(variantIndex); }} className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition ${reorderMode && dragItem?.kind === "variant" && dragItem.key === variant.key ? "border-[#986410] opacity-60" : "border-slate-200"}`}>
                 <div className="flex flex-col gap-2 bg-slate-50 p-3 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex min-w-0 items-center gap-2">
-                    {reorderMode && !readOnly && <span draggable={!busy} onDragStart={(event) => { event.stopPropagation(); setDragItem({ kind: "variant", key: variant.key, index: variantIndex }); }} onDragEnd={() => setDragItem(null)} onKeyDown={(event) => { if (event.key === "ArrowUp") { event.preventDefault(); void moveVariant(variant, variantIndex, -1); } if (event.key === "ArrowDown") { event.preventDefault(); void moveVariant(variant, variantIndex, 1); } }} role="button" tabIndex={0} title="اسحب أو استخدم الأسهم لتغيير ترتيب نسخة العقد" aria-label={`اسحب لترتيب ${variant.nameAr}`} className="flex h-10 w-10 shrink-0 cursor-grab items-center justify-center rounded-xl border border-[#986410]/30 bg-white text-[#986410] active:cursor-grabbing"><GripVertical className="h-5 w-5" /></span>}
+                    {reorderMode && !readOnly && !isSingleVariant && <span draggable={!busy} onDragStart={(event) => { event.stopPropagation(); setDragItem({ kind: "variant", key: variant.key, index: variantIndex }); }} onDragEnd={() => setDragItem(null)} onKeyDown={(event) => { if (event.key === "ArrowUp") { event.preventDefault(); void moveVariant(variant, variantIndex, -1); } if (event.key === "ArrowDown") { event.preventDefault(); void moveVariant(variant, variantIndex, 1); } }} role="button" tabIndex={0} title="اسحب أو استخدم الأسهم لتغيير ترتيب نسخة العقد" aria-label={`اسحب لترتيب ${variant.nameAr}`} className="flex h-10 w-10 shrink-0 cursor-grab items-center justify-center rounded-xl border border-[#986410]/30 bg-white text-[#986410] active:cursor-grabbing"><GripVertical className="h-5 w-5" /></span>}
                   <button type="button" onClick={() => setExpandedVariants((current) => ({ ...current, [variant.key]: !expanded }))} className="flex min-w-0 items-center gap-3 text-right">
                     {expanded ? <ChevronUp className="h-5 w-5 shrink-0 text-slate-500" /> : <ChevronDown className="h-5 w-5 shrink-0 text-slate-500" />}
                     <div className="min-w-0">
-                      <span className="mb-1 inline-flex rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-slate-500">نسخة عقد #{variantIndex + 1}</span>
+                      <span className={`mb-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${isSingleVariant ? "bg-[#986410]/10 text-[#986410]" : "bg-white text-slate-500"}`}>{isSingleVariant ? "نموذج العقد" : `نسخة عقد #${variantIndex + 1}`}</span>
                       <h3 className="truncate text-[15px] font-bold text-[#00102e]">{variant.nameAr}</h3>
                       <p className="mt-1 text-xs font-medium text-slate-500">{variant.steps.length} خطوة إدخال</p>
                     </div>
@@ -1788,8 +1807,8 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
                   </div>
                   {!readOnly && <div className="flex flex-wrap items-start gap-2">
                     <button type="button" onClick={() => setModal({ kind: "step", variantKey: variant.key })} className="inline-flex items-center gap-1 rounded-xl bg-[#00102e] px-3 py-2 text-xs font-bold text-white"><Plus className="h-3.5 w-3.5" />إضافة خطوة</button>
-                    <button type="button" onClick={() => setModal({ kind: "variant", value: variant })} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold"><Pencil className="h-3.5 w-3.5" />تعديل النسخة</button>
-                    <details className="relative">
+                    {!isSingleVariant && <button type="button" onClick={() => setModal({ kind: "variant", value: variant })} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold"><Pencil className="h-3.5 w-3.5" />تعديل النسخة</button>}
+                    {!isSingleVariant && <details className="relative">
                       <summary className="cursor-pointer list-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 [&::-webkit-details-marker]:hidden">⋯</summary>
                       <div className="absolute left-0 top-full z-30 mt-1 w-44 rounded-xl border border-slate-200 bg-white p-1.5 text-xs font-bold shadow-xl">
                         <button type="button" disabled={variantIndex === 0 || busy} onClick={() => void moveVariant(variant, variantIndex, -1)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"><ArrowUp className="h-4 w-4" />تحريك لأعلى</button>
@@ -1804,7 +1823,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
                           <Trash2 className="h-4 w-4" />حذف النسخة
                         </button>
                       </div>
-                    </details>
+                    </details>}
                   </div>}
                 </div>
                 {expanded && <div className="space-y-3 p-4">
@@ -1889,15 +1908,27 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
 
       {activeTab === "clauses" && (
         <section className="space-y-4">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h2 className="text-lg font-bold text-[#00102e]">البنود القانونية</h2><p className="mt-1 text-xs font-semibold text-slate-500">النص المنشور لا يتغير بأثر رجعي. استخدم المتغيرات بالشكل {"{{field_key}}"}.</p></div>{!readOnly && <button type="button" onClick={() => setModal({ kind: "clause" })} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-3 text-xs font-black text-white"><Plus className="h-4 w-4" />إضافة بند</button>}</div>
-          <VariantClauseSelectionPanel
-            key={version.definition.variants.map((variant) => `${variant.key}:${(variant.requiredClauseKeys ?? []).join("|")}`).join(";")}
-            variants={version.definition.variants}
-            clauses={version.definition.legalClauses ?? []}
-            readOnly={readOnly}
-            busy={busy}
-            onSave={(variant, requiredClauseKeys) => void saveVariantClauseSelection(variant, requiredClauseKeys)}
-          />
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <h2 className="text-lg font-bold text-[#00102e]">البنود القانونية</h2>
+              <p className="mt-1 text-xs font-semibold text-slate-500">
+                {isSingleVariant
+                  ? `بنود ${version.templateNameAr || version.definition.nameAr} (${filteredClauses.length} بند). النص المنشور لا يتغير بأثر رجعي. استخدم المتغيرات بالشكل {{field_key}}.`
+                  : `النص المنشور لا يتغير بأثر رجعي. استخدم المتغيرات بالشكل {{field_key}}.`}
+              </p>
+            </div>
+            {!readOnly && <button type="button" onClick={() => setModal({ kind: "clause" })} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-3 text-xs font-black text-white"><Plus className="h-4 w-4" />إضافة بند</button>}
+          </div>
+          {!isSingleVariant && (
+            <VariantClauseSelectionPanel
+              key={version.definition.variants.map((variant) => `${variant.key}:${(variant.requiredClauseKeys ?? []).join("|")}`).join(";")}
+              variants={version.definition.variants}
+              clauses={version.definition.legalClauses ?? []}
+              readOnly={readOnly}
+              busy={busy}
+              onSave={(variant, requiredClauseKeys) => void saveVariantClauseSelection(variant, requiredClauseKeys)}
+            />
+          )}
           <input value={clauseSearch} onChange={(event: ChangeEvent<HTMLInputElement>) => setClauseSearch(event.target.value)} placeholder="ابحث باسم المادة أو جزء من النص" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#986410]" />
           <div className="space-y-3">{filteredClauses.map((clause) => { const clauseIndex = (version.definition.legalClauses ?? []).findIndex((item) => item.key === clause.key); return <article key={clause.key} className={`rounded-2xl border bg-white p-5 ${clause.enabled === false ? "border-slate-200 opacity-60" : "border-slate-200"}`}><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-black text-[#00102e]">{clause.titleAr}</h3><span className={`rounded-full px-2 py-1 text-xs font-black ${clause.enabled === false ? "bg-slate-100 text-slate-600" : "bg-emerald-100 text-emerald-700"}`}>{clause.enabled === false ? "معطّل" : "مفعّل"}</span></div><details className="mt-1"><summary className="cursor-pointer text-xs font-bold text-slate-500">تفاصيل تقنية</summary><div className="mt-1 font-mono text-xs text-slate-500">{clause.key}</div></details>{clause.sourceDocumentName && <div className="mt-1 text-xs font-bold text-slate-500">المصدر: {clause.sourceDocumentName}{clause.sourcePageStart ? ` — ص ${clause.sourcePageStart}${clause.sourcePageEnd && clause.sourcePageEnd !== clause.sourcePageStart ? ` إلى ${clause.sourcePageEnd}` : ""}` : ""}</div>}</div>{!readOnly && <div className="flex flex-wrap gap-2"><button type="button" disabled={clauseIndex <= 0 || busy} onClick={() => void moveClause(clause, clauseIndex, -1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأعلى" aria-label="تحريك البند لأعلى"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" disabled={clauseIndex < 0 || clauseIndex >= (version.definition.legalClauses?.length ?? 1) - 1 || busy} onClick={() => void moveClause(clause, clauseIndex, 1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأسفل" aria-label="تحريك البند لأسفل"><ArrowDown className="h-3.5 w-3.5" /></button><button type="button" onClick={() => setModal({ kind: "clause", value: clause })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-black"><Pencil className="h-3.5 w-3.5" />تعديل</button>{clause.enabled !== false && <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/clauses/${encodeURIComponent(clause.key)}`, "تم تعطيل البند", `تعطيل البند «${clause.titleAr}» في هذه المسودة؟`)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-black text-red-700">تعطيل</button>}</div>}</div>{clause.guidance && <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-900"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">!</span><span>{clause.guidance}</span></div>}{canEditGuidance && <button type="button" onClick={() => setModal({ kind: "clauseGuidance", value: clause })} className="mt-3 rounded-lg border border-amber-200 px-3 py-2 text-xs font-black text-amber-800">{clause.guidance ? "تعديل الإرشاد" : "إضافة إرشاد (!)"}</button>}<p className="mt-4 whitespace-pre-wrap text-sm leading-8 text-slate-700">{clause.bodyAr}</p></article> })}{!filteredClauses.length && <div className="rounded-2xl bg-slate-50 p-8 text-center text-xs font-bold text-slate-500">لا توجد بنود مطابقة.</div>}</div>
         </section>
@@ -1913,7 +1944,17 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
       {activeTab === "preview" && (
         <section className="space-y-5">
           <div><h2 className="text-lg font-bold text-[#00102e]">معاينة تجريبية قبل النشر</h2><p className="mt-1 text-xs font-semibold text-slate-500">يملأ النظام بيانات تجريبية تلقائيًا ويعرض البنود الناتجة حتى تراجع ترتيبها والمتغيرات الناقصة.</p></div>
-          <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 lg:grid-cols-3"><label className="text-xs font-black text-slate-600">نسخة العقد<select value={previewVariant} onChange={(event: ChangeEvent<HTMLSelectElement>) => { setPreviewVariant(event.target.value); setPreviewOptionals([]); setPreview(null); }} className="mt-2 w-full rounded-xl border border-slate-200 p-3 font-normal">{version.definition.variants.map((variant) => <option key={variant.key} value={variant.key}>{variant.nameAr}</option>)}</select></label><div className="lg:col-span-2"><div className="text-xs font-black text-slate-600">الإضافات المراد اختبارها</div><div className="mt-2 flex flex-wrap gap-2">{version.definition.optionalClauses.filter((optional) => optional.applicableVariantKeys.includes(previewVariant)).map((optional) => <label key={optional.key} className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold"><input type="checkbox" checked={previewOptionals.includes(optional.key)} onChange={(event: ChangeEvent<HTMLInputElement>) => setPreviewOptionals((current) => event.target.checked ? [...current, optional.key] : current.filter((key) => key !== optional.key))} />{optional.nameAr}</label>)}{!version.definition.optionalClauses.some((optional) => optional.applicableVariantKeys.includes(previewVariant)) && <span className="text-xs text-slate-500">لا توجد إضافات لهذه النسخة.</span>}</div></div><div className="lg:col-span-3"><button type="button" disabled={!previewVariant || busy} onClick={() => void generatePreview()} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-[#d7a94f]"><Eye className="h-4 w-4" />إنشاء المعاينة</button></div></div>
+          <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 lg:grid-cols-3">
+            {isSingleVariant ? (
+              <div>
+                <span className="text-xs font-black text-slate-600">نوع العقد المراد معاينته</span>
+                <div className="mt-2 flex h-11 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-[#00102e]">
+                  {version.templateNameAr || version.definition.nameAr}
+                </div>
+              </div>
+            ) : (
+              <label className="text-xs font-black text-slate-600">نسخة العقد<select value={previewVariant} onChange={(event: ChangeEvent<HTMLSelectElement>) => { setPreviewVariant(event.target.value); setPreviewOptionals([]); setPreview(null); }} className="mt-2 w-full rounded-xl border border-slate-200 p-3 font-normal">{version.definition.variants.map((variant) => <option key={variant.key} value={variant.key}>{variant.nameAr}</option>)}</select></label>
+            )}<div className="lg:col-span-2"><div className="text-xs font-black text-slate-600">الإضافات المراد اختبارها</div><div className="mt-2 flex flex-wrap gap-2">{version.definition.optionalClauses.filter((optional) => optional.applicableVariantKeys.includes(previewVariant)).map((optional) => <label key={optional.key} className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold"><input type="checkbox" checked={previewOptionals.includes(optional.key)} onChange={(event: ChangeEvent<HTMLInputElement>) => setPreviewOptionals((current) => event.target.checked ? [...current, optional.key] : current.filter((key) => key !== optional.key))} />{optional.nameAr}</label>)}{!version.definition.optionalClauses.some((optional) => optional.applicableVariantKeys.includes(previewVariant)) && <span className="text-xs text-slate-500">لا توجد إضافات لهذه النسخة.</span>}</div></div><div className="lg:col-span-3"><button type="button" disabled={!previewVariant || busy} onClick={() => void generatePreview()} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-[#d7a94f]"><Eye className="h-4 w-4" />إنشاء المعاينة</button></div></div>
           {preview && <div className="space-y-4">{(preview.missingVariables.length > 0 || preview.missingClauseKeys.length > 0) && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900"><div>بيانات لم تُربط داخل النص: {preview.missingVariables.map((key) => availableClauseFields.find((field) => field.key === key)?.label ?? key).join("، ") || "لا يوجد"}</div><div className="mt-1">بنود غير موجودة: {preview.missingClauseKeys.map((key) => version.definition.legalClauses?.find((clause) => clause.key === key)?.titleAr ?? key).join("، ") || "لا يوجد"}</div></div>}<div className="rounded-2xl border border-slate-200 bg-white p-6">{preview.clauses.map((clause) => <article key={clause.key} className="border-b border-slate-100 py-5 first:pt-0 last:border-b-0 last:pb-0"><h3 className="text-center text-base font-black text-[#00102e]">{clause.titleAr}</h3><p className="mt-3 whitespace-pre-wrap text-justify text-sm leading-8 text-slate-700">{clause.bodyAr}</p></article>)}{!preview.clauses.length && <p className="text-center text-sm font-bold text-slate-500">لم ينتج عن الاختيارات الحالية أي بنود.</p>}</div></div>}
         </section>
       )}
@@ -1922,7 +1963,9 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
         <section className="space-y-5">
           <div><h2 className="text-lg font-bold text-[#00102e]">فحص جاهزية الإصدار</h2><p className="mt-1 text-xs font-semibold text-slate-500">النشر يتوقف تلقائيًا عند وجود أخطاء؛ التحذيرات لا تمنع النشر لكنها تحتاج مراجعة.</p></div>
           <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600">
-            {inspection.stats.variants} نسخ · {inspection.stats.steps} خطوة · {inspection.stats.fields} سؤال · {inspection.stats.legalClauses} بند · {inspection.stats.optionalClauses} إضافة
+            {isSingleVariant
+              ? `${inspection.stats.steps} خطوة · ${inspection.stats.fields} سؤال · ${inspection.stats.legalClauses} بند قانوني · ${inspection.stats.optionalClauses} ملحق اختياري`
+              : `${inspection.stats.variants} نسخ · ${inspection.stats.steps} خطوة · ${inspection.stats.fields} سؤال · ${inspection.stats.legalClauses} بند · ${inspection.stats.optionalClauses} إضافة`}
           </div>
           {!inspection.errors.length && <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800"><CheckCircle2 className="h-6 w-6" /><div><div className="font-black">لا توجد أخطاء تمنع النشر</div><div className="mt-1 text-xs font-semibold">راجع التحذيرات والمعاينة القانونية قبل الاعتماد النهائي.</div></div></div>}
           {!!inspection.errors.length && <div className="space-y-2"><h3 className="font-black text-red-800">أخطاء يجب معالجتها ({inspection.errors.length})</h3>{inspection.errors.map((item, index) => <div key={`${item.code}-${index}`} className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-start"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-700" /><div className="min-w-0 flex-1"><div className="text-sm font-black text-red-900">{item.messageAr}</div><details className="mt-2"><summary className="cursor-pointer text-xs font-bold text-red-700">تفاصيل تقنية</summary><div className="mt-1 break-all font-mono text-xs text-red-500">{item.code} · {item.path}</div></details></div><button type="button" onClick={() => void goToTab(tabForInspectionPath(item.path))} className="shrink-0 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-800">اذهب للمشكلة</button></div>)}</div>}
