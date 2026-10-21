@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   AlertTriangle,
@@ -1725,7 +1725,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
                 {activeTabMeta?.[1]} · {activeTabMeta?.[2]}
               </p>
             </div>
-            <div className="flex gap-1.5 overflow-x-auto pb-1 xl:pb-0">
+            <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-1 xl:pb-0" style={{ scrollbarWidth: "none" }}>
               {tabs.map(([key, label, , icon], index) => {
                 const active = activeTab === key;
                 const hasErrors = key === "validation" && validationErrorCount > 0;
@@ -1734,7 +1734,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
                     key={key}
                     type="button"
                     onClick={() => void goToTab(key)}
-                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-bold transition ${active ? "bg-[#00102e] text-white" : hasErrors ? "bg-red-50 text-red-700 hover:bg-red-100" : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-bold transition-all duration-150 active:scale-95 ${active ? "border border-white/10 bg-[#00102e] text-white shadow-sm ring-1 ring-[#00102e]" : hasErrors ? "border border-red-200/80 bg-red-50 text-red-700 hover:bg-red-100" : "bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900"}`}
                   >
                     <span className={active ? "text-[#d7a94f]" : ""}>{icon}</span>
                     <span>{index + 1}. {label}</span>

@@ -426,7 +426,7 @@ export default function OfficeContractWizard() {
       </div>
 
       {/* Steps Navigation Bar */}
-      <div className="mb-4 flex items-center gap-1.5 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-2xs">
+      <div className="no-scrollbar mb-4 flex items-center gap-1.5 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-2xs" style={{ scrollbarWidth: "none" }}>
         {steps.map((step, idx) => {
           const isCurrent = idx === currentStepIndex;
           const isDone = idx < currentStepIndex;

@@ -384,14 +384,27 @@ export default function TemplatesPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => void load()} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-700" aria-label="تحديث">
-            <RefreshCw className="h-4 w-4" />تحديث
+          <button
+            onClick={() => void load()}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 active:scale-95"
+            aria-label="تحديث"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span>تحديث</span>
           </button>
-          <button onClick={() => setCategoryDialog({ mode: "create" })} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold">
-            <Plus className="h-4 w-4" />إضافة تصنيف
+          <button
+            onClick={() => setCategoryDialog({ mode: "create" })}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 active:scale-95"
+          >
+            <Plus className="h-4 w-4 text-[#986410]" />
+            <span>إضافة تصنيف</span>
           </button>
-          <button onClick={openTemplateDialogForCurrentFilter} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-sm font-bold text-[#d7a94f]">
-            <Plus className="h-4 w-4" />إضافة نوع عقد
+          <button
+            onClick={openTemplateDialogForCurrentFilter}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-[#00102e] px-4 py-2.5 text-xs font-black text-[#d7a94f] shadow-sm transition-all duration-150 hover:bg-[#0a1f4d] hover:shadow-md active:scale-[0.98]"
+          >
+            <Plus className="h-4 w-4" />
+            <span>إضافة نوع عقد</span>
           </button>
         </div>
       </header>
@@ -407,21 +420,37 @@ export default function TemplatesPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedFilter("all")}
-                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition ${selectedFilter === "all" ? "bg-[#00102e] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                  className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all duration-150 active:scale-95 ${
+                    selectedFilter === "all"
+                      ? "bg-[#00102e] text-white shadow-sm"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900"
+                  }`}
                 >
-                  الكل <span className="rounded-full bg-white/20 px-1.5 text-[10px]">{items.length}</span>
+                  <span>الكل</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${selectedFilter === "all" ? "bg-white/20 text-[#d7a94f]" : "bg-white text-slate-600 shadow-2xs"}`}>
+                    {items.length}
+                  </span>
                 </button>
-                {visibleCategories.map((category) => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => setSelectedFilter(`category:${category.id}`)}
-                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition ${selectedFilter === `category:${category.id}` ? "bg-[#986410] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-                  >
-                    {category.nameAr}
-                    <span className="rounded-full bg-white/20 px-1.5 text-[10px]">{category.templatesCount}</span>
-                  </button>
-                ))}
+                {visibleCategories.map((category) => {
+                  const active = selectedFilter === `category:${category.id}`;
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => setSelectedFilter(`category:${category.id}`)}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all duration-150 active:scale-95 ${
+                        active
+                          ? "border border-[#986410]/30 bg-[#00102e] text-[#d7a94f] shadow-sm ring-1 ring-[#986410]/40"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900"
+                      }`}
+                    >
+                      <span>{category.nameAr}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${active ? "bg-[#d7a94f]/20 text-[#d7a94f]" : "bg-white text-slate-600 shadow-2xs"}`}>
+                        {category.templatesCount}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
               <p className="mt-2 text-xs font-medium text-slate-500">
                 {selectedTitle} · ظاهر {filteredItems.length} من {items.length} نوع عقد.

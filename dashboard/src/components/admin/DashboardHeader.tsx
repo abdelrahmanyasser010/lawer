@@ -44,13 +44,25 @@ export default function DashboardHeader() {
         <p className="mt-0.5 text-xs font-bold text-slate-500">تشغيل مكتب المحاماة وإدارة خدمات العملاء</p>
       </div>
       <div className="flex items-center gap-2">
-        <Link href="/notifications" aria-label="الإشعارات" className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600">
+        <Link
+          href="/notifications"
+          aria-label="الإشعارات"
+          className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 hover:text-[#00102e] active:scale-95"
+        >
           <Bell className="h-4 w-4" />
-          {unread > 0 && <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-xs font-black text-white">{unread > 99 ? "99+" : unread}</span>}
+          {unread > 0 && (
+            <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-black text-white shadow-xs">
+              {unread > 99 ? "99+" : unread}
+            </span>
+          )}
         </Link>
         {dashboardFeatures.officeContractCreation && can(staff.role, "contracts.create_office") && (
-          <Link href="/contracts/create" className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-black text-white">
-            <Plus className="h-4 w-4 text-[#986410]" />إنشاء عقد من المكتب
+          <Link
+            href="/contracts/create"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-[#00102e] px-4 py-2.5 text-xs font-black text-white shadow-sm transition-all duration-150 hover:bg-[#0a1f4d] hover:shadow-md active:scale-[0.98]"
+          >
+            <Plus className="h-4 w-4 text-[#d7a94f]" />
+            <span>إنشاء عقد من المكتب</span>
           </Link>
         )}
       </div>
