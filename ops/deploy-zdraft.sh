@@ -48,18 +48,21 @@ pull_source() {
     exit 2
   fi
 
+  local repo_owner
+  repo_owner=$(stat -c '%U' "${SOURCE_REPO}" 2>/dev/null || echo "deploy")
+
   cd "${SOURCE_REPO}"
-  git fetch origin "${BRANCH}"
-  git checkout "${BRANCH}"
+  run_as "${repo_owner}" git fetch origin "${BRANCH}"
+  run_as "${repo_owner}" git checkout "${BRANCH}"
 
   local before after
-  before=$(git rev-parse HEAD)
-  git pull --ff-only origin "${BRANCH}"
-  after=$(git rev-parse HEAD)
+  before=$(run_as "${repo_owner}" git rev-parse HEAD)
+  run_as "${repo_owner}" git pull --ff-only origin "${BRANCH}"
+  after=$(run_as "${repo_owner}" git rev-parse HEAD)
 
   CHANGED_FILES=$(mktemp)
   if [[ "${before}" != "${after}" ]]; then
-    git diff --name-only "${before}" "${after}" > "${CHANGED_FILES}"
+    run_as "${repo_owner}" git diff --name-only "${before}" "${after}" > "${CHANGED_FILES}"
     log "Updated ${BRANCH}: ${before}..${after}"
   else
     : > "${CHANGED_FILES}"
