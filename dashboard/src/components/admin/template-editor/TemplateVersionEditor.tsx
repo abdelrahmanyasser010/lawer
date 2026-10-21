@@ -569,20 +569,54 @@ function OptionalAdvancedVisualBuilder({
   );
 }
 
-function HighlightedClauseBody({ body }: { body: string }) {
+const systemVariableLabels: Record<string, string> = {
+  contract_date: "تاريخ التعاقد",
+  sale_seller_party_definition: "بيانات الطرف الأول (البائع)",
+  sale_buyer_party_definition: "بيانات الطرف الثاني (المشتري)",
+  rental_landlord_party_definition: "بيانات الطرف الأول (المؤجر)",
+  rental_tenant_party_definition: "بيانات الطرف الثاني (المستأجر)",
+  services_client_party_definition: "بيانات الطرف الأول (العميل)",
+  services_provider_party_definition: "بيانات الطرف الثاني (مقدم الخدمة)",
+  preliminary_garage_scope_text: "بيان الجراج والموقف",
+  sale_delivery_rule_text: "شروط موعد التسليم",
+  sale_inspection_ack_text: "إقرار المعاينة النافية للجهالة",
+  sale_occupancy_status_text: "حالة إشغال الوحدة",
+  preliminary_disposition_tax_payer_text: "المسؤول عن ضريبة التصرفات العقارية",
+  preliminary_reconciliation_legal_text: "الموقف من التصالح وقانون البناء",
+  sale_property_jurisdiction_text: "المحكمة المختصة بنظر النزاع",
+  sale_full_payment_clause: "بند سداد الثمن بالكامل",
+  preliminary_installment_payment_clause: "بند سداد الأقساط",
+  sale_installment_rescission_penalty_clause: "بند الشرط الجزائي عند التخلف عن السداد",
+  sale_full_delivery_clause: "بند تسليم الوحدة الفوري",
+  sale_installment_delivery_clause: "بند تسليم الوحدة بالتقسيط",
+  sale_occupied_unit_clause: "بند حالة إشغال العين",
+  preliminary_contractual_penalty_clause: "بند الشرط الجزائي والتعويض الاتفاقي",
+  sale_email_notice_clause: "بند الإخطار عبر البريد الإلكتروني",
+  sale_messaging_clause: "بند الإخطار عبر المراسلات",
+};
+
+function humanizeVariableKey(key: string, fieldMap?: Map<string, string>): string {
+  if (fieldMap?.has(key)) return fieldMap.get(key)!;
+  if (systemVariableLabels[key]) return systemVariableLabels[key];
+  return key;
+}
+
+function HighlightedClauseBody({ body, fieldMap }: { body: string; fieldMap?: Map<string, string> }) {
   const parts = body.split(/(\{\{[a-zA-Z0-9_]+\}\})/g);
   return (
     <p className="mt-4 whitespace-pre-wrap text-sm leading-8 text-slate-700">
       {parts.map((part, i) => {
         if (part.startsWith("{{") && part.endsWith("}}")) {
+          const key = part.slice(2, -2);
+          const friendlyLabel = humanizeVariableKey(key, fieldMap);
           return (
             <span
               key={i}
-              className="mx-1 inline-flex items-center rounded-lg border border-[#986410]/30 bg-[#986410]/10 px-2 py-0.5 font-mono text-xs font-bold text-[#986410]"
-              dir="ltr"
-              title="متغير ديناميكي يُستبدل تلقائيًا بإجابة العميل"
+              className="mx-1 inline-flex items-center gap-1 rounded-lg border border-[#986410]/40 bg-[#986410]/15 px-2.5 py-0.5 text-xs font-bold text-[#00102e] shadow-2xs transition hover:bg-[#986410]/25"
+              title={`المفتاح التقني: {{${key}}}`}
             >
-              {part}
+              <span className="text-[#986410] font-black">•</span>
+              <span>{friendlyLabel}</span>
             </span>
           );
         }
@@ -1289,133 +1323,67 @@ function VersionWorkflowStepper({
   const isPublished = status === "published";
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="grid flex-1 gap-2 sm:grid-cols-3">
-          <div
-            className={`flex items-center gap-3 rounded-xl p-3 transition ${
-              isDraft
-                ? "border border-[#986410]/30 bg-[#986410]/5 ring-1 ring-[#986410]/20"
-                : isReview || isPublished
-                ? "border border-emerald-200/80 bg-emerald-50/50 text-emerald-900"
-                : "border border-slate-100 bg-slate-50 text-slate-400"
-            }`}
-          >
-            <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
-                isDraft
-                  ? "bg-[#00102e] text-[#d7a94f]"
-                  : isReview || isPublished
-                  ? "bg-emerald-600 text-white"
-                  : "bg-slate-200 text-slate-500"
-              }`}
-            >
-              {isReview || isPublished ? "✓" : "١"}
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-black text-[#00102e]">١. مسودة قيد التحرير</div>
-              <div className="truncate text-[11px] font-medium text-slate-500">
-                {isDraft ? "أنت هنا: عدّل الأسئلة والمواد" : "تم الانتهاء من التحرير"}
-              </div>
-            </div>
-          </div>
-
-          <div
-            className={`flex items-center gap-3 rounded-xl p-3 transition ${
-              isReview
-                ? "border border-blue-300 bg-blue-50 ring-1 ring-blue-300"
-                : isPublished
-                ? "border border-emerald-200/80 bg-emerald-50/50 text-emerald-900"
-                : "border border-slate-100 bg-slate-50 text-slate-400"
-            }`}
-          >
-            <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
-                isReview
-                  ? "bg-blue-700 text-white"
-                  : isPublished
-                  ? "bg-emerald-600 text-white"
-                  : "bg-slate-200 text-slate-500"
-              }`}
-            >
-              {isPublished ? "✓" : "٢"}
-            </div>
-            <div className="min-w-0">
-              <div className={`text-xs font-black ${isReview ? "text-blue-900" : isPublished ? "text-emerald-900" : "text-slate-600"}`}>
-                ٢. التدقيق والمراجعة
-              </div>
-              <div className="truncate text-[11px] font-medium text-slate-500">
-                {isReview ? "أنت هنا: مراجعة الصياغة القانونية" : isPublished ? "تمت المراجعة والاعتماد" : "بعد انتهاء المسودة"}
-              </div>
-            </div>
-          </div>
-
-          <div
-            className={`flex items-center gap-3 rounded-xl p-3 transition ${
-              isPublished
-                ? "border border-emerald-300 bg-emerald-50 ring-1 ring-emerald-300 text-emerald-950"
-                : "border border-slate-100 bg-slate-50 text-slate-400"
-            }`}
-          >
-            <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
-                isPublished ? "bg-emerald-700 text-white" : "bg-slate-200 text-slate-500"
-              }`}
-            >
-              ٣
-            </div>
-            <div className="min-w-0">
-              <div className={`text-xs font-black ${isPublished ? "text-emerald-950" : "text-slate-600"}`}>
-                ٣. معتمد ومنشور للجمهور
-              </div>
-              <div className="truncate text-[11px] font-medium text-slate-500">
-                {isPublished ? "الإصدار الحي النشط حالياً" : "يصبح متاحاً للعملاء"}
-              </div>
-            </div>
-          </div>
+    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-2xs sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-bold text-slate-500">مسار الاعتماد:</span>
+        <div className="flex items-center gap-1.5 text-xs font-bold">
+          <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 ${isDraft ? "border border-[#986410]/40 bg-[#986410]/10 text-[#00102e]" : isReview || isPublished ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-400"}`}>
+            <span>{isReview || isPublished ? "✓" : "١"}</span>
+            <span>مسودة</span>
+          </span>
+          <span className="text-slate-300">←</span>
+          <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 ${isReview ? "border border-blue-400 bg-blue-50 text-blue-900" : isPublished ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-400"}`}>
+            <span>{isPublished ? "✓" : "٢"}</span>
+            <span>مراجعة</span>
+          </span>
+          <span className="text-slate-300">←</span>
+          <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 ${isPublished ? "border border-emerald-400 bg-emerald-50 text-emerald-950 font-black" : "bg-slate-100 text-slate-400"}`}>
+            <span>٣</span>
+            <span>منشور معتمد</span>
+          </span>
         </div>
+      </div>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {isDraft && canEdit && (
+      <div className="flex items-center gap-2">
+        {isDraft && canEdit && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onGoToValidation}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#00102e] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#0a1f4d] active:scale-95 disabled:opacity-50"
+          >
+            <ClipboardCheck className="h-3.5 w-3.5 text-[#d7a94f]" />
+            <span>فحص الجاهزية</span>
+            {validationErrorCount > 0 && (
+              <span className="rounded-full bg-red-600 px-1.5 py-0.2 text-[10px] text-white">
+                {validationErrorCount}
+              </span>
+            )}
+          </button>
+        )}
+
+        {isReview && canPublish && (
+          <>
             <button
               type="button"
               disabled={busy}
-              onClick={onGoToValidation}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#0a1f4d] active:scale-95 disabled:opacity-50"
+              onClick={onReturnReview}
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
             >
-              <ClipboardCheck className="h-4 w-4 text-[#d7a94f]" />
-              <span>جاهز للمراجعة؟ فحص الجاهزية</span>
-              {validationErrorCount > 0 && (
-                <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">
-                  {validationErrorCount}
-                </span>
-              )}
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>إعادة للمسودة</span>
             </button>
-          )}
-
-          {isReview && canPublish && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onReturnReview}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span>إعادة للمسودة للتعديل</span>
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onPublish}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-800 active:scale-95"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                <span>اعتماد ونشر للجمهور الآن</span>
-              </button>
-            </div>
-          )}
-        </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onPublish}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 active:scale-95"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>اعتماد ونشر للجمهور</span>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1491,15 +1459,24 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
   const availableClauseFields = useMemo(() => {
     if (!version) return [];
     const seen = new Set<string>();
+    const isSingle = version.definition.variants.length <= 1;
     return version.definition.variants.flatMap((variant) => variant.steps.flatMap((step) => step.fields.map((field) => ({
       key: field.key,
-      label: `${variant.nameAr} — ${step.titleAr} — ${field.labelAr}`,
+      label: isSingle ? `${step.titleAr}: ${field.labelAr}` : `${variant.nameAr} — ${step.titleAr} — ${field.labelAr}`,
+      stepTitle: step.titleAr,
+      fieldLabel: field.labelAr,
     })))).filter((field) => {
       if (seen.has(field.key)) return false;
       seen.add(field.key);
       return true;
     });
   }, [version]);
+
+  const fieldLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    availableClauseFields.forEach((f) => map.set(f.key, f.fieldLabel || f.label));
+    return map;
+  }, [availableClauseFields]);
 
   async function goToTab(nextTab: TabKey) {
     if (nextTab === activeTab) return;
@@ -2206,7 +2183,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
             />
           )}
           <input value={clauseSearch} onChange={(event: ChangeEvent<HTMLInputElement>) => setClauseSearch(event.target.value)} placeholder="ابحث باسم المادة أو جزء من النص" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#986410]" />
-          <div className="space-y-3">{filteredClauses.map((clause) => { const clauseIndex = (version.definition.legalClauses ?? []).findIndex((item) => item.key === clause.key); return <article key={clause.key} className={`rounded-2xl border bg-white p-5 ${clause.enabled === false ? "border-slate-200 opacity-60" : "border-slate-200"}`}><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-black text-[#00102e]">{clause.titleAr}</h3><span className={`rounded-full px-2 py-1 text-xs font-black ${clause.enabled === false ? "bg-slate-100 text-slate-600" : "bg-emerald-100 text-emerald-700"}`}>{clause.enabled === false ? "معطّل" : "مفعّل"}</span></div><details className="mt-1"><summary className="cursor-pointer text-xs font-bold text-slate-500">تفاصيل تقنية</summary><div className="mt-1 font-mono text-xs text-slate-500">{clause.key}</div></details>{clause.sourceDocumentName && <div className="mt-1 text-xs font-bold text-slate-500">المصدر: {clause.sourceDocumentName}{clause.sourcePageStart ? ` — ص ${clause.sourcePageStart}${clause.sourcePageEnd && clause.sourcePageEnd !== clause.sourcePageStart ? ` إلى ${clause.sourcePageEnd}` : ""}` : ""}</div>}</div>{!readOnly && <div className="flex flex-wrap gap-2"><button type="button" disabled={clauseIndex <= 0 || busy} onClick={() => void moveClause(clause, clauseIndex, -1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأعلى" aria-label="تحريك البند لأعلى"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" disabled={clauseIndex < 0 || clauseIndex >= (version.definition.legalClauses?.length ?? 1) - 1 || busy} onClick={() => void moveClause(clause, clauseIndex, 1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأسفل" aria-label="تحريك البند لأسفل"><ArrowDown className="h-3.5 w-3.5" /></button><button type="button" onClick={() => setModal({ kind: "clause", value: clause })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-black"><Pencil className="h-3.5 w-3.5" />تعديل</button>{clause.enabled !== false && <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/clauses/${encodeURIComponent(clause.key)}`, "تم تعطيل البند", `تعطيل البند «${clause.titleAr}» في هذه المسودة؟`)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-black text-red-700">تعطيل</button>}</div>}</div>{clause.guidance && <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-900"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">!</span><span>{clause.guidance}</span></div>}{canEditGuidance && <button type="button" onClick={() => setModal({ kind: "clauseGuidance", value: clause })} className="mt-3 rounded-lg border border-amber-200 px-3 py-2 text-xs font-black text-amber-800">{clause.guidance ? "تعديل الإرشاد" : "إضافة إرشاد (!)"}</button>}<HighlightedClauseBody body={clause.bodyAr} /></article> })}{!filteredClauses.length && <div className="rounded-2xl bg-slate-50 p-8 text-center text-xs font-bold text-slate-500">لا توجد بنود مطابقة.</div>}</div>
+          <div className="space-y-3">{filteredClauses.map((clause) => { const clauseIndex = (version.definition.legalClauses ?? []).findIndex((item) => item.key === clause.key); return <article key={clause.key} className={`rounded-2xl border bg-white p-5 ${clause.enabled === false ? "border-slate-200 opacity-60" : "border-slate-200"}`}><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-black text-[#00102e]">{clause.titleAr}</h3><span className={`rounded-full px-2 py-1 text-xs font-black ${clause.enabled === false ? "bg-slate-100 text-slate-600" : "bg-emerald-100 text-emerald-700"}`}>{clause.enabled === false ? "معطّل" : "مفعّل"}</span></div><details className="mt-1"><summary className="cursor-pointer text-xs font-bold text-slate-500">تفاصيل تقنية</summary><div className="mt-1 font-mono text-xs text-slate-500">{clause.key}</div></details>{clause.sourceDocumentName && <div className="mt-1 text-xs font-bold text-slate-500">المصدر: {clause.sourceDocumentName}{clause.sourcePageStart ? ` — ص ${clause.sourcePageStart}${clause.sourcePageEnd && clause.sourcePageEnd !== clause.sourcePageStart ? ` إلى ${clause.sourcePageEnd}` : ""}` : ""}</div>}</div>{!readOnly && <div className="flex flex-wrap gap-2"><button type="button" disabled={clauseIndex <= 0 || busy} onClick={() => void moveClause(clause, clauseIndex, -1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأعلى" aria-label="تحريك البند لأعلى"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" disabled={clauseIndex < 0 || clauseIndex >= (version.definition.legalClauses?.length ?? 1) - 1 || busy} onClick={() => void moveClause(clause, clauseIndex, 1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأسفل" aria-label="تحريك البند لأسفل"><ArrowDown className="h-3.5 w-3.5" /></button><button type="button" onClick={() => setModal({ kind: "clause", value: clause })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-black"><Pencil className="h-3.5 w-3.5" />تعديل</button>{clause.enabled !== false && <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/clauses/${encodeURIComponent(clause.key)}`, "تم تعطيل البند", `تعطيل البند «${clause.titleAr}» في هذه المسودة؟`)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-black text-red-700">تعطيل</button>}</div>}</div>{clause.guidance && <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-900"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">!</span><span>{clause.guidance}</span></div>}{canEditGuidance && <button type="button" onClick={() => setModal({ kind: "clauseGuidance", value: clause })} className="mt-3 rounded-lg border border-amber-200 px-3 py-2 text-xs font-black text-amber-800">{clause.guidance ? "تعديل الإرشاد" : "إضافة إرشاد (!)"}</button>}<HighlightedClauseBody body={clause.bodyAr} fieldMap={fieldLabelMap} /></article> })}{!filteredClauses.length && <div className="rounded-2xl bg-slate-50 p-8 text-center text-xs font-bold text-slate-500">لا توجد بنود مطابقة.</div>}</div>
         </section>
       )}
 
@@ -2231,7 +2208,82 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
             ) : (
               <label className="text-xs font-black text-slate-600">نسخة العقد<select value={previewVariant} onChange={(event: ChangeEvent<HTMLSelectElement>) => { setPreviewVariant(event.target.value); setPreviewOptionals([]); setPreview(null); }} className="mt-2 w-full rounded-xl border border-slate-200 p-3 font-normal">{version.definition.variants.map((variant) => <option key={variant.key} value={variant.key}>{variant.nameAr}</option>)}</select></label>
             )}<div className="lg:col-span-2"><div className="text-xs font-black text-slate-600">الإضافات المراد اختبارها</div><div className="mt-2 flex flex-wrap gap-2">{version.definition.optionalClauses.filter((optional) => optional.applicableVariantKeys.includes(previewVariant)).map((optional) => <label key={optional.key} className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold"><input type="checkbox" checked={previewOptionals.includes(optional.key)} onChange={(event: ChangeEvent<HTMLInputElement>) => setPreviewOptionals((current) => event.target.checked ? [...current, optional.key] : current.filter((key) => key !== optional.key))} />{optional.nameAr}</label>)}{!version.definition.optionalClauses.some((optional) => optional.applicableVariantKeys.includes(previewVariant)) && <span className="text-xs text-slate-500">لا توجد إضافات لهذه النسخة.</span>}</div></div><div className="lg:col-span-3"><button type="button" disabled={!previewVariant || busy} onClick={() => void generatePreview()} className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-[#d7a94f]"><Eye className="h-4 w-4" />إنشاء المعاينة</button></div></div>
-          {preview && <div className="space-y-4">{(preview.missingVariables.length > 0 || preview.missingClauseKeys.length > 0) && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900"><div>بيانات لم تُربط داخل النص: {preview.missingVariables.map((key) => availableClauseFields.find((field) => field.key === key)?.label ?? key).join("، ") || "لا يوجد"}</div><div className="mt-1">بنود غير موجودة: {preview.missingClauseKeys.map((key) => version.definition.legalClauses?.find((clause) => clause.key === key)?.titleAr ?? key).join("، ") || "لا يوجد"}</div></div>}<div className="rounded-2xl border border-slate-200 bg-white p-6">{preview.clauses.map((clause) => <article key={clause.key} className="border-b border-slate-100 py-5 first:pt-0 last:border-b-0 last:pb-0"><h3 className="text-center text-base font-black text-[#00102e]">{clause.titleAr}</h3><p className="mt-3 whitespace-pre-wrap text-justify text-sm leading-8 text-slate-700">{clause.bodyAr}</p></article>)}{!preview.clauses.length && <p className="text-center text-sm font-bold text-slate-500">لم ينتج عن الاختيارات الحالية أي بنود.</p>}</div></div>}
+          {preview && (
+            <div className="space-y-4">
+              {(preview.missingVariables.length > 0 || preview.missingClauseKeys.length > 0) && (
+                <div className="rounded-2xl border border-amber-300 bg-amber-50/80 p-5 shadow-xs">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-xs">
+                        <AlertTriangle className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-amber-950">
+                          تنبيه تدقيق: أسئلة يجيب عنها العميل ولكن إجابتها لا تظهر في صلب العقد ({preview.missingVariables.length})
+                        </h4>
+                        <p className="mt-1 text-xs font-semibold leading-5 text-amber-800/90">
+                          هذه البيانات يملؤها العميل في النموذج ولكن نصوص المواد القانونية أدناه لا تحتوي على الكود الخاص بها. إذا كانت ضرورية داخل العقد، اضغط على زر الصياغة لإدراجها.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void goToTab("clauses")}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3.5 py-2 text-xs font-bold text-amber-900 shadow-2xs hover:bg-amber-100/60 active:scale-95"
+                    >
+                      <span>الانتقال لصياغة العقد</span>
+                      <span>←</span>
+                    </button>
+                  </div>
+
+                  {preview.missingVariables.length > 0 && (
+                    <div className="mt-4 border-t border-amber-200/60 pt-3">
+                      <div className="mb-2 text-xs font-bold text-amber-900">البيانات غير المدرجة في نصوص المواد:</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {preview.missingVariables.map((key) => {
+                          const label = humanizeVariableKey(key, fieldLabelMap);
+                          return (
+                            <span
+                              key={key}
+                              className="inline-flex items-center gap-1 rounded-lg border border-amber-300/80 bg-white px-2.5 py-1 text-xs font-bold text-amber-950 shadow-2xs"
+                              title={`المفتاح التقني: {{${key}}}`}
+                            >
+                              <span className="text-amber-600 font-bold">•</span>
+                              <span>{label}</span>
+                              <span className="font-mono text-[10px] text-amber-600/70" dir="ltr">({`{{${key}}}`})</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {preview.missingClauseKeys.length > 0 && (
+                    <div className="mt-3 border-t border-amber-200/60 pt-3">
+                      <div className="mb-2 text-xs font-bold text-amber-900">بنود مطلوبة مفقودة:</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {preview.missingClauseKeys.map((key) => (
+                          <span key={key} className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-800">
+                            {version.definition.legalClauses?.find((c) => c.key === key)?.titleAr ?? key}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                {preview.clauses.map((clause) => (
+                  <article key={clause.key} className="border-b border-slate-100 py-5 first:pt-0 last:border-b-0 last:pb-0">
+                    <h3 className="text-center text-base font-black text-[#00102e]">{clause.titleAr}</h3>
+                    <HighlightedClauseBody body={clause.bodyAr} fieldMap={fieldLabelMap} />
+                  </article>
+                ))}
+                {!preview.clauses.length && <p className="text-center text-sm font-bold text-slate-500">لم ينتج عن الاختيارات الحالية أي بنود.</p>}
+              </div>
+            </div>
+          )}
         </section>
       )}
 

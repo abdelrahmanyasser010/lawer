@@ -56,7 +56,7 @@ export default function DashboardHeader() {
             </span>
           )}
         </Link>
-        {dashboardFeatures.officeContractCreation && can(staff.role, "contracts.create_office") && (
+        {!pathname.startsWith("/templates/versions/") && dashboardFeatures.officeContractCreation && can(staff.role, "contracts.create_office") && (
           <Link
             href="/contracts/create"
             className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-[#00102e] px-4 py-2.5 text-xs font-black text-white shadow-sm transition-all duration-150 hover:bg-[#0a1f4d] hover:shadow-md active:scale-[0.98]"

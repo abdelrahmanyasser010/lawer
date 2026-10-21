@@ -233,16 +233,18 @@ export default function ReadinessEditor({ variants, readOnly, busy, onDirtyChang
           </div>
           <p className="mt-1 text-sm font-semibold leading-7 text-slate-500">اضبط صفحة التجهيز التي تظهر قبل تعبئة العقد. كل نوع عقد له صفحة مستقلة ومعاينة مباشرة.</p>
         </div>
-        <label className="min-w-72 text-sm font-black text-slate-700">
-          اختر نوع العقد
-          <select value={variantKey} onChange={(event) => {
-            const nextKey = event.target.value;
-            if (dirty && !window.confirm("لديك تغييرات غير محفوظة في هذا النوع. هل تريد الانتقال بدون حفظها؟")) return;
-            setVariantKey(nextKey);
-          }} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-[#00102e]" disabled={busy}>
-            {variants.map((variant) => <option key={variant.key} value={variant.key}>{variant.nameAr}</option>)}
-          </select>
-        </label>
+        {variants.length > 1 && (
+          <label className="min-w-72 text-sm font-black text-slate-700">
+            اختر نوع العقد
+            <select value={variantKey} onChange={(event) => {
+              const nextKey = event.target.value;
+              if (dirty && !window.confirm("لديك تغييرات غير محفوظة في هذا النوع. هل تريد الانتقال بدون حفظها؟")) return;
+              setVariantKey(nextKey);
+            }} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-[#00102e]" disabled={busy}>
+              {variants.map((variant) => <option key={variant.key} value={variant.key}>{variant.nameAr}</option>)}
+            </select>
+          </label>
+        )}
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
@@ -252,14 +254,14 @@ export default function ReadinessEditor({ variants, readOnly, busy, onDirtyChang
               <h3 className="text-lg font-black text-[#00102e]">نصوص أعلى الصفحة</h3>
               <p className="mt-1 text-sm font-semibold text-slate-500">هذه أول رسائل يقرأها العميل قبل بدء العقد.</p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-black text-slate-700">
+            <div className="space-y-4">
+              <label className="block text-sm font-black text-slate-700">
                 عنوان الصفحة
                 <input value={draft.titleAr ?? ""} onChange={(event) => setDraft((current) => ({ ...current, titleAr: event.target.value }))} disabled={readOnly} className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal outline-none focus:border-[#986410]" />
               </label>
-              <label className="text-sm font-black text-slate-700">
-                وصف مختصر
-                <textarea value={draft.description ?? ""} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} disabled={readOnly} rows={2} className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-sm font-normal leading-7 outline-none focus:border-[#986410]" />
+              <label className="block text-sm font-black text-slate-700">
+                وصف وإرشادات ما قبل البدء للعميل
+                <textarea value={draft.description ?? ""} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} disabled={readOnly} rows={4} className="mt-2 w-full rounded-xl border border-slate-200 p-3.5 text-sm font-normal leading-7 outline-none focus:border-[#986410]" placeholder="اكتب التوجيهات أو المستندات الأساسية التي يجب أن يجهزها العميل..." />
               </label>
             </div>
           </div>
