@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  KeyRound,
   Laptop2,
   LogOut,
   Save,
@@ -153,7 +152,7 @@ export default function AccountPage() {
       <div className="mt-6 grid gap-5 lg:grid-cols-2">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#00102e] text-sm font-black text-[#986410]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#d7a94f] to-[#986410] text-sm font-black text-[#00102e] shadow-sm">
               {staff.name[0]}
             </div>
 
@@ -222,9 +221,9 @@ export default function AccountPage() {
               !confirmPassword
             }
             onClick={() => void changePassword()}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-black text-white disabled:opacity-50"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-[#00102e] px-5 py-2.5 text-xs font-black text-[#d7a94f] shadow-sm transition-all duration-150 hover:bg-[#0a1f4d] hover:shadow-md active:scale-[0.98] disabled:opacity-40"
           >
-            <Save className="h-4 w-4 text-[#986410]" />
+            <Save className="h-4 w-4 text-[#d7a94f]" />
             {loading ? "جاري الحفظ..." : "تغيير كلمة المرور"}
           </button>
         </section>
@@ -307,12 +306,6 @@ export default function AccountPage() {
                 لا توجد جلسات فعالة ظاهرة.
               </div>
             )}
-          </div>
-
-          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-900">
-            <KeyRound className="ml-1 inline h-4 w-4" />
-            الأساس مجهز لإضافة 2FA لاحقًا لحساب السوبر أدمن دون تغيير نظام
-            الجلسات.
           </div>
         </section>
       </div>
