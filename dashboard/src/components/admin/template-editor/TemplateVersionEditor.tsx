@@ -569,6 +569,29 @@ function OptionalAdvancedVisualBuilder({
   );
 }
 
+function HighlightedClauseBody({ body }: { body: string }) {
+  const parts = body.split(/(\{\{[a-zA-Z0-9_]+\}\})/g);
+  return (
+    <p className="mt-4 whitespace-pre-wrap text-sm leading-8 text-slate-700">
+      {parts.map((part, i) => {
+        if (part.startsWith("{{") && part.endsWith("}}")) {
+          return (
+            <span
+              key={i}
+              className="mx-1 inline-flex items-center rounded-lg border border-[#986410]/30 bg-[#986410]/10 px-2 py-0.5 font-mono text-xs font-bold text-[#986410]"
+              dir="ltr"
+              title="متغير ديناميكي يُستبدل تلقائيًا بإجابة العميل"
+            >
+              {part}
+            </span>
+          );
+        }
+        return part;
+      })}
+    </p>
+  );
+}
+
 function ClauseSettingsForm({
   clause,
   availableFields,
@@ -577,18 +600,19 @@ function ClauseSettingsForm({
   onSubmit,
 }: {
   clause?: LegalClauseDefinition;
-  availableFields: Array<{ key: string; label: string }>;
+  availableFields: Array<{ key: string; label: string; stepTitle?: string; fieldLabel?: string }>;
   busy: boolean;
   onCancel: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const [body, setBody] = useState(clause?.bodyAr ?? "");
   const [selectedFieldKey, setSelectedFieldKey] = useState("");
+  const [fieldSearch, setFieldSearch] = useState("");
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
-  function insertVariable() {
-    if (!selectedFieldKey) return;
-    const token = `{{${selectedFieldKey}}}`;
+  function insertVariableKey(key: string) {
+    if (!key) return;
+    const token = `{{${key}}}`;
     const element = bodyRef.current;
     const start = element?.selectionStart ?? body.length;
     const end = element?.selectionEnd ?? body.length;
@@ -600,6 +624,34 @@ function ClauseSettingsForm({
       bodyRef.current?.setSelectionRange(cursor, cursor);
     });
   }
+
+  function insertVariable() {
+    insertVariableKey(selectedFieldKey);
+  }
+
+  const detectedTokens = useMemo(() => {
+    const matches = Array.from(body.matchAll(/\{\{([a-zA-Z0-9_]+)\}\}/g));
+    const keys = Array.from(new Set(matches.map((m) => m[1])));
+    return keys.map((key) => {
+      const found = availableFields.find((f) => f.key === key);
+      return {
+        key,
+        label: found ? (found.fieldLabel || found.label) : null,
+        isValid: Boolean(found),
+      };
+    });
+  }, [body, availableFields]);
+
+  const filteredPills = useMemo(() => {
+    const q = fieldSearch.trim().toLowerCase();
+    if (!q) return availableFields;
+    return availableFields.filter((f) =>
+      (f.label || "").toLowerCase().includes(q) ||
+      (f.key || "").toLowerCase().includes(q) ||
+      (f.fieldLabel || "").toLowerCase().includes(q) ||
+      (f.stepTitle || "").toLowerCase().includes(q)
+    );
+  }, [availableFields, fieldSearch]);
 
   return (
     <form onSubmit={onSubmit} className="space-y-5 bg-slate-50/70 p-5">
@@ -613,16 +665,63 @@ function ClauseSettingsForm({
           <textarea ref={bodyRef} name="bodyAr" required rows={14} value={body} onChange={(event) => setBody(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-4 text-sm leading-8 font-normal" placeholder="اكتب نص البند هنا." />
         </FieldInputLabel>
 
+        {detectedTokens.length > 0 && (
+          <div className="rounded-xl border border-slate-200 bg-white p-3.5">
+            <div className="text-xs font-bold text-slate-700">المتغيرات المربوطة حاليًا في نص هذه المادة ({detectedTokens.length}):</div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {detectedTokens.map((tok) => (
+                <span
+                  key={tok.key}
+                  className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold ${
+                    tok.isValid
+                      ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+                      : "border border-red-200 bg-red-50 text-red-800"
+                  }`}
+                >
+                  <span>{tok.isValid ? "✓" : "⚠"}</span>
+                  <span>{tok.label || tok.key}</span>
+                  <span className="font-mono text-[10px] opacity-70">({`{{${tok.key}}}`})</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {availableFields.length > 0 && (
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="text-sm font-black text-[#00102e]">إدراج بيانات من إجابات العميل</div>
-            <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">ضع المؤشر في مكان البيانات داخل النص، اختر السؤال، ثم اضغط إدراج.</p>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-              <select value={selectedFieldKey} onChange={(event) => setSelectedFieldKey(event.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal">
-                <option value="">اختر بيانات العميل...</option>
-                {availableFields.map((field) => <option key={field.key} value={field.key}>{field.label}</option>)}
-              </select>
-              <button type="button" disabled={!selectedFieldKey} onClick={insertVariable} className="rounded-xl bg-[#00102e] px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">إدراج في النص</button>
+            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+              <div>
+                <div className="text-sm font-black text-[#00102e]">إدراج بيانات من أسئلة العقد بنقرة واحدة</div>
+                <p className="mt-0.5 text-xs font-medium leading-5 text-slate-500">اضغط على أي سؤال لإدراجه تلقائيًا في مكان مؤشر الكتابة داخل المادة.</p>
+              </div>
+              <input
+                type="text"
+                value={fieldSearch}
+                onChange={(e) => setFieldSearch(e.target.value)}
+                placeholder="ابحث في الأسئلة..."
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-[#986410] focus:bg-white sm:w-56"
+              />
+            </div>
+
+            <div className="no-scrollbar mt-3 flex max-h-48 flex-wrap gap-1.5 overflow-y-auto p-1">
+              {filteredPills.map((field) => (
+                <button
+                  key={field.key}
+                  type="button"
+                  onClick={() => insertVariableKey(field.key)}
+                  className="group inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 transition hover:border-[#986410] hover:bg-[#986410]/10 hover:text-[#00102e] active:scale-95"
+                  title={`إدراج {{${field.key}}} في النص`}
+                >
+                  <span className="text-[#986410] group-hover:scale-110 font-black">+</span>
+                  <span>{field.fieldLabel || field.label}</span>
+                  {field.stepTitle && (
+                    <span className="text-[10px] font-normal text-slate-400">({field.stepTitle})</span>
+                  )}
+                </button>
+              ))}
+              {filteredPills.length === 0 && (
+                <div className="py-2 text-xs text-slate-400">لا توجد أسئلة مطابقة للبحث.</div>
+              )}
             </div>
           </div>
         )}
@@ -1164,6 +1263,164 @@ function FieldBadge({ field }: { field: WizardFieldDefinition }) {
   );
 }
 
+function VersionWorkflowStepper({
+  status,
+  versionNumber,
+  onGoToValidation,
+  canEdit,
+  canPublish,
+  busy,
+  validationErrorCount,
+  onPublish,
+  onReturnReview,
+}: {
+  status: string;
+  versionNumber: number;
+  onGoToValidation: () => void;
+  canEdit: boolean;
+  canPublish: boolean;
+  busy: boolean;
+  validationErrorCount: number;
+  onPublish: () => void;
+  onReturnReview: () => void;
+}) {
+  const isDraft = status === "draft";
+  const isReview = status === "legal_review";
+  const isPublished = status === "published";
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="grid flex-1 gap-2 sm:grid-cols-3">
+          <div
+            className={`flex items-center gap-3 rounded-xl p-3 transition ${
+              isDraft
+                ? "border border-[#986410]/30 bg-[#986410]/5 ring-1 ring-[#986410]/20"
+                : isReview || isPublished
+                ? "border border-emerald-200/80 bg-emerald-50/50 text-emerald-900"
+                : "border border-slate-100 bg-slate-50 text-slate-400"
+            }`}
+          >
+            <div
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+                isDraft
+                  ? "bg-[#00102e] text-[#d7a94f]"
+                  : isReview || isPublished
+                  ? "bg-emerald-600 text-white"
+                  : "bg-slate-200 text-slate-500"
+              }`}
+            >
+              {isReview || isPublished ? "✓" : "١"}
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-black text-[#00102e]">١. مسودة قيد التحرير</div>
+              <div className="truncate text-[11px] font-medium text-slate-500">
+                {isDraft ? "أنت هنا: عدّل الأسئلة والمواد" : "تم الانتهاء من التحرير"}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`flex items-center gap-3 rounded-xl p-3 transition ${
+              isReview
+                ? "border border-blue-300 bg-blue-50 ring-1 ring-blue-300"
+                : isPublished
+                ? "border border-emerald-200/80 bg-emerald-50/50 text-emerald-900"
+                : "border border-slate-100 bg-slate-50 text-slate-400"
+            }`}
+          >
+            <div
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+                isReview
+                  ? "bg-blue-700 text-white"
+                  : isPublished
+                  ? "bg-emerald-600 text-white"
+                  : "bg-slate-200 text-slate-500"
+              }`}
+            >
+              {isPublished ? "✓" : "٢"}
+            </div>
+            <div className="min-w-0">
+              <div className={`text-xs font-black ${isReview ? "text-blue-900" : isPublished ? "text-emerald-900" : "text-slate-600"}`}>
+                ٢. التدقيق والمراجعة
+              </div>
+              <div className="truncate text-[11px] font-medium text-slate-500">
+                {isReview ? "أنت هنا: مراجعة الصياغة القانونية" : isPublished ? "تمت المراجعة والاعتماد" : "بعد انتهاء المسودة"}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`flex items-center gap-3 rounded-xl p-3 transition ${
+              isPublished
+                ? "border border-emerald-300 bg-emerald-50 ring-1 ring-emerald-300 text-emerald-950"
+                : "border border-slate-100 bg-slate-50 text-slate-400"
+            }`}
+          >
+            <div
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+                isPublished ? "bg-emerald-700 text-white" : "bg-slate-200 text-slate-500"
+              }`}
+            >
+              ٣
+            </div>
+            <div className="min-w-0">
+              <div className={`text-xs font-black ${isPublished ? "text-emerald-950" : "text-slate-600"}`}>
+                ٣. معتمد ومنشور للجمهور
+              </div>
+              <div className="truncate text-[11px] font-medium text-slate-500">
+                {isPublished ? "الإصدار الحي النشط حالياً" : "يصبح متاحاً للعملاء"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {isDraft && canEdit && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onGoToValidation}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#0a1f4d] active:scale-95 disabled:opacity-50"
+            >
+              <ClipboardCheck className="h-4 w-4 text-[#d7a94f]" />
+              <span>جاهز للمراجعة؟ فحص الجاهزية</span>
+              {validationErrorCount > 0 && (
+                <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] text-white">
+                  {validationErrorCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          {isReview && canPublish && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onReturnReview}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>إعادة للمسودة للتعديل</span>
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onPublish}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-800 active:scale-95"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>اعتماد ونشر للجمهور الآن</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TemplateVersionEditor({ versionId }: { versionId: string }) {
   const [version, setVersion] = useState<Version | null>(null);
   const [inspection, setInspection] = useState<TemplateDefinitionInspection | null>(null);
@@ -1700,6 +1957,18 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
         </div>
       </header>
 
+      <VersionWorkflowStepper
+        status={version.status}
+        versionNumber={version.versionNumber}
+        onGoToValidation={() => void goToTab("validation")}
+        canEdit={canEdit}
+        canPublish={canPublish}
+        busy={busy}
+        validationErrorCount={validationErrorCount}
+        onPublish={() => void publish()}
+        onReturnReview={() => setReturnReviewOpen(true)}
+      />
+
       {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">{error}</div>}
       {notice && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">{notice}</div>}
       {readinessDirty && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">لديك تغييرات غير محفوظة في صفحة «أنت جاهز؟». احفظها قبل الانتقال إلى مرحلة أخرى أو إرسال القالب للمراجعة.</div>}
@@ -1868,6 +2137,13 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
                                 </div>
                               </div>
                               <div className="flex flex-wrap items-center gap-2">
+                                <span
+                                  className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-500"
+                                  title="المفتاح التقني المستخدم في ربط نصوص المواد القانونية"
+                                  dir="ltr"
+                                >
+                                  {`{{${field.key}}}`}
+                                </span>
                                 <FieldBadge field={field} />
                                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${field.helpText ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{field.helpText ? "مساعدة ✓" : "بدون مساعدة"}</span>
                                 {!readOnly && <button type="button" onClick={() => setModal({ kind: "field", variantKey: variant.key, stepKey: step.key, value: field })} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700"><Pencil className="h-3.5 w-3.5" />تعديل</button>}
@@ -1930,7 +2206,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
             />
           )}
           <input value={clauseSearch} onChange={(event: ChangeEvent<HTMLInputElement>) => setClauseSearch(event.target.value)} placeholder="ابحث باسم المادة أو جزء من النص" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#986410]" />
-          <div className="space-y-3">{filteredClauses.map((clause) => { const clauseIndex = (version.definition.legalClauses ?? []).findIndex((item) => item.key === clause.key); return <article key={clause.key} className={`rounded-2xl border bg-white p-5 ${clause.enabled === false ? "border-slate-200 opacity-60" : "border-slate-200"}`}><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-black text-[#00102e]">{clause.titleAr}</h3><span className={`rounded-full px-2 py-1 text-xs font-black ${clause.enabled === false ? "bg-slate-100 text-slate-600" : "bg-emerald-100 text-emerald-700"}`}>{clause.enabled === false ? "معطّل" : "مفعّل"}</span></div><details className="mt-1"><summary className="cursor-pointer text-xs font-bold text-slate-500">تفاصيل تقنية</summary><div className="mt-1 font-mono text-xs text-slate-500">{clause.key}</div></details>{clause.sourceDocumentName && <div className="mt-1 text-xs font-bold text-slate-500">المصدر: {clause.sourceDocumentName}{clause.sourcePageStart ? ` — ص ${clause.sourcePageStart}${clause.sourcePageEnd && clause.sourcePageEnd !== clause.sourcePageStart ? ` إلى ${clause.sourcePageEnd}` : ""}` : ""}</div>}</div>{!readOnly && <div className="flex flex-wrap gap-2"><button type="button" disabled={clauseIndex <= 0 || busy} onClick={() => void moveClause(clause, clauseIndex, -1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأعلى" aria-label="تحريك البند لأعلى"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" disabled={clauseIndex < 0 || clauseIndex >= (version.definition.legalClauses?.length ?? 1) - 1 || busy} onClick={() => void moveClause(clause, clauseIndex, 1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأسفل" aria-label="تحريك البند لأسفل"><ArrowDown className="h-3.5 w-3.5" /></button><button type="button" onClick={() => setModal({ kind: "clause", value: clause })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-black"><Pencil className="h-3.5 w-3.5" />تعديل</button>{clause.enabled !== false && <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/clauses/${encodeURIComponent(clause.key)}`, "تم تعطيل البند", `تعطيل البند «${clause.titleAr}» في هذه المسودة؟`)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-black text-red-700">تعطيل</button>}</div>}</div>{clause.guidance && <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-900"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">!</span><span>{clause.guidance}</span></div>}{canEditGuidance && <button type="button" onClick={() => setModal({ kind: "clauseGuidance", value: clause })} className="mt-3 rounded-lg border border-amber-200 px-3 py-2 text-xs font-black text-amber-800">{clause.guidance ? "تعديل الإرشاد" : "إضافة إرشاد (!)"}</button>}<p className="mt-4 whitespace-pre-wrap text-sm leading-8 text-slate-700">{clause.bodyAr}</p></article> })}{!filteredClauses.length && <div className="rounded-2xl bg-slate-50 p-8 text-center text-xs font-bold text-slate-500">لا توجد بنود مطابقة.</div>}</div>
+          <div className="space-y-3">{filteredClauses.map((clause) => { const clauseIndex = (version.definition.legalClauses ?? []).findIndex((item) => item.key === clause.key); return <article key={clause.key} className={`rounded-2xl border bg-white p-5 ${clause.enabled === false ? "border-slate-200 opacity-60" : "border-slate-200"}`}><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-black text-[#00102e]">{clause.titleAr}</h3><span className={`rounded-full px-2 py-1 text-xs font-black ${clause.enabled === false ? "bg-slate-100 text-slate-600" : "bg-emerald-100 text-emerald-700"}`}>{clause.enabled === false ? "معطّل" : "مفعّل"}</span></div><details className="mt-1"><summary className="cursor-pointer text-xs font-bold text-slate-500">تفاصيل تقنية</summary><div className="mt-1 font-mono text-xs text-slate-500">{clause.key}</div></details>{clause.sourceDocumentName && <div className="mt-1 text-xs font-bold text-slate-500">المصدر: {clause.sourceDocumentName}{clause.sourcePageStart ? ` — ص ${clause.sourcePageStart}${clause.sourcePageEnd && clause.sourcePageEnd !== clause.sourcePageStart ? ` إلى ${clause.sourcePageEnd}` : ""}` : ""}</div>}</div>{!readOnly && <div className="flex flex-wrap gap-2"><button type="button" disabled={clauseIndex <= 0 || busy} onClick={() => void moveClause(clause, clauseIndex, -1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأعلى" aria-label="تحريك البند لأعلى"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" disabled={clauseIndex < 0 || clauseIndex >= (version.definition.legalClauses?.length ?? 1) - 1 || busy} onClick={() => void moveClause(clause, clauseIndex, 1)} className="rounded-lg border p-2 disabled:opacity-30" title="تحريك لأسفل" aria-label="تحريك البند لأسفل"><ArrowDown className="h-3.5 w-3.5" /></button><button type="button" onClick={() => setModal({ kind: "clause", value: clause })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-black"><Pencil className="h-3.5 w-3.5" />تعديل</button>{clause.enabled !== false && <button type="button" onClick={() => void remove(`/api/v1/admin/templates/versions/${version.id}/clauses/${encodeURIComponent(clause.key)}`, "تم تعطيل البند", `تعطيل البند «${clause.titleAr}» في هذه المسودة؟`)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-black text-red-700">تعطيل</button>}</div>}</div>{clause.guidance && <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-900"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">!</span><span>{clause.guidance}</span></div>}{canEditGuidance && <button type="button" onClick={() => setModal({ kind: "clauseGuidance", value: clause })} className="mt-3 rounded-lg border border-amber-200 px-3 py-2 text-xs font-black text-amber-800">{clause.guidance ? "تعديل الإرشاد" : "إضافة إرشاد (!)"}</button>}<HighlightedClauseBody body={clause.bodyAr} /></article> })}{!filteredClauses.length && <div className="rounded-2xl bg-slate-50 p-8 text-center text-xs font-bold text-slate-500">لا توجد بنود مطابقة.</div>}</div>
         </section>
       )}
 
