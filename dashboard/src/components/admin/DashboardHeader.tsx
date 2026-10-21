@@ -36,6 +36,14 @@ export default function DashboardHeader() {
     };
   }, [pathname, loadUnread]);
 
+  const isDeepConfigPage =
+    pathname.startsWith("/templates") ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/pricing") ||
+    pathname.startsWith("/team") ||
+    pathname.startsWith("/roles") ||
+    pathname.startsWith("/reports") ||
+    pathname === "/contracts/create";
 
   return (
     <header className="sticky top-0 z-30 hidden min-h-16 items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-6 py-3 backdrop-blur lg:flex">
@@ -56,7 +64,7 @@ export default function DashboardHeader() {
             </span>
           )}
         </Link>
-        {!pathname.startsWith("/templates/versions/") && dashboardFeatures.officeContractCreation && can(staff.role, "contracts.create_office") && (
+        {!isDeepConfigPage && dashboardFeatures.officeContractCreation && can(staff.role, "contracts.create_office") && (
           <Link
             href="/contracts/create"
             className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-[#00102e] px-4 py-2.5 text-xs font-black text-white shadow-sm transition-all duration-150 hover:bg-[#0a1f4d] hover:shadow-md active:scale-[0.98]"
