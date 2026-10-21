@@ -185,11 +185,11 @@ final class ProcessDocumentJobs extends Command
 
     private function partyMeta(string $slug,string $variantKey,array $fields):array
     {
-        if($slug==='rental')return[
+        if($slug==='rental'||str_starts_with($slug,'rental_')||str_starts_with($slug,'lease_'))return[
             ['label'=>'الطرف الأول – المؤجر','name'=>(string)($fields['landlord_name']??''),'capacity'=>(string)(($fields['landlord_party_type']??'individual')==='company'?($fields['landlord_representative_capacity']??''):'المؤجر'),'nationalId'=>(string)($fields['landlord_national_id']??''),'identityLabel'=>$this->identityDocumentLabel('landlord',$fields)],
             ['label'=>'الطرف الثاني – المستأجر','name'=>(string)($fields['tenant_name']??''),'capacity'=>(string)(($fields['tenant_party_type']??'individual')==='company'?($fields['tenant_representative_capacity']??''):'المستأجر'),'nationalId'=>(string)($fields['tenant_national_id']??''),'identityLabel'=>$this->identityDocumentLabel('tenant',$fields)],
         ];
-        if($slug==='apartment_sale')return[
+        if($slug==='apartment_sale'||str_starts_with($slug,'sale_'))return[
             ['label'=>'الطرف الأول – البائع','name'=>(string)($fields['seller_name']??''),'capacity'=>(string)(($fields['seller_party_type']??'individual')==='company'?($fields['seller_representative_capacity']??''):'البائع'),'nationalId'=>(string)($fields['seller_national_id']??''),'identityLabel'=>$this->identityDocumentLabel('seller',$fields)],
             ['label'=>'الطرف الثاني – المشتري','name'=>(string)($fields['buyer_name']??''),'capacity'=>(string)(($fields['buyer_party_type']??'individual')==='company'?($fields['buyer_representative_capacity']??''):'المشتري'),'nationalId'=>(string)($fields['buyer_national_id']??''),'identityLabel'=>$this->identityDocumentLabel('buyer',$fields)],
         ];

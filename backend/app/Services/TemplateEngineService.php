@@ -124,9 +124,12 @@ final class TemplateEngineService
             }
         }
         $slug = (string)($definition['slug'] ?? '');
+        $isFreelancer = $slug === 'freelancer' || str_starts_with($slug, 'services_');
+        $isRental = $slug === 'rental' || str_starts_with($slug, 'rental_') || str_starts_with($slug, 'lease_');
+        $isSale = $slug === 'apartment_sale' || str_starts_with($slug, 'sale_');
 
         // Freelancer - Social Media Management
-        if ($slug === 'freelancer' && $variantKey === 'social_media_management') {
+        if ($isFreelancer && $variantKey === 'social_media_management') {
             $serviceKeys = [
                 'social_service_account_management', 'social_service_strategy', 'social_service_copywriting', 'social_service_design',
                 'social_service_content_production', 'social_service_publishing', 'social_service_paid_ads', 'social_service_reports',
@@ -152,7 +155,7 @@ final class TemplateEngineService
         }
 
         // Freelancer - Visual Identity Design
-        if ($slug === 'freelancer' && $variantKey === 'visual_identity_design' && ($fieldValues['visual_payment_mode'] ?? null) === 'installments') {
+        if ($isFreelancer && $variantKey === 'visual_identity_design' && ($fieldValues['visual_payment_mode'] ?? null) === 'installments') {
             $total = (float)($fieldValues['visual_contract_value'] ?? 0);
             $rows = is_array($fieldValues['visual_main_payment_schedule'] ?? null) ? $fieldValues['visual_main_payment_schedule'] : [];
             $installmentsTotal = 0.0;
@@ -163,7 +166,7 @@ final class TemplateEngineService
         }
 
         // Freelancer - Website Development
-        if ($slug === 'freelancer' && $variantKey === 'website_development' && ($fieldValues['website_payment_mode'] ?? null) === 'installments') {
+        if ($isFreelancer && $variantKey === 'website_development' && ($fieldValues['website_payment_mode'] ?? null) === 'installments') {
             $total = (float)($fieldValues['website_total_price'] ?? 0);
             $rows = is_array($fieldValues['website_payment_schedule'] ?? null) ? $fieldValues['website_payment_schedule'] : [];
             $installmentsTotal = 0.0;
@@ -174,7 +177,7 @@ final class TemplateEngineService
         }
 
         // Rental Contracts (Residential, Commercial, Administrative)
-        if ($slug === 'rental') {
+        if ($isRental) {
             $start = (string)($fieldValues['start_date'] ?? '');
             $end = (string)($fieldValues['end_date'] ?? '');
             if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $start) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $end) && $end <= $start) {
@@ -196,7 +199,7 @@ final class TemplateEngineService
         }
 
         // Apartment Sale / Land / Villa Contracts
-        if ($slug === 'apartment_sale') {
+        if ($isSale) {
             $plan = (string)($fieldValues['sale_payment_plan'] ?? '');
             if ($plan !== 'installments' && in_array('sale_installment_schedule', array_map('strval', $optionalKeys), true)) {
                 $issues[] = 'ملحق جدول الأقساط يُستخدم فقط عند اختيار السداد بالتقسيط';

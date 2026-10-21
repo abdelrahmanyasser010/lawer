@@ -118,7 +118,12 @@ export function validateDynamicDefinition(
     }),
   );
 
-  if (definition.template.slug === "freelancer" && draft.variantKey === "social_media_management") {
+  const templateSlug = definition.template.slug || "";
+  const isFreelancer = templateSlug === "freelancer" || templateSlug.startsWith("services_");
+  const isRental = templateSlug === "rental" || templateSlug.startsWith("rental_") || templateSlug.startsWith("lease_");
+  const isSale = templateSlug === "apartment_sale" || templateSlug.startsWith("sale_");
+
+  if (isFreelancer && draft.variantKey === "social_media_management") {
     const serviceKeys = [
       "social_service_account_management", "social_service_strategy", "social_service_copywriting", "social_service_design",
       "social_service_content_production", "social_service_publishing", "social_service_paid_ads", "social_service_reports",
@@ -147,7 +152,7 @@ export function validateDynamicDefinition(
     }
   }
 
-  if (definition.template.slug === "freelancer" && draft.variantKey === "visual_identity_design" && draft.fieldValues.visual_payment_mode === "installments") {
+  if (isFreelancer && draft.variantKey === "visual_identity_design" && draft.fieldValues.visual_payment_mode === "installments") {
     const total = Number(draft.fieldValues.visual_contract_value ?? 0);
     const rows = Array.isArray(draft.fieldValues.visual_main_payment_schedule) ? draft.fieldValues.visual_main_payment_schedule : [];
     const installmentsTotal = rows.reduce((sum, row) => sum + Number((row as RepeaterRowValue).amount ?? 0), 0);
@@ -160,7 +165,7 @@ export function validateDynamicDefinition(
     }
   }
 
-  if (definition.template.slug === "freelancer" && draft.variantKey === "website_development" && draft.fieldValues.website_payment_mode === "installments") {
+  if (isFreelancer && draft.variantKey === "website_development" && draft.fieldValues.website_payment_mode === "installments") {
     const total = Number(draft.fieldValues.website_total_price ?? 0);
     const rows = Array.isArray(draft.fieldValues.website_payment_schedule) ? draft.fieldValues.website_payment_schedule : [];
     const installmentsTotal = rows.reduce((sum, row) => sum + Number((row as RepeaterRowValue).amount ?? 0), 0);
@@ -173,7 +178,7 @@ export function validateDynamicDefinition(
     }
   }
 
-  if (definition.template.slug === "rental") {
+  if (isRental) {
     const fv = draft.fieldValues;
 
     const start = String(fv.start_date ?? "");
@@ -204,11 +209,11 @@ export function validateDynamicDefinition(
     checkCountIssue("administrative", "rental_administrative_details");
   }
 
-  if (definition.template.slug === "apartment_sale" && draft.fieldValues.sale_payment_plan !== "installments" && draft.selectedOptionalClauseKeys.includes("sale_installment_schedule")) {
+  if (isSale && draft.fieldValues.sale_payment_plan !== "installments" && draft.selectedOptionalClauseKeys.includes("sale_installment_schedule")) {
     issues.push({ stepKey: "sale_payment", fieldKey: "sale_payment_plan", labelAr: "ملحق جدول الأقساط يُستخدم فقط عند اختيار السداد بالتقسيط" });
   }
 
-  if (definition.template.slug === "apartment_sale" && draft.fieldValues.sale_payment_plan === "installments") {
+  if (isSale && draft.fieldValues.sale_payment_plan === "installments") {
     const total = Number(draft.fieldValues.sale_total_price ?? 0);
     const down = Number(draft.fieldValues.sale_down_payment ?? 0);
     const remaining = total - down;

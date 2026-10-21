@@ -767,9 +767,9 @@ export default function LegalDocumentSheet({
     return formatLegalValue(key, value, definition?.options ?? [], definition?.type);
   };
 
-  const isRental = effectiveSlug === "rental";
-  const isSale = effectiveSlug === "apartment_sale";
-  const isFreelancer = effectiveSlug === "freelancer";
+  const isRental = effectiveSlug === "rental" || effectiveSlug.startsWith("rental_") || effectiveSlug.startsWith("lease_");
+  const isSale = effectiveSlug === "apartment_sale" || effectiveSlug.startsWith("sale_");
+  const isFreelancer = effectiveSlug === "freelancer" || effectiveSlug.startsWith("services_");
   const freelancerPartyTwoRole = effectiveVariantKey === "visual_identity_design"
     ? "المصمم"
     : effectiveVariantKey === "website_development"
