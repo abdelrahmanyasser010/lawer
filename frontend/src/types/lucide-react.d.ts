@@ -84,6 +84,7 @@ declare module "lucide-react" {
   export const MessageCircle: LucideIcon;
   export const MessageSquareText: LucideIcon;
   export const Paperclip: LucideIcon;
+  export const Package: LucideIcon;
   export const Pencil: LucideIcon;
   export const Phone: LucideIcon;
   export const Play: LucideIcon;
@@ -112,6 +113,7 @@ declare module "lucide-react" {
   export const Tags: LucideIcon;
   export const Trash2: LucideIcon;
   export const TrendingUp: LucideIcon;
+  export const Truck: LucideIcon;
   export const Upload: LucideIcon;
   export const User: LucideIcon;
   export const UserRound: LucideIcon;

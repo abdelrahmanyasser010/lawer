@@ -4,9 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { FileText, Save } from "lucide-react";
 import { dashboardRequest } from "@/lib/apiClient";
 
-type LegalKey="about_us"|"terms_and_conditions"|"privacy_policy"|"refund_cancellation_policy";
+type LegalKey="about_us"|"terms_and_conditions"|"privacy_policy"|"refund_cancellation_policy"|"delivery_shipping_policy";
 type LegalRow={key:LegalKey;title:string;body:string;isPublished:boolean;publishedVersion?:number|null;publishedAt?:string|null;updatedAt?:string|null};
-const labels:Record<LegalKey,string>={about_us:"من نحن",terms_and_conditions:"الشروط والأحكام",privacy_policy:"سياسة الخصوصية",refund_cancellation_policy:"سياسة الإلغاء والاسترداد"};
+const labels:Record<LegalKey,string>={about_us:"من نحن",terms_and_conditions:"الشروط والأحكام",privacy_policy:"سياسة الخصوصية",refund_cancellation_policy:"سياسة الإلغاء والاسترداد",delivery_shipping_policy:"سياسة الشحن والتسليم"};
 
 export default function LegalContentSettings(){
   const [items,setItems]=useState<LegalRow[]>([]),[selected,setSelected]=useState<LegalKey>("terms_and_conditions"),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");

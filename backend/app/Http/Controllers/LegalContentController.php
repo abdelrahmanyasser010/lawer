@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 final class LegalContentController extends Controller
 {
     use ApiResponse;
-    private const KEYS=['about_us','terms_and_conditions','privacy_policy','refund_cancellation_policy'];
+    private const KEYS=['about_us','terms_and_conditions','privacy_policy','refund_cancellation_policy','delivery_shipping_policy'];
 
     public function __construct(private AuditService $audit,private LegalAcceptanceService $acceptances){}
 

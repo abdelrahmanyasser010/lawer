@@ -85,6 +85,9 @@ export default function Navbar() {
     const base: NavItem[] = [
       { href: "/create-contract?mode=self_service", label: "إعداد عقد", icon: Sparkles },
       { href: "/request-review", label: "راجع عقدك أو اسأل محامي", icon: Scale },
+      { href: "/pricing", label: "الأسعار", icon: FileText },
+      { href: "/about", label: "من نحن", icon: UsersRound },
+      { href: "/contact", label: "اتصل بنا", icon: MailCheck },
     ];
     if (!user) return base;
     return [

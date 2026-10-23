@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 final class LegalAcceptanceService
 {
-    private const TYPES=['terms_and_conditions','privacy_policy','refund_cancellation_policy'];
+    private const TYPES=['terms_and_conditions','privacy_policy','refund_cancellation_policy','delivery_shipping_policy'];
 
     /** @param array<int,array<string,mixed>> $entries @return array<int,array<string,mixed>> */
     public function recordRegistration(int $userId,array $entries,Request $request):array
