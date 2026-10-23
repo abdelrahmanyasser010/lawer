@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { DateTimePickerInput } from "@/components/ui/DateTimePickerInput";
 
 function GripVertical({ className = "h-4 w-4" }: { className?: string }) {
   return (
@@ -1963,7 +1964,7 @@ export default function TemplateVersionEditor({ versionId }: { versionId: string
         <form onSubmit={saveReviewMetadata} className="grid gap-4 border-t border-slate-100 p-5 lg:grid-cols-4">
           <label className="text-xs font-black text-slate-600">ملخص التعديل<input name="changeSummary" defaultValue={version.changeSummary ?? ""} disabled={readOnly} className="mt-2 w-full rounded-xl border border-slate-200 p-3 font-normal outline-none focus:border-[#986410]" /></label>
           <label className="text-xs font-black text-slate-600">المرجع القانوني<input name="legalReference" defaultValue={version.legalReference ?? ""} disabled={readOnly} className="mt-2 w-full rounded-xl border border-slate-200 p-3 font-normal outline-none focus:border-[#986410]" /></label>
-          <label className="text-xs font-black text-slate-600">تاريخ بدء السريان<input name="effectiveFrom" type="datetime-local" defaultValue={version.effectiveFrom?.slice(0, 16) ?? ""} disabled={readOnly} className="mt-2 w-full rounded-xl border border-slate-200 p-3 font-normal outline-none focus:border-[#986410]" /></label>
+          <div><span className="block text-xs font-black text-slate-600">تاريخ بدء السريان</span><div className="mt-2"><DateTimePickerInput name="effectiveFrom" defaultValue={version.effectiveFrom?.slice(0, 16) ?? ""} disabled={readOnly} className="p-3" /></div></div>
           <div className="flex items-end">{!readOnly && <button disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00102e] px-5 py-3 text-xs font-black text-[#d7a94f]"><Save className="h-4 w-4" />حفظ الإعدادات</button>}</div>
         </form>
       </details>

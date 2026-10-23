@@ -10,6 +10,7 @@ import { dashboardFeatures } from "@/config/dashboardFeatures";
 import { PageError, PageLoading, StatusBadge } from "@/components/admin/PageFeedback";
 import { AdminDialog } from "@/components/admin/AdminDialog";
 import CustomerContactActions from "@/components/admin/CustomerContactActions";
+import { DateTimePickerInput } from "@/components/ui/DateTimePickerInput";
 
 const statusLabels: Record<string,string> = {
   new: "جديد", awaiting_payment: "بانتظار الدفع", assigned: "قيد المتابعة", awaiting_client_info: "بانتظار بيانات العميل",
@@ -222,7 +223,7 @@ export default function WorkRequestDetailsPage() {
                 <label><span className="mb-2 block text-xs font-black text-slate-500">اليوم</span><select value={selectedMeetingDay} onChange={(event)=>{ const day=event.target.value; setSelectedMeetingDay(day); setSelectedMeetingStart(meetingDays.find((item)=>item.date===day)?.slots[0]?.start ?? ""); }} className="w-full rounded-xl border border-slate-200 p-3 text-xs">{meetingDays.map((day)=><option key={day.date} value={day.date}>{day.label}</option>)}</select></label>
                 <div><span className="mb-2 block text-xs font-black text-slate-500">الموعد المتاح</span><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{selectedMeetingDayData?.slots.map((slot)=><button key={slot.slotKey} type="button" onClick={()=>setSelectedMeetingStart(slot.start)} className={`rounded-xl border p-3 text-xs font-black ${selectedMeetingStart===slot.start?"border-[#986410] bg-[#986410]/10 text-[#986410]":"border-slate-200 text-slate-600"}`}><span className="block">{slot.label}</span><span className="mt-1 block text-xs font-bold text-slate-500">متبقي {slot.remaining}</span></button>)}</div></div>
               </>}
-            </> : <label><span className="mb-2 block text-xs font-black text-slate-500">التاريخ والوقت</span><input name="scheduledAt" type="datetime-local" required className="w-full rounded-xl border border-slate-200 p-3 text-xs" /></label>}
+            </> : <div><span className="mb-2 block text-xs font-black text-slate-500">التاريخ والوقت</span><DateTimePickerInput name="scheduledAt" required className="py-2.5" /></div>}
             {meetingProvider==="zoom"&&<label><span className="mb-2 block text-xs font-black text-slate-500">رابط Zoom</span><input name="meetingUrl" type="url" required defaultValue={data.meetingProvider === "zoom" ? data.meetingUrl ?? "" : ""} placeholder="https://zoom.us/j/..." className="w-full rounded-xl border border-slate-200 p-3 text-xs" /></label>}
           </div>
           <button disabled={busy || (meetingSupported && (!selectedMeetingStart || availabilityLoading))} className="mt-4 rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-black text-[#d7a94f] disabled:cursor-not-allowed disabled:opacity-50">حفظ الموعد وإشعار العميل</button>
