@@ -286,7 +286,7 @@ export default function RequestDetailsPage() {
             )}
 
             {canCancel && (
-              <button type="button" disabled={busy} onClick={() => void cancelUnpaidRequest()} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:opacity-50">إلغاء الطلب</button>
+              <button type="button" disabled={busy} onClick={() => void cancelUnpaidRequest()} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-rose-700 disabled:opacity-50 transition">إلغاء الطلب</button>
             )}
           </aside>
         </div>

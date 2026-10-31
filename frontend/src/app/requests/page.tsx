@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Clock3, FileText, Loader2, Scale } from "lucide-react";
+import { ArrowLeft, Clock3, FileText, Scale } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { PageLoading, PageError } from "@/components/ui/PageFeedback";
 import { ApiClientError, frontendApi } from "@/lib/apiClient";
 import { formatDate } from "@/lib/labels";
 import type { ServiceRequestSummary } from "@/types/customer";
@@ -61,20 +62,41 @@ export default function RequestsPage() {
             <h1 className="text-2xl font-black text-[#00102e]">خدماتي مع المحامين</h1>
             <p className="mt-1 text-xs leading-6 text-slate-500">طلبات صياغة العقود أو مراجعة واستشارة بخصوص عقد. العقود اللي بتعملها بنفسك موجودة في سجل العقود.</p>
           </div>
-          <div className="flex gap-2 overflow-x-auto">
+          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
             {([
               ["all", "الكل", counts.all],
               ["active", "تحت المتابعة", counts.active],
               ["completed", "مكتملة", counts.completed],
-            ] as const).map(([key, label, count]) => (
-              <button key={key} type="button" onClick={() => setFilter(key)} className={`shrink-0 rounded-xl px-3 py-2 text-[11px] font-black ${filter === key ? "bg-[#00102e] text-white" : "border border-slate-200 bg-white text-slate-600"}`}>{label} ({count})</button>
-            ))}
+            ] as const).map(([key, label, count]) => {
+              const active = filter === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setFilter(key)}
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs transition-all duration-150 active:scale-95 ${
+                    active
+                      ? "border border-[#d7a94f]/30 bg-[#00102e] font-extrabold text-[#d7a94f] shadow-xs"
+                      : "border border-slate-200/90 bg-white font-bold text-slate-700 hover:bg-slate-50 hover:text-[#00102e]"
+                  }`}
+                >
+                  <span>{label}</span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                      active ? "bg-[#d7a94f]/20 text-[#d7a94f]" : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </header>
 
         <div className="min-h-[400px] pt-5">
           {loading ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-[#986410]" /><p className="mt-2 text-xs font-bold text-slate-500">جاري تحميل طلباتك...</p></div>
+            <PageLoading label="جاري تحميل طلباتك..." skeletonType="list" />
           ) : error ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-7 text-center"><p className="text-sm font-bold text-amber-900">{error}</p><Link href="/login?next=/requests" className="mt-3 inline-block rounded-xl bg-[#00102e] px-4 py-2 text-xs font-black text-white">تسجيل الدخول</Link></div>
           ) : filtered.length === 0 ? (

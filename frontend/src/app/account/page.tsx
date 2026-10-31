@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Copy, KeyRound, Loader2, Save, ShieldCheck, Smartphone, UsersRound } from "lucide-react";
+import { Check, Copy, KeyRound, Save, ShieldCheck, Smartphone, UsersRound } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { PageLoading } from "@/components/ui/PageFeedback";
 import { apiRequest, ApiClientError, frontendApi } from "@/lib/apiClient";
 import type { CustomerProfile } from "@/types/customer";
 import { formatDate } from "@/lib/labels";
@@ -122,7 +123,7 @@ export default function AccountPage() {
           <Link href="/saved-parties" className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-[#00102e] hover:bg-slate-50"><UsersRound className="h-4 w-4 text-[#986410]" /> الأطراف المحفوظة</Link>
         </header>
 
-        {loading ? <div className="mt-8 rounded-2xl border bg-white p-14"><Loader2 className="mx-auto h-7 w-7 animate-spin text-blue-700" /></div> : !profile ? (
+        {loading ? <div className="mt-8"><PageLoading label="جاري تحميل بيانات حسابك..." skeletonType="cards" /></div> : !profile ? (
           <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center font-bold text-amber-900">{error}</div>
         ) : (
           <div className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_.85fr]">

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { PageLoading } from "@/components/ui/PageFeedback";
 import { usePublicCatalog } from "@/hooks/usePublicCatalog";
 import { apiRequest, ApiClientError, frontendApi } from "@/lib/apiClient";
 import { compressMultipleFiles } from "@/lib/compression";
@@ -153,10 +154,10 @@ function CreateContractContent() {
               </div>
 
               <div className="shrink-0 inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
-                <Link href="/create-contract?mode=self_service" className={`inline-flex items-center justify-center rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${mode === "self_service" ? "bg-[#00102e] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                <Link href="/create-contract?mode=self_service" className={`inline-flex items-center justify-center rounded-lg px-3.5 py-1.5 text-xs transition-all ${mode === "self_service" ? "bg-[#00102e] font-extrabold text-[#d7a94f] shadow-xs" : "font-bold text-slate-600 hover:text-slate-900"}`}>
                   إعداد بنفسي
                 </Link>
-                <Link href="/create-contract?mode=lawyer_assisted" className={`inline-flex items-center justify-center rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${mode === "lawyer_assisted" ? "bg-[#00102e] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                <Link href="/create-contract?mode=lawyer_assisted" className={`inline-flex items-center justify-center rounded-lg px-3.5 py-1.5 text-xs transition-all ${mode === "lawyer_assisted" ? "bg-[#00102e] font-extrabold text-[#d7a94f] shadow-xs" : "font-bold text-slate-600 hover:text-slate-900"}`}>
                   إعداد بواسطة محامٍ
                 </Link>
               </div>
@@ -196,7 +197,7 @@ function CreateContractContent() {
 
         <section className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6 sm:py-10">
           {loading ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-[#986410]" /><p className="mt-2 text-xs font-bold text-slate-500">جاري تحميل العقود والأسعار...</p></div>
+            <PageLoading label="جاري تحميل العقود والأسعار..." skeletonType="cards" />
           ) : loadError ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-xs font-bold text-amber-900">تعذر تحميل العقود والأسعار مؤقتًا. حاول مرة أخرى بعد قليل.</div>
           ) : grouped.length === 0 ? (

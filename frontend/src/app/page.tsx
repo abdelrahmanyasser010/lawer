@@ -33,7 +33,7 @@ export default function HomePage() {
                 <h1 className="text-[26px] font-black leading-[1.4] text-[#00102e] sm:text-[40px] lg:text-[48px] tracking-tight">
                   صياغة قانونية موثوقة،
                   <br />
-                  <span className="bg-gradient-to-l from-[#986410] via-[#d9a84e] to-[#986410] bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-x">
+                  <span className="text-[#986410]">
                     بذكاء واحترافية
                   </span>
                 </h1>

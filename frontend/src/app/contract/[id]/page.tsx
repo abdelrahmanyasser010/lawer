@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { PageLoading } from "@/components/ui/PageFeedback";
 import GatewayCheckoutModal from "@/components/checkout/GatewayCheckoutModal";
 import ActionDialog from "@/components/ui/ActionDialog";
 import ZShareModal from "@/components/sharing/ZShareModal";
@@ -147,7 +148,17 @@ export default function ContractPage() {
     }
   }
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-[#986410]" /></div>;
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-[#f8fafc]" dir="rtl">
+        <Navbar />
+        <div className="mx-auto w-full max-w-4xl px-4 py-12">
+          <PageLoading label="جاري استدعاء وثيقة العقد وبيانات التدقيق..." skeletonType="cards" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
   if (!item) return <main className="p-10 text-center"><p className="font-bold text-red-700">{error || "العقد غير موجود"}</p></main>;
 
   const platformFee = Number(item.original_price_egp || item.payment_amount_egp || 100);

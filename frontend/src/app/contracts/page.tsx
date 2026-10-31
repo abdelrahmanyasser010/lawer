@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Clock3, FilePlus2, FileText, Loader2, Trash2, AlertTriangle } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { PageLoading, PageError } from "@/components/ui/PageFeedback";
 import { ApiClientError, frontendApi } from "@/lib/apiClient";
 import { contractStatusLabels, formatDate, getContractNextAction } from "@/lib/labels";
 import type { ContractSummary } from "@/types/customer";
@@ -89,7 +90,7 @@ export default function ContractsPage() {
         </header>
 
         {/* Filter Tabs with Live Counters */}
-        <div className="mt-4 flex items-center gap-2 overflow-x-auto">
+        <div className="no-scrollbar mt-4 flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
           {([
             { key: "all", label: "كل العقود", count: counts.all },
             { key: "active", label: "غير مكتملة", count: counts.active },
@@ -101,16 +102,16 @@ export default function ContractsPage() {
                 key={tab.key}
                 type="button"
                 onClick={() => setFilter(tab.key)}
-                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-black transition ${
+                className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs transition-all duration-150 active:scale-95 ${
                   isActive
-                    ? "bg-[#00102e] text-white shadow-sm"
-                    : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    ? "border border-[#d7a94f]/30 bg-[#00102e] font-extrabold text-[#d7a94f] shadow-xs"
+                    : "border border-slate-200/90 bg-white font-bold text-slate-700 hover:bg-slate-50 hover:text-[#00102e]"
                 }`}
               >
                 <span>{tab.label}</span>
                 <span
-                  className={`inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 text-[9px] font-black ${
-                    isActive ? "bg-[#d9a84e] text-[#00102e]" : "bg-slate-100 text-slate-500"
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                    isActive ? "bg-[#d7a94f]/20 text-[#d7a94f]" : "bg-slate-100 text-slate-600"
                   }`}
                 >
                   {tab.count}
@@ -123,10 +124,7 @@ export default function ContractsPage() {
         {/* Content Area with min-height */}
         <div className="min-h-[400px] pt-4">
           {loading ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
-              <Loader2 className="mx-auto h-6 w-6 animate-spin text-[#986410]" />
-              <p className="mt-2 text-xs font-bold text-slate-500">جاري تحميل عقودك...</p>
-            </div>
+            <PageLoading label="جاري تحميل عقودك..." skeletonType="cards" />
           ) : error ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
               <p className="font-bold text-amber-900 text-xs sm:text-sm">{error}</p>
@@ -185,7 +183,7 @@ export default function ContractsPage() {
                               type="button"
                               title="حذف المسودة"
                               onClick={() => setConfirmDeleteId(isConfirming ? null : item.id)}
-                              className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                              className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-rose-600 transition"
                             >
                               <Trash2 className="h-3 w-3" />
                             </button>

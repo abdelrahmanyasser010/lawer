@@ -214,7 +214,7 @@ export default function NotificationsPage() {
                       type="button"
                       disabled={deletingId === item.id}
                       onClick={() => void deleteNotice(item.id)}
-                      className="inline-flex items-center gap-1 rounded-xl p-2 text-xs font-bold text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                      className="inline-flex items-center gap-1 rounded-xl p-2 text-xs font-bold text-slate-500 hover:bg-slate-100 hover:text-rose-700 transition"
                       title="حذف هذا الإشعار من السجل"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

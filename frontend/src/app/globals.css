@@ -16,8 +16,13 @@
     --font-alexandria: "Alexandria";
   }
 
-  * {
-    font-family: 'Cairo', var(--font-cairo), sans-serif !important;
+  html, body, button, input, select, textarea {
+    font-family: 'Cairo', var(--font-cairo), sans-serif;
+  }
+
+  table,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 
   h1, h2, h3, h4, h5, h6, .font-heading {
