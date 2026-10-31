@@ -18,15 +18,16 @@
     --font-cairo: "Cairo";
   }
 
-  * {
-    font-family: 'Cairo', var(--font-cairo), sans-serif !important;
-  }
-
-  body {
-    font-family: 'Cairo', var(--font-cairo), sans-serif !important;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  html, body {
+    font-family: 'Cairo', var(--font-cairo), system-ui, -apple-system, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: rgba(152, 100, 16, 0.2);
+    color: #00102e;
   }
 }
 
@@ -119,11 +120,10 @@ body {
   background: #f6f8fb;
 }
 
-/* Cairo is loaded only up to 700. Keep the admin hierarchy dense and avoid
-   synthetic 900 weights from utility classes left in older screens. */
-.admin-shell .font-black,
-.admin-shell .font-extrabold {
-  font-weight: 700 !important;
+/* Cairo is loaded with full weight scale (400-900). */
+.admin-shell table td,
+.admin-shell table th {
+  font-variant-numeric: tabular-nums;
 }
 
 .admin-shell :is(input, select, textarea) {

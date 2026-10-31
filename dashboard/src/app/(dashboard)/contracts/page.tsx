@@ -13,7 +13,19 @@ type ContractRow={id:number;serialNumber:string;title:string;templateSlug:string
 type Summary={total:number;office:number;needs_attention:number;issued:number};
 type Group=""|"attention"|"pending_payment"|"awaiting_client"|"issued"|"cancelled";
 const statusLabels:Record<ContractStatus,string>={draft:"مسودة",pending_payment:"بانتظار الدفع",pending_review:"بانتظار المراجعة",assigned:"قيد المتابعة",in_progress:"قيد الصياغة",client_review:"مراجعة العميل",revision_requested:"تعديلات مطلوبة",approved:"معتمد",locked:"مقفول",issued:"صدر",cancelled:"ملغي"};
-const statusClass:Record<ContractStatus,string>={draft:"bg-slate-100 text-slate-700",pending_payment:"bg-amber-50 text-amber-800",pending_review:"bg-blue-50 text-blue-800",assigned:"bg-indigo-50 text-indigo-800",in_progress:"bg-violet-50 text-violet-800",client_review:"bg-cyan-50 text-cyan-800",revision_requested:"bg-rose-50 text-rose-800",approved:"bg-emerald-50 text-emerald-800",locked:"bg-slate-800 text-white",issued:"bg-[#00102e] text-white",cancelled:"bg-rose-100 text-rose-900"};
+const statusClass: Record<ContractStatus, string> = {
+  draft: "bg-slate-100 text-slate-700",
+  pending_payment: "bg-amber-50 text-amber-800",
+  pending_review: "bg-blue-50 text-blue-800",
+  assigned: "bg-indigo-50 text-indigo-800",
+  in_progress: "bg-violet-50 text-violet-800",
+  client_review: "bg-cyan-50 text-cyan-800",
+  revision_requested: "bg-rose-50 text-rose-800",
+  approved: "bg-emerald-50 text-emerald-800",
+  locked: "bg-slate-800 text-white",
+  issued: "bg-[#00102e] text-white",
+  cancelled: "bg-rose-100 text-rose-900",
+};
 
 export default function ContractsPage(){
   const paramsFromUrl=useSearchParams(); const staff=getCurrentStaff();

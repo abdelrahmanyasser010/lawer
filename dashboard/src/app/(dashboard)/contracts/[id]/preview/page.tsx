@@ -124,7 +124,10 @@ export default function StaffContractPreviewPage() {
         </header>
 
         <section className="relative mt-7">
-          <h2 className="border-r-4 border-[#986410] pr-3 text-[15px] font-black text-[#00102e]">بيانات العقد</h2>
+          <h2 className="flex items-center gap-2 text-[14px] font-black text-[#00102e] border-b border-slate-200 pb-2.5">
+            <span className="h-2 w-2 rounded-full bg-[#986410]" />
+            بيانات العقد
+          </h2>
           <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 text-[11.5px] leading-6">
             {resolved.steps.flatMap((step) => step.fields.map((field) => ({ step, field }))).filter(({ field }) => (field.type as string) !== "file" && !/(?:copies|contract_copies)/i.test(field.key) && !/(?:عدد.*نسخ)/i.test(field.labelAr)).map(({ step, field }) => (
               <div key={`${step.key}:${field.key}`} className="break-inside-avoid border-b border-slate-200 pb-2">
@@ -136,7 +139,10 @@ export default function StaffContractPreviewPage() {
         </section>
 
         <section className="relative mt-8">
-          <h2 className="border-r-4 border-[#986410] pr-3 text-[15px] font-black text-[#00102e]">بنود العقد</h2>
+          <h2 className="flex items-center gap-2 text-[14px] font-black text-[#00102e] border-b border-slate-200 pb-2.5">
+            <span className="h-2 w-2 rounded-full bg-[#986410]" />
+            بنود العقد
+          </h2>
           <div className="mt-4 space-y-5">
             {clauses.length ? clauses.map((clause, index) => (
               <section key={clause.key || index} className="break-inside-avoid-page">
