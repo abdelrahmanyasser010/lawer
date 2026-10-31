@@ -33,3 +33,10 @@ backend/storage/framework/views/*
 backend/storage/logs/*
 !backend/storage/**/.gitignore
 .codex_tmp/
+
+# Impeccable cache & temp
+.npm-impeccable-cache/
+**/.npm-impeccable-cache/
+.tmp-*/
+**/.tmp-*/
+
