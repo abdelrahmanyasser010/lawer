@@ -347,16 +347,16 @@ export default function PricingPage() {
               return (
                 <article
                   key={def.key}
-                  className={`flex flex-col justify-between rounded-2xl border bg-white p-4 shadow-xs transition hover:border-slate-300 ${
-                    isModified ? "border-[#986410]/60 ring-1 ring-[#986410]/20" : "border-slate-200"
+                  className={`flex flex-col justify-between rounded-2xl border bg-white p-5 shadow-xs transition hover:border-slate-300 hover:shadow-sm ${
+                    isModified ? "border-[#986410] ring-1 ring-[#986410]/30" : "border-slate-200/90"
                   }`}
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#986410]/10 text-[#986410]">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#986410]/20 bg-[#986410]/10 text-[#986410]">
                         <Icon className="h-4 w-4" />
                       </div>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-600">
+                      <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[10px] font-black text-slate-700">
                         {def.badge}
                       </span>
                     </div>
@@ -365,7 +365,7 @@ export default function PricingPage() {
                     <p className="mt-1 text-xs leading-4 text-slate-500 font-medium">{def.description}</p>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-100">
+                  <div className="mt-4 pt-3.5 border-t border-slate-100">
                     <MoneyInput
                       compact
                       isChanged={isModified}
@@ -410,11 +410,11 @@ export default function PricingPage() {
             {filteredTemplates.map((template) => (
               <article
                 key={template.id}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs"
+                className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs"
               >
-                <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3.5">
+                <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-100/80 px-5 py-3.5">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-slate-200 text-[#986410]">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-slate-200/90 text-[#986410] shadow-2xs">
                       <FileText className="h-4 w-4" />
                     </div>
                     <div>
@@ -430,7 +430,7 @@ export default function PricingPage() {
                   </div>
                 </header>
 
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-200">
                   {template.variants.map((variant) => {
                     const selfKey = keyOf(template.id, variant.key, "self");
                     const lawyerKey = keyOf(template.id, variant.key, "lawyer");
@@ -454,7 +454,7 @@ export default function PricingPage() {
                     return (
                       <div
                         key={variant.key}
-                        className="grid items-center gap-4 p-4 lg:grid-cols-[minmax(200px,1.2fr)_130px_130px_130px_200px]"
+                        className="grid items-center gap-4 p-4.5 hover:bg-slate-50/60 transition-colors lg:grid-cols-[minmax(200px,1.2fr)_130px_130px_130px_200px]"
                       >
                         <div>
                           <div className="text-xs font-black text-[#00102e]">{variant.nameAr}</div>
@@ -495,15 +495,15 @@ export default function PricingPage() {
                           }
                         />
 
-                        <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3 text-xs">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs shadow-2xs">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-slate-500 font-medium">العربون الموحد</span>
+                            <span className="text-slate-500 font-semibold">العربون الموحد</span>
                             <b className="font-black text-[#986410]">
                               {effectiveDeposit.toLocaleString("ar-EG")} ج.م
                             </b>
                           </div>
-                          <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-slate-200/60 pt-1.5">
-                            <span className="text-slate-500 font-medium">المتبقي</span>
+                          <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-slate-200/80 pt-1.5">
+                            <span className="text-slate-500 font-semibold">المتبقي</span>
                             <b className="font-black text-[#00102e]">
                               {remaining.toLocaleString("ar-EG")} ج.م
                             </b>
@@ -594,12 +594,12 @@ function MoneyInput({
           inputMode="decimal"
           value={value}
           onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ""))}
-          className={`w-full rounded-xl border bg-white pr-3 pl-9 text-center font-black text-[#00102e] tabular-nums outline-none transition focus:border-[#00102e] focus:ring-1 focus:ring-[#986410]/20 ${
+          className={`w-full rounded-xl border pr-3 pl-9 text-center font-black tabular-nums outline-none transition focus:bg-white focus:border-[#00102e] focus:ring-2 focus:ring-[#00102e]/10 ${
             compact ? "py-2 text-xs" : "py-2.5 text-sm"
           } ${
             isChanged
-              ? "border-[#986410] bg-amber-50/20 text-[#986410]"
-              : "border-slate-200 text-[#00102e]"
+              ? "border-[#986410] bg-amber-50/50 text-[#986410] ring-1 ring-[#986410]/30"
+              : "border-slate-300/90 bg-slate-50/70 text-[#00102e] hover:border-slate-400"
           }`}
         />
         <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">

@@ -477,10 +477,10 @@ export default function WorkQueuePage() {
       </div>
 
       {/* Main Operations Queue Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1050px] text-right text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50/80 font-black text-slate-500">
+            <thead className="border-b border-slate-200 bg-slate-100/80 font-black text-slate-700">
               <tr>
                 <th className="p-4">الطلب والعميل</th>
                 <th className="p-4">الخدمة ونوع العقد</th>
@@ -492,7 +492,7 @@ export default function WorkQueuePage() {
                 <th className="p-4 text-center">الإجراء</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-200">
               {items.map((item) => {
                 const purpose =
                   item.requestType === "contract_review"

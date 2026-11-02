@@ -250,6 +250,7 @@ export default function AdminReportsPage() {
       note: `${isRevenueGrowthPositive ? "+" : ""}${formatNumber(metrics.revenueGrowthPercent, 1)}% مقارنة بالفترة السابقة`,
       notePositive: isRevenueGrowthPositive,
       icon: WalletCards,
+      iconTheme: "text-emerald-700 bg-emerald-50 border-emerald-200/80",
     },
     {
       label: "المدفوعات المسددة بنجاح",
@@ -257,6 +258,7 @@ export default function AdminReportsPage() {
       note: "سداد إلكتروني مؤتمت بالكامل عبر Paymob",
       notePositive: true,
       icon: CreditCard,
+      iconTheme: "text-indigo-700 bg-indigo-50 border-indigo-200/80",
     },
     {
       label: "العقود الصادرة رسمياً",
@@ -264,6 +266,7 @@ export default function AdminReportsPage() {
       note: `${formatNumber(metrics.contractIssueRatePercent, 1)}% من عقود الفترة اكتمل إصدارها`,
       notePositive: true,
       icon: FileText,
+      iconTheme: "text-amber-700 bg-amber-50 border-amber-200/80",
     },
     {
       label: "طلبات الخدمات المكتملة",
@@ -271,6 +274,7 @@ export default function AdminReportsPage() {
       note: `متوسط زمن الإنجاز ${formatNumber(metrics.averageCompletionHours, 1)} ساعة`,
       notePositive: true,
       icon: CheckCircle2,
+      iconTheme: "text-sky-700 bg-sky-50 border-sky-200/80",
     },
   ];
 
@@ -341,14 +345,14 @@ export default function AdminReportsPage() {
 
       {/* Top Metric Cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {topCards.map(({ label, value, note, notePositive, icon: Icon }) => (
+        {topCards.map(({ label, value, note, notePositive, icon: Icon, iconTheme }) => (
           <article
             key={label}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition hover:border-slate-300"
+            className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs transition hover:border-slate-300 hover:shadow-sm"
           >
             <div className="flex items-center justify-between text-xs font-black text-slate-500">
               <span>{label}</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#986410]/10 text-[#986410]">
+              <div className={`flex h-8 w-8 items-center justify-center rounded-xl border ${iconTheme}`}>
                 <Icon className="h-4 w-4" />
               </div>
             </div>
@@ -529,7 +533,7 @@ export default function AdminReportsPage() {
             {data.serviceDistribution.map((item) => (
               <div
                 key={item.requestType}
-                className="flex items-center justify-between rounded-xl border border-slate-200 p-4 transition hover:border-slate-300"
+                className="flex items-center justify-between rounded-xl border border-slate-200/90 bg-slate-50/60 p-4 transition hover:border-slate-300 hover:bg-slate-50"
               >
                 <div>
                   <div className="text-xs font-black text-[#00102e]">
@@ -549,8 +553,8 @@ export default function AdminReportsPage() {
 
       {/* Lawyers Performance (if Assignment Feature Enabled) */}
       {dashboardFeatures.assignment && (
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
-          <div className="flex items-center gap-2 border-b border-slate-100 p-5">
+        <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
+          <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50/50 p-5">
             <Users className="h-5 w-5 text-[#986410]" />
             <div>
               <h2 className="font-black text-[#00102e]">أداء فريق المحامين</h2>
@@ -560,7 +564,7 @@ export default function AdminReportsPage() {
 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px] text-right text-xs">
-              <thead className="bg-slate-50 text-slate-500 font-black">
+              <thead className="bg-slate-100/80 text-slate-700 font-black border-b border-slate-200">
                 <tr>
                   <th className="p-4">المحامي</th>
                   <th className="p-4">مسند</th>
@@ -570,9 +574,9 @@ export default function AdminReportsPage() {
                   <th className="p-4">متوسط الإنجاز</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200">
                 {data.lawyerPerformance.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-50/50 transition">
+                  <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-4 font-black text-[#00102e]">{row.name}</td>
                     <td className="p-4 tabular-nums">{row.assignedCount}</td>
                     <td className="p-4 font-black text-emerald-700 tabular-nums">{row.completedCount}</td>
@@ -624,7 +628,9 @@ function MiniStat({
   return (
     <div
       className={`rounded-xl border p-4 transition ${
-        danger ? "border-rose-200 bg-rose-50/60" : "border-slate-200 bg-white"
+        danger
+          ? "border-rose-200 bg-rose-50/80 text-rose-950"
+          : "border-slate-200/90 bg-slate-50/80 text-slate-900 hover:bg-slate-100/70"
       }`}
     >
       <div
@@ -642,13 +648,13 @@ function MiniStat({
 
 function StatusPanel({ title, rows }: { title: string; rows: Array<{ status: string; count: number }> }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+    <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs">
       <h2 className="text-base font-black text-[#00102e]">{title}</h2>
       <div className="mt-4 flex flex-wrap gap-2">
         {rows.map((row) => (
           <div
             key={row.status}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-800 shadow-2xs"
           >
             <StatusBadge value={row.status} />
             <b className="text-sm font-black text-[#00102e] tabular-nums">{row.count}</b>

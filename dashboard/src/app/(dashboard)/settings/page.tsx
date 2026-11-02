@@ -445,7 +445,7 @@ export default function SettingsPage() {
                   defaultValue={String(current("office.address", ""))}
                   maxLength={500}
                   placeholder="العنوان بالكامل يظهر في أسفل وثائق العقود الرسمية وتواصل العملاء"
-                  className="min-h-24 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-medium text-[#00102e] outline-none transition focus:border-[#00102e] focus:ring-2 focus:ring-[#986410]/20"
+                  className="min-h-24 w-full rounded-xl border border-slate-300 bg-slate-50/60 p-3 text-sm font-medium text-[#00102e] outline-none transition hover:border-slate-400 focus:bg-white focus:border-[#00102e] focus:ring-2 focus:ring-[#00102e]/10"
                 />
                 {fieldError["office.address"] && <FieldError text={fieldError["office.address"]} />}
               </label>
@@ -554,7 +554,7 @@ export default function SettingsPage() {
 
       {/* Review Schedule & Working Hours Section */}
       {(activeTab === "all" || activeTab === "schedule") && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs">
+        <section className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs hover:border-slate-300 transition">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#986410]/10 text-[#986410]">
@@ -875,7 +875,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs">
+    <section className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs hover:border-slate-300 transition">
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#986410]/10 text-[#986410]">
           <Icon className="h-5 w-5" />
@@ -929,9 +929,13 @@ function Field({
           min={numeric ? undefined : min}
           max={numeric ? undefined : max}
           pattern={numeric ? "[0-9]+" : undefined}
-          className={`w-full rounded-xl border bg-white p-3 text-sm font-medium text-[#00102e] outline-none transition focus:border-[#00102e] focus:ring-2 focus:ring-[#986410]/20 ${
+          className={`w-full rounded-xl border p-3 text-sm font-medium text-[#00102e] outline-none transition focus:bg-white focus:border-[#00102e] focus:ring-2 focus:ring-[#00102e]/10 ${
             suffix ? "pl-16" : ""
-          } ${error ? "border-rose-400 bg-rose-50/20" : "border-slate-200"}`}
+          } ${
+            error
+              ? "border-rose-400 bg-rose-50/40"
+              : "border-slate-300 bg-slate-50/60 hover:border-slate-400"
+          }`}
         />
         {suffix && (
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">

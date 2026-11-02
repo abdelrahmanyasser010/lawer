@@ -2,7 +2,7 @@
 
 @layer base {
   :root {
-    --background: #f6f8fb;
+    --background: #eef2f6;
     --foreground: #00102e;
     --primary: #00102e;
     --primary-hover: #0a1f4d;
@@ -64,7 +64,7 @@
 }
 
 body {
-  background: #f6f8fb;
+  background: #eef2f6;
   color: var(--foreground);
   font-family: 'Cairo', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
