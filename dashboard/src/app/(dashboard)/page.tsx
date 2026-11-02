@@ -22,7 +22,7 @@ export default function AdminOverviewPage(){
   const cards=[
     ["إجمالي العقود",data.contracts.total,FileText,`${data.contracts.active} قيد العمل`,"/contracts"],
     ["العقود النشطة",data.contracts.active,BriefcaseBusiness,`${data.contracts.issued} عقد صادر`,"/contracts?group=attention"],
-    ["مدفوعات تحتاج مراجعة",data.payments.pending,CreditCard,`${Number(data.payments.approved_month).toLocaleString("ar-EG")} ج.م هذا الشهر`,"/payments?status=pending_verification"],
+    ["تحصيل هذا الشهر", `${Number(data.payments.approved_month).toLocaleString("ar-EG")} ج.م`, CreditCard, "سداد إلكتروني عبر Paymob", "/payments"],
     ["إشعارات غير مقروءة",data.notifications.unread,Bell,"متابعة تنبيهات العمل","/notifications"],
   ] as const;
   return <div className="mx-auto max-w-7xl space-y-7 p-6 sm:p-8">
