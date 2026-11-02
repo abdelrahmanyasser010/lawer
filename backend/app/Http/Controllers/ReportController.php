@@ -18,10 +18,10 @@ final class ReportController extends Controller
         $start=$r['start'];$end=$r['end'];$previousStart=$r['previousStart'];$previousEnd=$r['previousEnd'];
 
         $payments=DB::selectOne("SELECT
-            COALESCE(SUM(amount_egp) FILTER (WHERE status='approved' AND reviewed_at>=? AND reviewed_at<?),0)::float AS current_revenue,
-            COALESCE(SUM(amount_egp) FILTER (WHERE status='approved' AND reviewed_at>=? AND reviewed_at<?),0)::float AS previous_revenue,
-            COUNT(*) FILTER (WHERE status='approved' AND reviewed_at>=? AND reviewed_at<?)::int AS approved_payments,
-            COUNT(*) FILTER (WHERE status IN ('pending_verification','needs_client_info'))::int AS pending_payments
+            COALESCE(SUM(amount_egp - COALESCE(refunded_amount_egp, 0)) FILTER (WHERE status IN ('approved','paid') AND COALESCE(reviewed_at, created_at)>=? AND COALESCE(reviewed_at, created_at)<?),0)::float AS current_revenue,
+            COALESCE(SUM(amount_egp - COALESCE(refunded_amount_egp, 0)) FILTER (WHERE status IN ('approved','paid') AND COALESCE(reviewed_at, created_at)>=? AND COALESCE(reviewed_at, created_at)<?),0)::float AS previous_revenue,
+            COUNT(*) FILTER (WHERE status IN ('approved','paid') AND COALESCE(reviewed_at, created_at)>=? AND COALESCE(reviewed_at, created_at)<?)::int AS approved_payments,
+            (SELECT COUNT(*)::int FROM payment_attempts WHERE status IN ('created','pending') AND created_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours') + COUNT(*) FILTER (WHERE status IN ('pending_verification','needs_client_info'))::int AS pending_payments
             FROM payments",[$start,$end,$previousStart,$previousEnd,$start,$end]);
 
         $contracts=DB::selectOne("SELECT
@@ -56,9 +56,9 @@ final class ReportController extends Controller
 
         $interval=$r['bucket']==='month'?'1 month':'1 day';
         $revenue=DB::select("WITH buckets AS (SELECT generate_series(?::timestamptz,(?::timestamptz-INTERVAL '1 second'),INTERVAL '{$interval}') AS bucket)
-          SELECT bucket AS \"bucketStart\",COALESCE(SUM(p.amount_egp) FILTER (WHERE p.status='approved'),0)::float AS amount,
-          COUNT(p.id) FILTER (WHERE p.status='approved')::int AS \"paymentsCount\"
-          FROM buckets b LEFT JOIN payments p ON p.reviewed_at>=b.bucket AND p.reviewed_at<LEAST(b.bucket+INTERVAL '{$interval}',?::timestamptz)
+          SELECT bucket AS \"bucketStart\",COALESCE(SUM(p.amount_egp - COALESCE(p.refunded_amount_egp, 0)) FILTER (WHERE p.status IN ('approved','paid')),0)::float AS amount,
+          COUNT(p.id) FILTER (WHERE p.status IN ('approved','paid'))::int AS \"paymentsCount\"
+          FROM buckets b LEFT JOIN payments p ON COALESCE(p.reviewed_at, p.created_at)>=b.bucket AND COALESCE(p.reviewed_at, p.created_at)<LEAST(b.bucket+INTERVAL '{$interval}',?::timestamptz)
           GROUP BY bucket ORDER BY bucket",[$start,$end,$end]);
 
         $templates=DB::select("SELECT ct.slug,ct.name_ar AS \"nameAr\",COUNT(c.id)::int AS count,
@@ -91,7 +91,7 @@ final class ReportController extends Controller
     public function customerExport(Request $request)
     {
         $r=$this->range($request->query('period'));
-        $rows=DB::select("WITH contract_counts AS (SELECT customer_id,COUNT(*)::int AS count FROM (SELECT id,COALESCE(client_user_id,user_id) AS customer_id FROM contracts WHERE deleted_at IS NULL AND created_at>=? AND created_at<?) scoped WHERE customer_id IS NOT NULL GROUP BY customer_id),request_counts AS (SELECT client_user_id AS customer_id,COUNT(*)::int AS count FROM service_requests WHERE client_user_id IS NOT NULL AND created_at>=? AND created_at<? GROUP BY client_user_id),payment_totals AS (SELECT user_id AS customer_id,COALESCE(SUM(amount_egp),0)::float AS total FROM payments WHERE status='approved' AND reviewed_at>=? AND reviewed_at<? GROUP BY user_id) SELECT u.public_id AS \"publicId\",u.name,u.email,u.phone,u.whatsapp_number AS \"whatsappNumber\",u.account_type AS \"accountType\",u.company_name AS \"companyName\",u.status,COALESCE(cc.count,0)::int AS \"contractsCount\",COALESCE(rc.count,0)::int AS \"requestsCount\",COALESCE(pt.total,0)::float AS \"approvedPaymentsEgp\" FROM users u LEFT JOIN staff_profiles sp ON sp.user_id=u.id LEFT JOIN contract_counts cc ON cc.customer_id=u.id LEFT JOIN request_counts rc ON rc.customer_id=u.id LEFT JOIN payment_totals pt ON pt.customer_id=u.id WHERE sp.user_id IS NULL ORDER BY \"approvedPaymentsEgp\" DESC,u.created_at DESC LIMIT 10001",[$r['start'],$r['end'],$r['start'],$r['end'],$r['start'],$r['end']]);
+        $rows=DB::select("WITH contract_counts AS (SELECT customer_id,COUNT(*)::int AS count FROM (SELECT id,COALESCE(client_user_id,user_id) AS customer_id FROM contracts WHERE deleted_at IS NULL AND created_at>=? AND created_at<?) scoped WHERE customer_id IS NOT NULL GROUP BY customer_id),request_counts AS (SELECT client_user_id AS customer_id,COUNT(*)::int AS count FROM service_requests WHERE client_user_id IS NOT NULL AND created_at>=? AND created_at<? GROUP BY client_user_id),payment_totals AS (SELECT user_id AS customer_id,COALESCE(SUM(amount_egp - COALESCE(refunded_amount_egp, 0)),0)::float AS total FROM payments WHERE status IN ('approved','paid') AND COALESCE(reviewed_at, created_at)>=? AND COALESCE(reviewed_at, created_at)<? GROUP BY user_id) SELECT u.public_id AS \"publicId\",u.name,u.email,u.phone,u.whatsapp_number AS \"whatsappNumber\",u.account_type AS \"accountType\",u.company_name AS \"companyName\",u.status,COALESCE(cc.count,0)::int AS \"contractsCount\",COALESCE(rc.count,0)::int AS \"requestsCount\",COALESCE(pt.total,0)::float AS \"approvedPaymentsEgp\" FROM users u LEFT JOIN staff_profiles sp ON sp.user_id=u.id LEFT JOIN contract_counts cc ON cc.customer_id=u.id LEFT JOIN request_counts rc ON rc.customer_id=u.id LEFT JOIN payment_totals pt ON pt.customer_id=u.id WHERE sp.user_id IS NULL ORDER BY \"approvedPaymentsEgp\" DESC,u.created_at DESC LIMIT 10001",[$r['start'],$r['end'],$r['start'],$r['end'],$r['start'],$r['end']]);
         if(count($rows)>10000)throw new ApiException(413,'حجم التقرير أكبر من الحد المسموح');
         return $this->ok($request,['period'=>$r['period'],'range'=>['start'=>$r['start'],'end'=>$r['end']],'rows'=>$rows]);
     }
