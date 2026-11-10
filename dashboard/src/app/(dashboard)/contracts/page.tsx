@@ -267,10 +267,10 @@ export default function ContractsPage() {
             setGroup("");
             setChannel("");
           }}
-          className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all shadow-xs active:scale-[0.99] ${
+          className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all shadow-sm active:scale-[0.99] ${
             group === "" && channel === ""
               ? "border-[#00102e] bg-[#00102e] text-white"
-              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50"
+              : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
           }`}
         >
           <div className="flex items-center justify-between">
@@ -298,10 +298,10 @@ export default function ContractsPage() {
             setGroup("attention");
             setChannel("");
           }}
-          className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all shadow-xs active:scale-[0.99] ${
+          className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all shadow-sm active:scale-[0.99] ${
             group === "attention"
               ? "border-amber-600 bg-amber-600 text-white"
-              : "border-amber-200 bg-amber-50/50 text-amber-950 hover:border-amber-300 hover:bg-amber-50"
+              : "border-amber-300 bg-amber-50 text-amber-950 hover:border-amber-400 hover:bg-amber-100/70"
           }`}
         >
           <div className="flex items-center justify-between">
@@ -329,10 +329,10 @@ export default function ContractsPage() {
             setGroup("issued");
             setChannel("");
           }}
-          className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all shadow-xs active:scale-[0.99] ${
+          className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all shadow-sm active:scale-[0.99] ${
             group === "issued"
               ? "border-emerald-700 bg-emerald-700 text-white"
-              : "border-emerald-200 bg-emerald-50/50 text-emerald-950 hover:border-emerald-300 hover:bg-emerald-50"
+              : "border-emerald-300 bg-emerald-50 text-emerald-950 hover:border-emerald-400 hover:bg-emerald-100/70"
           }`}
         >
           <div className="flex items-center justify-between">
@@ -360,10 +360,10 @@ export default function ContractsPage() {
             setChannel("office");
             setGroup("");
           }}
-          className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all shadow-xs active:scale-[0.99] ${
+          className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all shadow-sm active:scale-[0.99] ${
             channel === "office"
               ? "border-indigo-700 bg-indigo-700 text-white"
-              : "border-indigo-200 bg-indigo-50/50 text-indigo-950 hover:border-indigo-300 hover:bg-indigo-50"
+              : "border-indigo-300 bg-indigo-50 text-indigo-950 hover:border-indigo-400 hover:bg-indigo-100/70"
           }`}
         >
           <div className="flex items-center justify-between">
@@ -386,7 +386,7 @@ export default function ContractsPage() {
       </section>
 
       {/* Segmented Group Tabs Navigation */}
-      <nav aria-label="أقسام العقود" className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-100/90 p-1.5">
+      <nav aria-label="أقسام العقود" className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-300 bg-slate-100 p-1.5">
         {groupTabs.map((tab) => {
           const active = group === tab.key;
           return (
@@ -396,7 +396,7 @@ export default function ContractsPage() {
               onClick={() => setGroup(tab.key)}
               className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all active:scale-95 ${
                 active
-                  ? "bg-white font-black text-[#00102e] shadow-xs"
+                  ? "border border-slate-300 bg-white font-black text-[#00102e] shadow-xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
               }`}
             >
@@ -416,7 +416,7 @@ export default function ContractsPage() {
       </nav>
 
       {/* Search & Channel Filter Bar */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs">
+      <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           {/* Search Box */}
           <div className="relative flex-1">
@@ -427,7 +427,7 @@ export default function ContractsPage() {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && void load()}
               placeholder="بحث بالعميل، اسم العقد، أو رقم العقد (اضغط Enter)..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-2.5 pr-9 pl-9 text-xs font-medium text-[#00102e] outline-none transition focus:border-[#00102e] focus:bg-white focus:ring-1 focus:ring-[#986410]/20"
+              className="w-full rounded-xl border border-slate-300 bg-slate-50/70 py-2.5 pr-9 pl-9 text-xs font-medium text-[#00102e] outline-none transition hover:border-slate-400 focus:border-[#00102e] focus:bg-white focus:ring-1 focus:ring-[#986410]/20"
             />
             {query && (
               <button
@@ -461,7 +461,7 @@ export default function ContractsPage() {
                   className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
                     active
                       ? "bg-[#00102e] font-black text-white shadow-2xs"
-                      : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                   }`}
                 >
                   {c.label}
@@ -483,7 +483,7 @@ export default function ContractsPage() {
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 transition active:scale-95"
+                className="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 hover:border-slate-400 transition active:scale-95"
               >
                 <X className="h-3.5 w-3.5 text-slate-400" />
                 <span>إعادة ضبط</span>
@@ -494,12 +494,12 @@ export default function ContractsPage() {
       </div>
 
       {/* Main Contracts Table Container */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1050px] text-right text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50/80 font-black text-slate-500">
+            <thead className="border-b border-slate-300 bg-slate-100 font-black text-slate-800">
               <tr>
-                <th className="p-4">العقد والمسار</th>
+                <th className="p-4">اسم العقد ونوعه</th>
                 <th className="p-4">العميل ومصدر الإنشاء</th>
                 <th className="p-4">المحامي المسؤول</th>
                 <th className="p-4">الحالة التشغيلية</th>
@@ -507,13 +507,13 @@ export default function ContractsPage() {
                 <th className="p-4 text-center">الإجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-200">
               {loading && contracts.length === 0 ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     <td className="p-4">
-                      <div className="h-4 w-32 rounded bg-slate-200" />
-                      <div className="mt-2 h-3 w-48 rounded bg-slate-100" />
+                      <div className="h-4 w-48 rounded bg-slate-200" />
+                      <div className="mt-2 h-3 w-32 rounded bg-slate-100" />
                     </td>
                     <td className="p-4">
                       <div className="h-3 w-28 rounded bg-slate-200" />
@@ -570,25 +570,22 @@ export default function ContractsPage() {
                   return (
                     <tr
                       key={contract.id}
-                      className="align-middle transition-colors hover:bg-slate-50/80"
+                      className="align-middle transition-colors hover:bg-slate-50/90"
                     >
-                      {/* Contract Title & Serial */}
+                      {/* Contract Title & Template (Without Serial Number) */}
                       <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <span className="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-bold text-slate-700">
-                            {contract.serialNumber}
-                          </span>
-                          {contract.templateNameAr && (
-                            <span className="rounded-md bg-[#986410]/10 px-2 py-0.5 text-[10px] font-bold text-[#986410]">
-                              {contract.templateNameAr}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-1.5 max-w-sm font-black text-[#00102e] text-xs leading-5 hover:text-[#986410] transition-colors">
+                        <div className="text-sm font-black text-[#00102e] hover:text-[#986410] transition-colors">
                           <Link href={`/contracts/${contract.id}`}>
                             {contract.title}
                           </Link>
                         </div>
+                        {contract.templateNameAr && (
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="text-xs font-semibold text-slate-500">
+                              {contract.templateNameAr}
+                            </span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Client Name & Source Channel */}

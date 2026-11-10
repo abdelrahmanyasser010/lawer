@@ -244,7 +244,7 @@ export default function UsersPage() {
               aria-label="فترة تصدير العملاء"
               value={exportPeriod}
               onChange={(e) => setExportPeriod(e.target.value as ExportPeriod)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-[#00102e] outline-none shadow-2xs"
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-[#00102e] outline-none shadow-2xs hover:border-slate-400"
             >
               {Object.entries(exportPeriodLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -265,7 +265,7 @@ export default function UsersPage() {
 
           <button
             onClick={() => void load()}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-2xs active:scale-95"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition shadow-2xs active:scale-95"
             aria-label="تحديث"
             title="تحديث البيانات"
           >
@@ -290,7 +290,7 @@ export default function UsersPage() {
       )}
 
       {/* Search & Filter Container */}
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs">
+      <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -298,7 +298,7 @@ export default function UsersPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="بحث باسم العميل، البريد الإلكتروني، أو رقم الهاتف..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pr-9 pl-9 text-xs font-medium text-[#00102e] outline-none transition focus:border-[#00102e] focus:bg-white focus:ring-1 focus:ring-[#986410]/20"
+              className="w-full rounded-xl border border-slate-300 bg-slate-50/70 py-2.5 pr-9 pl-9 text-xs font-medium text-[#00102e] outline-none transition hover:border-slate-400 focus:border-[#00102e] focus:bg-white focus:ring-1 focus:ring-[#986410]/20"
             />
             {search && (
               <button
@@ -317,7 +317,7 @@ export default function UsersPage() {
               aria-label="تصفية العملاء حسب الحالة"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-2.5 text-xs font-bold text-[#00102e] outline-none transition focus:border-[#00102e]"
+              className="rounded-xl border border-slate-300 bg-slate-50/70 px-4 py-2.5 text-xs font-bold text-[#00102e] outline-none transition hover:border-slate-400 focus:border-[#00102e]"
             >
               <option value="">كافة الحالات</option>
               <option value="active">نشط</option>
@@ -331,7 +331,7 @@ export default function UsersPage() {
                   setSearch("");
                   setStatus("");
                 }}
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 transition active:scale-95"
+                className="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 transition active:scale-95"
               >
                 <X className="h-3.5 w-3.5 text-slate-400" />
                 <span>إعادة ضبط</span>
@@ -342,10 +342,10 @@ export default function UsersPage() {
       </div>
 
       {/* Main High-Contrast Users Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
+      <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1050px] text-right text-xs">
-            <thead className="bg-slate-100/80 font-black text-slate-700 border-b border-slate-200">
+            <thead className="bg-slate-100 font-black text-slate-800 border-b border-slate-300">
               <tr>
                 <th className="p-4">العميل</th>
                 <th className="p-4">بيانات التواصل السريعة</th>
@@ -412,11 +412,11 @@ export default function UsersPage() {
                   {/* Activity */}
                   <td className="p-4">
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-bold text-slate-700">
+                      <span className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-bold text-slate-700">
                         <FileText className="h-3 w-3 text-slate-400" />
                         <b className="font-black text-[#00102e]">{client.contractsCount}</b> عقود
                       </span>
-                      <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-bold text-slate-700">
+                      <span className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-bold text-slate-700">
                         <BriefcaseBusiness className="h-3 w-3 text-slate-400" />
                         <b className="font-black text-[#00102e]">{client.requestsCount}</b> طلبات
                       </span>

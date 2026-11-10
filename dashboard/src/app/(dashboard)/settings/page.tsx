@@ -377,7 +377,7 @@ export default function SettingsPage() {
                 className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs transition-all duration-150 active:scale-95 ${
                   active
                     ? "border border-[#d7a94f]/30 bg-[#00102e] font-extrabold text-[#d7a94f] shadow-xs"
-                    : "border border-slate-200/90 bg-white font-bold text-slate-700 hover:bg-slate-50 hover:text-[#00102e]"
+                    : "border border-slate-300 bg-white font-bold text-slate-700 hover:bg-slate-50 hover:text-[#00102e]"
                 }`}
               >
                 <Icon className={`h-3.5 w-3.5 ${active ? "text-[#d7a94f]" : "text-slate-400"}`} />
@@ -496,7 +496,7 @@ export default function SettingsPage() {
                     ].map(([value, label]) => (
                       <label
                         key={value}
-                        className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5 text-xs font-black text-[#00102e] shadow-2xs cursor-pointer hover:border-[#986410]/40 transition"
+                        className="flex items-center gap-3 rounded-xl border border-slate-300 bg-slate-50/70 p-3.5 text-xs font-black text-[#00102e] shadow-2xs cursor-pointer hover:border-[#00102e] hover:bg-white transition"
                       >
                         <input
                           name={`channel_${value}`}
@@ -518,7 +518,7 @@ export default function SettingsPage() {
                   <select
                     name="notifications.whatsapp_mode"
                     defaultValue={String(current("notifications.whatsapp_mode", "manual_wa_me"))}
-                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-bold text-[#00102e] outline-none transition focus:border-[#00102e] focus:ring-2 focus:ring-[#986410]/20"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50/70 p-3 text-sm font-bold text-[#00102e] outline-none transition hover:border-slate-400 focus:bg-white focus:border-[#00102e] focus:ring-2 focus:ring-[#00102e]/10"
                   >
                     <option value="manual_wa_me">فتح محادثة واتساب المباشرة عند الحاجة</option>
                     <option value="disabled">معطل مؤقتًا</option>
@@ -533,7 +533,7 @@ export default function SettingsPage() {
           )}
 
           {/* Save Bar for Office & Policies */}
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-300 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
               <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
               <span>بيانات الاتصال والسياسات مشفرة ومحمية بسجلات النظام.</span>
@@ -554,7 +554,7 @@ export default function SettingsPage() {
 
       {/* Review Schedule & Working Hours Section */}
       {(activeTab === "all" || activeTab === "schedule") && (
-        <section className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs hover:border-slate-300 transition">
+        <section className="rounded-2xl border border-slate-300 bg-white p-5 sm:p-6 shadow-sm hover:shadow-md transition">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#986410]/10 text-[#986410]">
@@ -601,7 +601,7 @@ export default function SettingsPage() {
                 const isDayOpen = rows.length > 0;
 
                 return (
-                  <div key={day} className="rounded-xl border border-slate-200/90 p-4 transition-all">
+                  <div key={day} className="rounded-xl border border-slate-300 bg-white p-4 shadow-2xs transition-all">
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-black text-[#00102e]">{dayLabels[day]}</span>
@@ -654,8 +654,8 @@ export default function SettingsPage() {
                             key={`${day}-${index}`}
                             className={`flex flex-wrap items-end gap-3 rounded-xl p-3.5 transition-all ${
                               isOverCapacity
-                                ? "border border-rose-300 bg-rose-50/40"
-                                : "border border-slate-200/60 bg-slate-50"
+                                ? "border border-rose-300 bg-rose-50/60"
+                                : "border border-slate-300 bg-slate-50/80 shadow-2xs"
                             }`}
                           >
                             <div className="w-28 shrink-0">
@@ -785,7 +785,7 @@ export default function SettingsPage() {
                   value={blockReason}
                   onChange={(e) => setBlockReason(e.target.value)}
                   placeholder="السبب (مثال: إجازة عيد الفطر — اختياري)"
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-[#00102e] outline-none transition focus:border-[#00102e] focus:ring-1 focus:ring-[#986410]/30"
+                  className="rounded-xl border border-slate-300 bg-slate-50/70 px-3 py-2 text-xs font-medium text-[#00102e] outline-none transition hover:border-slate-400 focus:bg-white focus:border-[#00102e] focus:ring-1 focus:ring-[#986410]/30 shadow-2xs"
                 />
                 <button
                   disabled={scheduleBusy || !blockDate}
@@ -800,10 +800,10 @@ export default function SettingsPage() {
                 {schedule.exceptions.map((ex) => (
                   <div
                     key={ex.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-slate-50 p-3 text-xs shadow-2xs"
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white border border-slate-300 text-slate-500 shadow-2xs">
                         <CalendarClock className="h-3.5 w-3.5" />
                       </span>
                       <div>
@@ -833,7 +833,7 @@ export default function SettingsPage() {
                   </div>
                 ))}
                 {schedule.exceptions.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-4 text-center text-xs font-bold text-slate-500">
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-4 text-center text-xs font-bold text-slate-500">
                     لا توجد استثناءات أو عطلات مجدولة حالياً.
                   </div>
                 )}
@@ -875,7 +875,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs hover:border-slate-300 transition">
+    <section className="rounded-2xl border border-slate-300 bg-white p-5 sm:p-6 shadow-sm hover:shadow-md transition">
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#986410]/10 text-[#986410]">
           <Icon className="h-5 w-5" />
@@ -978,7 +978,7 @@ function MiniField({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-bold text-[#00102e] outline-none transition focus:border-[#00102e] focus:ring-1 focus:ring-[#986410]/20"
+        className="h-10 w-full rounded-xl border border-slate-300 bg-white px-2.5 text-xs font-bold text-[#00102e] shadow-2xs outline-none transition hover:border-slate-400 focus:border-[#00102e] focus:ring-1 focus:ring-[#986410]/20"
       />
     </label>
   );
@@ -1007,7 +1007,7 @@ function MiniNumber({
         pattern="[0-9]+"
         value={value}
         onChange={(e) => onChange(Math.max(0, Number(e.target.value.replace(/\D/g, "")) || 0))}
-        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-2 text-center text-xs font-bold tabular-nums text-[#00102e] outline-none transition focus:border-[#00102e] focus:ring-1 focus:ring-[#986410]/20"
+        className="h-10 w-full rounded-xl border border-slate-300 bg-white px-2 text-center text-xs font-bold tabular-nums text-[#00102e] shadow-2xs outline-none transition hover:border-slate-400 focus:border-[#00102e] focus:ring-1 focus:ring-[#986410]/20"
       />
     </label>
   );

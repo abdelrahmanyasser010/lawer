@@ -386,7 +386,7 @@ export default function TemplatesPage() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => void load()}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 active:scale-95"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-400 hover:bg-slate-50 active:scale-95"
             aria-label="تحديث"
           >
             <RefreshCw className="h-4 w-4" />
@@ -394,7 +394,7 @@ export default function TemplatesPage() {
           </button>
           <button
             onClick={() => setCategoryDialog({ mode: "create" })}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 active:scale-95"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-400 hover:bg-slate-50 active:scale-95"
           >
             <Plus className="h-4 w-4 text-[#986410]" />
             <span>إضافة تصنيف</span>
@@ -413,7 +413,7 @@ export default function TemplatesPage() {
       {notice && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800">{notice}</div>}
 
       <section className="space-y-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-sm">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0">
               <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-1 xl:pb-0" style={{ scrollbarWidth: "none" }}>
@@ -423,7 +423,7 @@ export default function TemplatesPage() {
                   className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs transition-all duration-150 active:scale-95 ${
                     selectedFilter === "all"
                       ? "border border-[#d7a94f]/30 bg-[#00102e] font-extrabold text-[#d7a94f] shadow-sm"
-                      : "border border-slate-200/90 bg-slate-50 font-bold text-slate-700 hover:bg-slate-100 hover:text-[#00102e]"
+                      : "border border-slate-300 bg-slate-50 font-bold text-slate-700 hover:bg-slate-100 hover:text-[#00102e]"
                   }`}
                 >
                   <span>الكل</span>
@@ -441,7 +441,7 @@ export default function TemplatesPage() {
                       className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs transition-all duration-150 active:scale-95 ${
                         active
                           ? "border border-[#d7a94f]/30 bg-[#00102e] font-extrabold text-[#d7a94f] shadow-sm"
-                          : "border border-slate-200/90 bg-slate-50 font-bold text-slate-700 hover:bg-slate-100 hover:text-[#00102e]"
+                          : "border border-slate-300 bg-slate-50 font-bold text-slate-700 hover:bg-slate-100 hover:text-[#00102e]"
                       }`}
                     >
                       <span>{category.nameAr}</span>
@@ -464,11 +464,11 @@ export default function TemplatesPage() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="ابحث باسم العقد"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-3 pr-9 text-xs font-medium text-[#00102e] outline-none focus:border-[#986410] focus:bg-white"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2 pl-3 pr-9 text-xs font-medium text-[#00102e] outline-none hover:border-slate-400 focus:border-[#986410] focus:bg-white"
                 />
               </label>
               {activeCategory && (
-                <button type="button" onClick={() => setCategoryDialog({ mode: "edit", category: activeCategory })} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">
+                <button type="button" onClick={() => setCategoryDialog({ mode: "edit", category: activeCategory })} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs">
                   <Edit3 className="h-3.5 w-3.5" />تعديل التصنيف
                 </button>
               )}
@@ -485,39 +485,39 @@ export default function TemplatesPage() {
                 const reviewVersion = orderedVersions.find((version) => version.status === "legal_review");
                 const managementVersion = draftVersion ?? reviewVersion ?? latestVersion;
                 return (
-                  <article key={template.id} className="rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div className="p-3">
-                      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                  <article key={template.id} className="rounded-2xl border border-slate-300 bg-white p-4 shadow-sm hover:border-[#986410]/50 hover:shadow-md transition-all">
+                    <div>
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-[15px] font-bold text-[#00102e]">{template.nameAr}</h3>
+                            <h3 className="text-base font-black text-[#00102e]">{template.nameAr}</h3>
                             <StatusBadge value={template.isActive ? "active" : "suspended"} />
-                            <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-700">{template.categoryNameAr || "غير مصنف"}</span>
-                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${template.selfServiceEnabled!==false&&template.currentPublishedVersionId?"bg-emerald-50 text-emerald-700":"bg-slate-100 text-slate-500"}`}>إنشاء ذاتي</span>
-                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${template.lawyerDraftingEnabled!==false?"bg-blue-50 text-blue-700":"bg-slate-100 text-slate-500"}`}>صياغة بمحامي</span>
-                            {draftVersion && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">مسودة</span>}
-                            {!draftVersion && reviewVersion && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-800">مراجعة</span>}
+                            <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[11px] font-bold text-violet-800">{template.categoryNameAr || "غير مصنف"}</span>
+                            <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${template.selfServiceEnabled!==false&&template.currentPublishedVersionId?"border-emerald-200 bg-emerald-50 text-emerald-800":"border-slate-200 bg-slate-100 text-slate-600"}`}>إنشاء ذاتي</span>
+                            <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${template.lawyerDraftingEnabled!==false?"border-blue-200 bg-blue-50 text-blue-800":"border-slate-200 bg-slate-100 text-slate-600"}`}>صياغة بمحامي</span>
+                            {draftVersion && <span className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-[11px] font-black text-amber-900">مسودة</span>}
+                            {!draftVersion && reviewVersion && <span className="rounded-full border border-blue-300 bg-blue-50 px-2.5 py-0.5 text-[11px] font-black text-blue-900">مراجعة</span>}
                           </div>
                           <p className="mt-1.5 line-clamp-1 max-w-3xl text-xs font-medium leading-5 text-slate-500">{template.description || "لا يوجد وصف لهذا العقد بعد."}</p>
-                          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-slate-500">
-                            <span>{latestVersion ? `آخر إصدار v${latestVersion.versionNumber}` : "لا يوجد إصدار بعد"}</span>
-                            <span>{template.versions.length} إصدار</span>
+                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold text-slate-500">
+                            <span className="rounded-md border border-slate-300 bg-slate-50 px-2 py-0.5 text-slate-700">{latestVersion ? `آخر إصدار v${latestVersion.versionNumber}` : "لا يوجد إصدار بعد"}</span>
+                            <span>{template.versions.length} إصدارات مسجلة</span>
                           </div>
                         </div>
 
-                        <div className="flex shrink-0 flex-wrap gap-2">
+                        <div className="flex shrink-0 flex-wrap items-center gap-2">
                           {managementVersion ? (
-                            <Link href={`/templates/versions/${managementVersion.id}`} className="inline-flex items-center gap-1.5 rounded-xl bg-[#00102e] px-3.5 py-2 text-xs font-bold text-white">
-                              <Eye className="h-3.5 w-3.5" />فتح وإدارة
+                            <Link href={`/templates/versions/${managementVersion.id}`} className="inline-flex items-center gap-1.5 rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-black text-[#d7a94f] shadow-xs hover:bg-[#001a42] transition">
+                              <Eye className="h-4 w-4" />إدارة القالب والإصدارات
                             </Link>
                           ) : (
-                            <button disabled={busy === template.id} onClick={() => void cloneVersion(template)} className="inline-flex items-center gap-1.5 rounded-xl bg-[#00102e] px-3.5 py-2 text-xs font-bold text-white disabled:opacity-50">
-                              <CopyPlus className="h-3.5 w-3.5" />فتح وإدارة
+                            <button disabled={busy === template.id} onClick={() => void cloneVersion(template)} className="inline-flex items-center gap-1.5 rounded-xl bg-[#00102e] px-4 py-2.5 text-xs font-black text-[#d7a94f] shadow-xs hover:bg-[#001a42] disabled:opacity-50 transition">
+                              <CopyPlus className="h-4 w-4" />إدارة القالب والإصدارات
                             </button>
                           )}
                           <details className="relative">
-                            <summary className="inline-flex cursor-pointer list-none items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 [&::-webkit-details-marker]:hidden">⋯</summary>
-                            <div className="absolute left-0 z-20 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-2 text-xs font-bold shadow-xl">
+                            <summary className="inline-flex cursor-pointer list-none items-center rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 transition [&::-webkit-details-marker]:hidden">⋯</summary>
+                            <div className="absolute left-0 z-20 mt-2 w-52 rounded-xl border border-slate-300 bg-white p-2 text-xs font-bold shadow-xl">
                               <button type="button" onClick={() => setEditingTemplate(template)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-[#00102e] hover:bg-slate-50">
                                 <Edit3 className="h-4 w-4" />تعديل بيانات نوع العقد
                               </button>

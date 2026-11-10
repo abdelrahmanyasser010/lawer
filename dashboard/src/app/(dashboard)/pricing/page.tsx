@@ -292,7 +292,7 @@ export default function PricingPage() {
         </div>
 
         {/* Segmented Sub-Navigation Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100/90 p-1">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 p-1 shadow-2xs">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.key;
@@ -303,7 +303,7 @@ export default function PricingPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all active:scale-95 ${
                   active
-                    ? "bg-white font-black text-[#00102e] shadow-xs"
+                    ? "border border-slate-300 bg-white font-black text-[#00102e] shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
@@ -347,27 +347,26 @@ export default function PricingPage() {
               return (
                 <article
                   key={def.key}
-                  className={`flex flex-col justify-between rounded-2xl border bg-white p-5 shadow-xs transition hover:border-slate-300 hover:shadow-sm ${
-                    isModified ? "border-[#986410] ring-1 ring-[#986410]/30" : "border-slate-200/90"
+                  className={`flex flex-col justify-between rounded-2xl border bg-white p-5 shadow-sm transition hover:border-[#986410]/50 hover:shadow-md ${
+                    isModified ? "border-[#986410] ring-2 ring-[#986410]/30" : "border-slate-300"
                   }`}
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#986410]/20 bg-[#986410]/10 text-[#986410]">
-                        <Icon className="h-4 w-4" />
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#986410]/30 bg-[#986410]/10 text-[#986410] shadow-2xs">
+                        <Icon className="h-5 w-5" />
                       </div>
-                      <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[10px] font-black text-slate-700">
+                      <span className="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-700">
                         {def.badge}
                       </span>
                     </div>
 
-                    <h3 className="mt-3 text-xs font-black text-[#00102e]">{def.label}</h3>
-                    <p className="mt-1 text-xs leading-4 text-slate-500 font-medium">{def.description}</p>
+                    <h3 className="mt-3 text-sm font-black text-[#00102e]">{def.label}</h3>
+                    <p className="mt-1 text-xs leading-5 text-slate-500 font-medium">{def.description}</p>
                   </div>
 
-                  <div className="mt-4 pt-3.5 border-t border-slate-100">
+                  <div className="mt-5 pt-4 border-t border-slate-200">
                     <MoneyInput
-                      compact
                       isChanged={isModified}
                       value={currentValue}
                       onChange={(value) =>
@@ -401,7 +400,7 @@ export default function PricingPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="بحث باسم القالب أو العقد..."
-                className="w-full rounded-xl border border-slate-200 bg-white py-2 pr-9 pl-3 text-xs font-medium text-[#00102e] outline-none transition focus:border-[#00102e] focus:ring-1 focus:ring-[#986410]/20"
+                className="w-full rounded-xl border border-slate-300 bg-white py-2 pr-9 pl-3 text-xs font-medium text-[#00102e] outline-none transition hover:border-slate-400 focus:border-[#00102e] focus:ring-1 focus:ring-[#986410]/20 shadow-2xs"
               />
             </div>
           </div>
@@ -410,20 +409,20 @@ export default function PricingPage() {
             {filteredTemplates.map((template) => (
               <article
                 key={template.id}
-                className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs"
+                className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm"
               >
-                <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-100/80 px-5 py-3.5">
+                <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-300 bg-slate-100 px-5 py-3.5">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-slate-200/90 text-[#986410] shadow-2xs">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-300 text-[#986410] shadow-2xs">
                       <FileText className="h-4 w-4" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-black text-[#00102e]">{template.nameAr}</h3>
+                      <h3 className="text-base font-black text-[#00102e]">{template.nameAr}</h3>
                       <p className="mt-0.5 text-xs text-slate-500 font-medium">{template.description}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-500">
+                    <span className="text-xs font-bold text-slate-600 bg-slate-200/80 px-2.5 py-1 rounded-lg">
                       {template.variants.length} أنواع فرعية
                     </span>
                     <StatusBadge value={template.isActive ? "active" : "suspended"} />
@@ -495,15 +494,15 @@ export default function PricingPage() {
                           }
                         />
 
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs shadow-2xs">
+                        <div className="rounded-xl border border-slate-300 bg-slate-50 p-3 text-xs shadow-2xs">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-slate-500 font-semibold">العربون الموحد</span>
+                            <span className="text-slate-600 font-semibold">العربون الموحد</span>
                             <b className="font-black text-[#986410]">
                               {effectiveDeposit.toLocaleString("ar-EG")} ج.م
                             </b>
                           </div>
-                          <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-slate-200/80 pt-1.5">
-                            <span className="text-slate-500 font-semibold">المتبقي</span>
+                          <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-slate-200 pt-1.5">
+                            <span className="text-slate-600 font-semibold">المتبقي</span>
                             <b className="font-black text-[#00102e]">
                               {remaining.toLocaleString("ar-EG")} ج.م
                             </b>
@@ -517,7 +516,7 @@ export default function PricingPage() {
             ))}
 
             {filteredTemplates.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-xs font-bold text-slate-500">
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 p-8 text-center text-xs font-bold text-slate-500">
                 لا توجد قوالب عقود مطابقة لكلمة البحث "{searchQuery}".
               </div>
             )}
@@ -526,7 +525,7 @@ export default function PricingPage() {
       )}
 
       {/* Floating Save Bar with Changes Counter */}
-      <div className="sticky bottom-4 z-40 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur-md">
+      <div className="sticky bottom-4 z-40 flex items-center justify-between gap-4 rounded-2xl border border-slate-300 bg-white/95 p-4 shadow-lg backdrop-blur-md">
         <div className="flex items-center gap-2.5 text-xs font-bold text-slate-600">
           {modifiedCount > 0 ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 font-black text-amber-900">
@@ -587,22 +586,22 @@ function MoneyInput({
 }) {
   return (
     <label className="block text-center">
-      {label && <span className="mb-1 block text-xs font-black text-slate-500">{label}</span>}
+      {label && <span className="mb-1.5 block text-xs font-black text-slate-700">{label}</span>}
       <div className="relative">
         <input
           type="text"
           inputMode="decimal"
           value={value}
           onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ""))}
-          className={`w-full rounded-xl border pr-3 pl-9 text-center font-black tabular-nums outline-none transition focus:bg-white focus:border-[#00102e] focus:ring-2 focus:ring-[#00102e]/10 ${
-            compact ? "py-2 text-xs" : "py-2.5 text-sm"
+          className={`w-full rounded-xl border pr-3 pl-9 text-center font-black tabular-nums outline-none transition focus:bg-white focus:border-[#00102e] focus:ring-2 focus:ring-[#00102e]/10 shadow-2xs ${
+            compact ? "py-2.5 text-xs" : "py-3 text-base"
           } ${
             isChanged
-              ? "border-[#986410] bg-amber-50/50 text-[#986410] ring-1 ring-[#986410]/30"
-              : "border-slate-300/90 bg-slate-50/70 text-[#00102e] hover:border-slate-400"
+              ? "border-[#986410] bg-amber-50 text-[#986410] ring-2 ring-[#986410]/30"
+              : "border-slate-300 bg-white text-[#00102e] hover:border-slate-400"
           }`}
         />
-        <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-500">
           ج.م
         </span>
       </div>

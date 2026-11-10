@@ -247,15 +247,15 @@ export default function WorkQueuePage() {
           <button
             type="button"
             onClick={() => setQueue("")}
-            className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all hover:border-slate-300 shadow-xs ${
+            className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all hover:border-slate-400 shadow-sm ${
               queue === ""
                 ? "border-[#00102e] bg-[#00102e] text-white"
-                : "border-slate-200 bg-white text-slate-700"
+                : "border-slate-300 bg-white text-slate-800"
             }`}
           >
             <div className="flex items-center justify-between text-xs font-bold">
               <span>إجمالي الطلبات</span>
-              <BriefcaseBusiness className={`h-4 w-4 ${queue === "" ? "text-[#d7a94f]" : "text-slate-400"}`} />
+              <BriefcaseBusiness className={`h-4 w-4 ${queue === "" ? "text-[#d7a94f]" : "text-slate-500"}`} />
             </div>
             <div className="mt-3 text-2xl font-black tabular-nums">{summary.total}</div>
           </button>
@@ -263,16 +263,16 @@ export default function WorkQueuePage() {
           <button
             type="button"
             onClick={() => setQueue("needs_attention")}
-            className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all hover:border-amber-300 shadow-xs ${
+            className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all hover:border-amber-400 shadow-sm ${
               queue === "needs_attention"
                 ? "border-amber-600 bg-amber-600 text-white"
-                : "border-amber-200 bg-amber-50/60 text-amber-950"
+                : "border-amber-300 bg-amber-50/80 text-amber-950"
             }`}
           >
             <div className="flex items-center justify-between text-xs font-bold">
               <span>تحتاج إجراء فوري</span>
               <Clock
-                className={`h-4 w-4 ${queue === "needs_attention" ? "text-amber-200" : "text-amber-600"}`}
+                className={`h-4 w-4 ${queue === "needs_attention" ? "text-amber-200" : "text-amber-700"}`}
               />
             </div>
             <div className="mt-3 text-2xl font-black tabular-nums">{summary.needs_attention}</div>
@@ -281,16 +281,16 @@ export default function WorkQueuePage() {
           <button
             type="button"
             onClick={() => setQueue("awaiting_client")}
-            className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all hover:border-slate-300 shadow-xs ${
+            className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all hover:border-slate-400 shadow-sm ${
               queue === "awaiting_client"
                 ? "border-[#00102e] bg-[#00102e] text-white"
-                : "border-slate-200 bg-white text-slate-700"
+                : "border-slate-300 bg-white text-slate-800"
             }`}
           >
             <div className="flex items-center justify-between text-xs font-bold">
               <span>بانتظار العميل</span>
               <User
-                className={`h-4 w-4 ${queue === "awaiting_client" ? "text-[#d7a94f]" : "text-slate-400"}`}
+                className={`h-4 w-4 ${queue === "awaiting_client" ? "text-[#d7a94f]" : "text-slate-500"}`}
               />
             </div>
             <div className="mt-3 text-2xl font-black tabular-nums">{summary.awaiting_client}</div>
@@ -299,16 +299,16 @@ export default function WorkQueuePage() {
           <button
             type="button"
             onClick={() => setQueue("meetings_today")}
-            className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all hover:border-blue-300 shadow-xs ${
+            className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all hover:border-blue-400 shadow-sm ${
               queue === "meetings_today"
                 ? "border-blue-700 bg-blue-700 text-white"
-                : "border-blue-200 bg-blue-50/60 text-blue-950"
+                : "border-blue-300 bg-blue-50/80 text-blue-950"
             }`}
           >
             <div className="flex items-center justify-between text-xs font-bold">
               <span>مواعيد اليوم</span>
               <Calendar
-                className={`h-4 w-4 ${queue === "meetings_today" ? "text-blue-200" : "text-blue-600"}`}
+                className={`h-4 w-4 ${queue === "meetings_today" ? "text-blue-200" : "text-blue-700"}`}
               />
             </div>
             <div className="mt-3 text-2xl font-black tabular-nums">{summary.meetings_today}</div>
@@ -317,16 +317,16 @@ export default function WorkQueuePage() {
           <button
             type="button"
             onClick={() => setQueue("overdue")}
-            className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all hover:border-rose-300 shadow-xs ${
+            className={`flex flex-col justify-between rounded-2xl border p-4 text-right transition-all hover:border-rose-400 shadow-sm ${
               queue === "overdue"
                 ? "border-rose-700 bg-rose-700 text-white"
-                : "border-rose-200 bg-rose-50/60 text-rose-950"
+                : "border-rose-300 bg-rose-50/80 text-rose-950"
             }`}
           >
             <div className="flex items-center justify-between text-xs font-bold">
               <span>طلبات متأخرة</span>
               <AlertCircle
-                className={`h-4 w-4 ${queue === "overdue" ? "text-rose-200" : "text-rose-600"}`}
+                className={`h-4 w-4 ${queue === "overdue" ? "text-rose-200" : "text-rose-700"}`}
               />
             </div>
             <div className="mt-3 text-2xl font-black tabular-nums">{summary.overdue}</div>
@@ -335,7 +335,7 @@ export default function WorkQueuePage() {
       )}
 
       {/* Segmented Queue Filter Navigation Pills */}
-      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100 p-1">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 p-1 shadow-2xs">
         {queueTabs.map((tab) => {
           const active = queue === tab.key;
           return (
@@ -345,7 +345,7 @@ export default function WorkQueuePage() {
               onClick={() => setQueue(tab.key)}
               className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all active:scale-95 ${
                 active
-                  ? "bg-white font-black text-[#00102e] shadow-xs"
+                  ? "border border-slate-300 bg-white font-black text-[#00102e] shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
@@ -367,7 +367,7 @@ export default function WorkQueuePage() {
       </div>
 
       {/* Structured Filters Container */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
+      <div className="rounded-2xl border border-slate-300 bg-white p-4 shadow-sm space-y-3">
         <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-[minmax(240px,1.5fr)_180px_180px_170px_auto]">
           {/* Search Input */}
           <div className="relative">
@@ -376,8 +376,8 @@ export default function WorkQueuePage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && void load()}
-              placeholder="بحث بالعميل، رقم الطلب، أو الموضوع..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pr-9 pl-3 text-xs font-medium text-[#00102e] outline-none transition focus:border-[#00102e] focus:bg-white focus:ring-1 focus:ring-[#986410]/20"
+              placeholder="بحث بالعميل أو الموضوع..."
+              className="w-full rounded-xl border border-slate-300 bg-slate-50/70 py-2.5 pr-9 pl-3 text-xs font-medium text-[#00102e] outline-none transition hover:border-slate-400 focus:border-[#00102e] focus:bg-white focus:ring-1 focus:ring-[#986410]/20"
             />
           </div>
 
@@ -385,7 +385,7 @@ export default function WorkQueuePage() {
           <select
             value={serviceType}
             onChange={(e) => setServiceType(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-[#00102e] outline-none transition focus:border-[#00102e]"
+            className="rounded-xl border border-slate-300 bg-slate-50/70 px-3 py-2 text-xs font-bold text-[#00102e] outline-none transition hover:border-slate-400 focus:border-[#00102e] focus:bg-white"
           >
             <option value="">جميع الخدمات</option>
             {Object.entries(serviceLabels).map(([value, label]) => (
@@ -399,7 +399,7 @@ export default function WorkQueuePage() {
           <select
             value={lawyerId}
             onChange={(e) => setLawyerId(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-[#00102e] outline-none transition focus:border-[#00102e]"
+            className="rounded-xl border border-slate-300 bg-slate-50/70 px-3 py-2 text-xs font-bold text-[#00102e] outline-none transition hover:border-slate-400 focus:border-[#00102e] focus:bg-white"
           >
             <option value="">جميع المحامين</option>
             {lawyers.map((l) => (
@@ -413,7 +413,7 @@ export default function WorkQueuePage() {
           <select
             value={paymentStatus}
             onChange={(e) => setPaymentStatus(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-[#00102e] outline-none transition focus:border-[#00102e]"
+            className="rounded-xl border border-slate-300 bg-slate-50/70 px-3 py-2 text-xs font-bold text-[#00102e] outline-none transition hover:border-slate-400 focus:border-[#00102e] focus:bg-white"
           >
             <option value="">جميع حالات الدفع</option>
             <option value="unpaid">غير مدفوع</option>
@@ -477,10 +477,10 @@ export default function WorkQueuePage() {
       </div>
 
       {/* Main Operations Queue Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
+      <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1050px] text-right text-xs">
-            <thead className="border-b border-slate-200 bg-slate-100/80 font-black text-slate-700">
+            <thead className="border-b border-slate-300 bg-slate-100 font-black text-slate-800">
               <tr>
                 <th className="p-4">الطلب والعميل</th>
                 <th className="p-4">الخدمة ونوع العقد</th>
@@ -512,27 +512,24 @@ export default function WorkQueuePage() {
                 return (
                   <tr
                     key={item.id}
-                    className={`align-top transition-colors hover:bg-slate-50/80 ${
-                      isOverdue ? "bg-rose-50/25" : ""
+                    className={`align-top transition-colors hover:bg-slate-50/90 ${
+                      isOverdue ? "bg-rose-50/30" : ""
                     }`}
                   >
-                    {/* Request Serial & Title & Client */}
+                    {/* Request Title & Client (Clean, without clutter) */}
                     <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-bold text-slate-700">
-                          {item.serialNumber}
+                      <div className="text-sm font-black text-[#00102e] leading-5">
+                        {item.title}
+                      </div>
+                      <div className="mt-1 flex items-center gap-2 text-xs">
+                        <span className="font-bold text-slate-600">
+                          العميل: {item.clientName || "—"}
                         </span>
                         {item.priority === "high" && (
-                          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-800">
+                          <span className="rounded-full border border-rose-300 bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-800">
                             أولوية عاجلة
                           </span>
                         )}
-                      </div>
-                      <div className="mt-1.5 max-w-xs font-black text-[#00102e] text-xs leading-5">
-                        {item.title}
-                      </div>
-                      <div className="mt-1 text-slate-500 font-bold text-[11px]">
-                        العميل: {item.clientName || "—"}
                       </div>
                     </td>
 

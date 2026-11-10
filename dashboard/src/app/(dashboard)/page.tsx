@@ -117,7 +117,7 @@ export default function AdminOverviewPage() {
             <Link
               href={card.href}
               key={card.title}
-              className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#986410]/50 hover:shadow-md"
+              className="group flex flex-col justify-between rounded-2xl border border-slate-300 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#986410]/50 hover:shadow-md"
             >
               <div>
                 <div className="flex items-center justify-between">
@@ -146,7 +146,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* Work Center Operations Card */}
-      <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-4">
+      <section className="rounded-2xl border border-slate-300 bg-white p-6 shadow-sm space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4">
           <div>
             <div className="flex items-center gap-2">
@@ -159,7 +159,7 @@ export default function AdminOverviewPage() {
           </div>
           <Link
             href="/work"
-            className="inline-flex items-center gap-1 self-start sm:self-auto rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-black text-[#00102e] hover:bg-slate-100 hover:border-slate-300 transition active:scale-95 shadow-2xs"
+            className="inline-flex items-center gap-1 self-start sm:self-auto rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs font-black text-[#00102e] hover:bg-slate-100 hover:border-slate-400 transition active:scale-95 shadow-2xs"
           >
             <span>فتح مركز المتابعة بالكامل</span>
             <ArrowLeft className="h-3.5 w-3.5 text-[#986410]" />
@@ -223,28 +223,28 @@ function MetricCard({
 }) {
   const tones = {
     amber: {
-      card: "border-amber-200/90 bg-amber-50/50 hover:bg-amber-50 hover:border-amber-300 text-amber-950",
+      card: "border-amber-300 bg-amber-50 hover:bg-amber-100/70 hover:border-amber-400 text-amber-950",
       num: "text-amber-950",
-      icon: "text-amber-600 bg-amber-100/80",
-      sub: "text-amber-800/80",
+      icon: "text-amber-700 bg-amber-100",
+      sub: "text-amber-800",
     },
     blue: {
-      card: "border-blue-200/90 bg-blue-50/50 hover:bg-blue-50 hover:border-blue-300 text-blue-950",
+      card: "border-blue-300 bg-blue-50 hover:bg-blue-100/70 hover:border-blue-400 text-blue-950",
       num: "text-blue-950",
-      icon: "text-blue-600 bg-blue-100/80",
-      sub: "text-blue-800/80",
+      icon: "text-blue-700 bg-blue-100",
+      sub: "text-blue-800",
     },
     indigo: {
-      card: "border-indigo-200/90 bg-indigo-50/50 hover:bg-indigo-50 hover:border-indigo-300 text-indigo-950",
+      card: "border-indigo-300 bg-indigo-50 hover:bg-indigo-100/70 hover:border-indigo-400 text-indigo-950",
       num: "text-indigo-950",
-      icon: "text-indigo-600 bg-indigo-100/80",
-      sub: "text-indigo-800/80",
+      icon: "text-indigo-700 bg-indigo-100",
+      sub: "text-indigo-800",
     },
     rose: {
-      card: "border-rose-200/90 bg-rose-50/50 hover:bg-rose-50 hover:border-rose-300 text-rose-950",
+      card: "border-rose-300 bg-rose-50 hover:bg-rose-100/70 hover:border-rose-400 text-rose-950",
       num: "text-rose-950",
-      icon: "text-rose-600 bg-rose-100/80",
-      sub: "text-rose-800/80",
+      icon: "text-rose-700 bg-rose-100",
+      sub: "text-rose-800",
     },
   }[tone];
 

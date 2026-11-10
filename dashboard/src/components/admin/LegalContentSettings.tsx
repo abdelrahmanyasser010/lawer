@@ -258,7 +258,7 @@ export default function LegalContentSettings() {
               value={current.title}
               onChange={(e) => patch({ title: e.target.value })}
               placeholder="عنوان الوثيقة (مثال: الشروط والأحكام)"
-              className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-bold text-[#00102e] outline-none transition focus:border-[#00102e] focus:ring-2 focus:ring-[#986410]/20"
+              className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm font-bold text-[#00102e] shadow-2xs outline-none transition hover:border-slate-400 focus:border-[#00102e] focus:ring-2 focus:ring-[#00102e]/10"
             />
           </label>
 
@@ -273,7 +273,7 @@ export default function LegalContentSettings() {
               value={current.body}
               onChange={(e) => patch({ body: e.target.value })}
               placeholder="اكتب بنود ومحتوى السياسة هنا..."
-              className="min-h-80 w-full rounded-xl border border-slate-200 bg-white p-3.5 text-sm leading-7 text-[#00102e] outline-none transition focus:border-[#00102e] focus:ring-2 focus:ring-[#986410]/20 resize-y"
+              className="min-h-80 w-full rounded-xl border border-slate-300 bg-white p-3.5 text-sm leading-7 text-[#00102e] shadow-2xs outline-none transition hover:border-slate-400 focus:border-[#00102e] focus:ring-2 focus:ring-[#00102e]/10 resize-y"
             />
           </label>
 

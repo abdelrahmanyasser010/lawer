@@ -272,7 +272,7 @@ export default function PaymentsPage() {
           <button
             type="button"
             onClick={() => void load()}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-2xs active:scale-95"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition shadow-2xs active:scale-95"
             title="تحديث البيانات"
             aria-label="تحديث"
           >
@@ -292,14 +292,14 @@ export default function PaymentsPage() {
 
       {/* Notifications / Alerts */}
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-bold text-rose-800">
+        <div className="flex items-center gap-2 rounded-xl border border-rose-300 bg-rose-50 p-3.5 text-xs font-bold text-rose-800">
           <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
           <span>{error}</span>
         </div>
       )}
 
       {notice && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs font-bold text-emerald-800">
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 p-3.5 text-xs font-bold text-emerald-800">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
           <span>{notice}</span>
         </div>
@@ -308,7 +308,7 @@ export default function PaymentsPage() {
       {/* KPI Overview Strip */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Collected */}
-        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
+        <div className="flex flex-col justify-between rounded-2xl border border-slate-300 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-600">محصل الصفحة الحالية</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-200/80 bg-emerald-50 text-emerald-700">
@@ -321,7 +321,7 @@ export default function PaymentsPage() {
         </div>
 
         {/* Successful Transactions */}
-        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
+        <div className="flex flex-col justify-between rounded-2xl border border-slate-300 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-600">عمليات مسددة بنجاح</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-indigo-200/80 bg-indigo-50 text-indigo-700">
@@ -334,7 +334,7 @@ export default function PaymentsPage() {
         </div>
 
         {/* Pending Transactions */}
-        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
+        <div className="flex flex-col justify-between rounded-2xl border border-slate-300 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-600">قيد التنفيذ / المراجعة</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-amber-200/80 bg-amber-50 text-amber-700">
@@ -347,7 +347,7 @@ export default function PaymentsPage() {
         </div>
 
         {/* Refunded */}
-        <div className="flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
+        <div className="flex flex-col justify-between rounded-2xl border border-slate-300 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-600">استردادات مسجلة</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-rose-200/80 bg-rose-50 text-rose-700">
@@ -361,7 +361,7 @@ export default function PaymentsPage() {
       </section>
 
       {/* Segmented Status Tabs */}
-      <nav aria-label="تصفية العمليات" className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-100/90 p-1.5">
+      <nav aria-label="تصفية العمليات" className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-300 bg-slate-100 p-1.5">
         {statusTabs.map((tab) => {
           const active = status === tab.key;
           return (
@@ -374,7 +374,7 @@ export default function PaymentsPage() {
               }}
               className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all active:scale-95 ${
                 active
-                  ? "bg-white font-black text-[#00102e] shadow-xs"
+                  ? "border border-slate-300 bg-white font-black text-[#00102e] shadow-xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
               }`}
             >
@@ -385,7 +385,7 @@ export default function PaymentsPage() {
       </nav>
 
       {/* Search Bar Container */}
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs">
+      <div className="rounded-2xl border border-slate-300 bg-white p-3.5 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -397,7 +397,7 @@ export default function PaymentsPage() {
                 setPage(1);
               }}
               placeholder="بحث باسم العميل، البريد، رقم العملية، أو مرجع البوابة..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pr-9 pl-9 text-xs font-medium text-[#00102e] outline-none transition focus:border-[#00102e] focus:bg-white focus:ring-1 focus:ring-[#986410]/20"
+              className="w-full rounded-xl border border-slate-300 bg-slate-50/70 py-2.5 pr-9 pl-9 text-xs font-medium text-[#00102e] outline-none transition hover:border-slate-400 focus:border-[#00102e] focus:bg-white focus:ring-1 focus:ring-[#986410]/20"
             />
             {query && (
               <button
@@ -422,7 +422,7 @@ export default function PaymentsPage() {
                 setQuery("");
                 setPage(1);
               }}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 transition active:scale-95"
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 transition active:scale-95"
             >
               <X className="h-3.5 w-3.5 text-slate-400" />
               <span>إعادة ضبط</span>
@@ -432,10 +432,10 @@ export default function PaymentsPage() {
       </div>
 
       {/* Main High-Contrast Payments Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
+      <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] text-right text-xs">
-            <thead className="bg-slate-100/80 font-black text-slate-700 border-b border-slate-200">
+            <thead className="bg-slate-100 font-black text-slate-800 border-b border-slate-300">
               <tr>
                 <th className="p-4">العملية والمرجع</th>
                 <th className="p-4">العميل</th>
