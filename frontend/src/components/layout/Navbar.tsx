@@ -82,21 +82,32 @@ export default function Navbar() {
   }, [mobileOpen]);
 
   const navItems = useMemo<NavItem[]>(() => {
-    const base: NavItem[] = [
+    const publicItems: NavItem[] = [
       { href: "/create-contract?mode=self_service", label: "إعداد عقد", icon: Sparkles },
-      { href: "/request-review", label: "راجع عقدك أو اسأل محامي", icon: Scale },
+      { href: "/request-review", label: "مراجعة واستشارة", icon: Scale },
       { href: "/pricing", label: "الأسعار", icon: FileText },
       { href: "/about", label: "من نحن", icon: UsersRound },
       { href: "/contact", label: "اتصل بنا", icon: MailCheck },
     ];
-    if (!user) return base;
+    if (!user) return publicItems;
     return [
-      { href: "/dashboard", label: "لوحتي", icon: LayoutDashboard },
-      ...base,
+      { href: "/create-contract?mode=self_service", label: "إعداد عقد", icon: Sparkles },
+      { href: "/request-review", label: "مراجعة واستشارة", icon: Scale },
       { href: "/contracts", label: "سجل العقود", icon: FileText, badge: counts.contracts },
-      { href: "/requests", label: "طلبات الخدمات", icon: Scale, badge: counts.requests },
+      { href: "/requests", label: "طلباتي", icon: Scale, badge: counts.requests },
+      { href: "/pricing", label: "الأسعار", icon: FileText },
     ];
   }, [counts, user]);
+
+  const mobileNavItems = useMemo<NavItem[]>(() => {
+    if (!user) return navItems;
+    return [
+      { href: "/dashboard", label: "لوحتي", icon: LayoutDashboard },
+      ...navItems,
+      { href: "/about", label: "من نحن", icon: UsersRound },
+      { href: "/contact", label: "اتصل بنا", icon: MailCheck },
+    ];
+  }, [navItems, user]);
 
   const active = (href: string) => {
     if (href.startsWith("/#")) return false;
@@ -280,7 +291,7 @@ export default function Navbar() {
               </div>
             )}
 
-            <nav className="space-y-1.5">{navItems.map((item) => navLink(item, true))}</nav>
+            <nav className="space-y-1.5">{mobileNavItems.map((item) => navLink(item, true))}</nav>
 
             <div className="mt-8 border-t border-slate-100 pt-6">
               {user ? (

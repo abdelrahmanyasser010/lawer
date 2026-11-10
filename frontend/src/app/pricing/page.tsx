@@ -160,8 +160,9 @@ export default function PricingPage() {
                     </div>
                   </header>
 
-                  <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {template.variants.map((variant) => {
+                  {template.variants.length === 1 ? (
+                    (() => {
+                      const variant = template.variants[0];
                       const totalLawyer = Number(variant.lawyerAssistedPriceEgp || 0);
                       const deposit =
                         totalLawyer > 0
@@ -171,71 +172,135 @@ export default function PricingPage() {
                       const selfPrice = Number(variant.selfServicePriceEgp || 0);
 
                       return (
-                        <article
-                          key={variant.key}
-                          className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/70 p-5 transition hover:border-[#986410]/40 hover:bg-white hover:shadow-md"
-                        >
-                          <div>
-                            <div className="flex items-start justify-between gap-2">
-                              <h3 className="font-black text-[#00102e] text-base">{variant.nameAr}</h3>
-                              <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-700 border border-emerald-200">
-                                معتمد
-                              </span>
+                        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+                          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex-1 space-y-3">
+                              <div className="grid grid-cols-2 gap-3 max-w-lg">
+                                <PriceBox
+                                  label="إعداد ذاتي (فوري)"
+                                  value={selfPrice}
+                                  unavailable={selfPrice <= 0}
+                                  highlight={selfPrice > 0}
+                                />
+                                <PriceBox
+                                  label="بواسطة محامٍ مختص"
+                                  value={totalLawyer}
+                                  unavailable={totalLawyer <= 0}
+                                />
+                              </div>
+                              {totalLawyer > 0 && (
+                                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#986410]/20 bg-amber-50/60 px-3.5 py-2 text-xs font-bold text-slate-700 max-w-lg">
+                                  <span>
+                                    عربون الحجز: <b className="text-[#986410] font-black">{deposit.toLocaleString("ar-EG")} ج.م</b>
+                                  </span>
+                                  <span className="text-slate-400">•</span>
+                                  <span>
+                                    المتبقي عند التسليم: <b>{remaining.toLocaleString("ar-EG")} ج.م</b>
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                            <p className="mt-2 min-h-10 text-[11px] leading-5 text-slate-600 font-medium">
-                              {variant.description}
-                            </p>
 
-                            {/* Prices comparison boxes */}
-                            <div className="mt-4 grid grid-cols-2 gap-2">
-                              <PriceBox
-                                label="إعداد ذاتي (فوري)"
-                                value={selfPrice}
-                                unavailable={selfPrice <= 0}
-                                highlight={selfPrice > 0}
-                              />
-                              <PriceBox
-                                label="بواسطة محامٍ مختص"
-                                value={totalLawyer}
-                                unavailable={totalLawyer <= 0}
-                              />
+                            <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 lg:w-72">
+                              {variant.selfServiceEnabled && selfPrice > 0 ? (
+                                <Link
+                                  href={`/create-contract?mode=self_service&template=${template.slug}&variant=${variant.key}`}
+                                  className="w-full rounded-xl bg-[#00102e] py-3 text-center text-xs font-black text-[#d9a84e] transition hover:bg-[#001a42] shadow-sm"
+                                >
+                                  صياغة ذاتية
+                                </Link>
+                              ) : null}
+                              {variant.lawyerDraftingEnabled && totalLawyer > 0 ? (
+                                <Link
+                                  href={`/create-contract?mode=lawyer_assisted&template=${template.slug}&variant=${variant.key}`}
+                                  className="w-full rounded-xl border border-slate-300 bg-white py-3 text-center text-xs font-black text-[#00102e] transition hover:bg-slate-100 shadow-2xs"
+                                >
+                                  طلب من محامٍ
+                                </Link>
+                              ) : null}
                             </div>
+                          </div>
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {template.variants.map((variant) => {
+                        const totalLawyer = Number(variant.lawyerAssistedPriceEgp || 0);
+                        const deposit =
+                          totalLawyer > 0
+                            ? Math.min(Number(variant.lawyerDepositEgp || 0), totalLawyer)
+                            : Number(variant.lawyerDepositEgp || 0);
+                        const remaining = totalLawyer > 0 ? Math.max(0, totalLawyer - deposit) : 0;
+                        const selfPrice = Number(variant.selfServicePriceEgp || 0);
 
-                            {totalLawyer > 0 && (
-                              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-1 rounded-xl border border-[#986410]/20 bg-amber-50/60 px-3 py-2 text-[10px] font-bold text-slate-700">
-                                <span>
-                                  عربون الحجز: <b className="text-[#986410] font-black">{deposit.toLocaleString("ar-EG")} ج.م</b>
-                                </span>
-                                <span>
-                                  المتبقي عند التسليم: <b>{remaining.toLocaleString("ar-EG")} ج.م</b>
+                        return (
+                          <article
+                            key={variant.key}
+                            className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/70 p-5 transition hover:border-[#986410]/40 hover:bg-white hover:shadow-md"
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-2">
+                                <h3 className="font-black text-[#00102e] text-base">{variant.nameAr}</h3>
+                                <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-700 border border-emerald-200">
+                                  معتمد
                                 </span>
                               </div>
-                            )}
-                          </div>
+                              <p className="mt-2 min-h-10 text-[11px] leading-5 text-slate-600 font-medium">
+                                {variant.description}
+                              </p>
 
-                          {/* Action Buttons */}
-                          <div className="mt-5 flex items-center gap-2 border-t border-slate-200/80 pt-4">
-                            {variant.selfServiceEnabled && selfPrice > 0 ? (
-                              <Link
-                                href={`/create-contract?mode=self_service&template=${template.slug}&variant=${variant.key}`}
-                                className="flex-1 rounded-xl bg-[#00102e] py-2.5 text-center text-xs font-black text-[#d9a84e] transition hover:bg-[#001a42]"
-                              >
-                                صياغة ذاتية
-                              </Link>
-                            ) : null}
-                            {variant.lawyerDraftingEnabled && totalLawyer > 0 ? (
-                              <Link
-                                href={`/create-contract?mode=lawyer_assisted&template=${template.slug}&variant=${variant.key}`}
-                                className="flex-1 rounded-xl border border-slate-300 bg-white py-2.5 text-center text-xs font-black text-[#00102e] transition hover:bg-slate-100"
-                              >
-                                طلب من محامٍ
-                              </Link>
-                            ) : null}
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
+                              {/* Prices comparison boxes */}
+                              <div className="mt-4 grid grid-cols-2 gap-2">
+                                <PriceBox
+                                  label="إعداد ذاتي (فوري)"
+                                  value={selfPrice}
+                                  unavailable={selfPrice <= 0}
+                                  highlight={selfPrice > 0}
+                                />
+                                <PriceBox
+                                  label="بواسطة محامٍ مختص"
+                                  value={totalLawyer}
+                                  unavailable={totalLawyer <= 0}
+                                />
+                              </div>
+
+                              {totalLawyer > 0 && (
+                                <div className="mt-2.5 flex flex-wrap items-center justify-between gap-1 rounded-xl border border-[#986410]/20 bg-amber-50/60 px-3 py-2 text-[10px] font-bold text-slate-700">
+                                  <span>
+                                    عربون الحجز: <b className="text-[#986410] font-black">{deposit.toLocaleString("ar-EG")} ج.م</b>
+                                  </span>
+                                  <span>
+                                    المتبقي عند التسليم: <b>{remaining.toLocaleString("ar-EG")} ج.م</b>
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="mt-5 flex items-center gap-2 border-t border-slate-200/80 pt-4">
+                              {variant.selfServiceEnabled && selfPrice > 0 ? (
+                                <Link
+                                  href={`/create-contract?mode=self_service&template=${template.slug}&variant=${variant.key}`}
+                                  className="flex-1 rounded-xl bg-[#00102e] py-2.5 text-center text-xs font-black text-[#d9a84e] transition hover:bg-[#001a42]"
+                                >
+                                  صياغة ذاتية
+                                </Link>
+                              ) : null}
+                              {variant.lawyerDraftingEnabled && totalLawyer > 0 ? (
+                                <Link
+                                  href={`/create-contract?mode=lawyer_assisted&template=${template.slug}&variant=${variant.key}`}
+                                  className="flex-1 rounded-xl border border-slate-300 bg-white py-2.5 text-center text-xs font-black text-[#00102e] transition hover:bg-slate-100"
+                                >
+                                  طلب من محامٍ
+                                </Link>
+                              ) : null}
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )}
                 </section>
               );
             })}

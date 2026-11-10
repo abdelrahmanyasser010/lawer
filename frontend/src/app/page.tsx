@@ -84,7 +84,7 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="mt-8 space-y-4 rounded-xl bg-slate-50 p-4">
+                  <div className="mt-8 space-y-4 rounded-xl bg-slate-50 p-4 pl-12 sm:pl-16">
                     <div className="flex justify-between text-[11px]">
                       <span className="font-bold text-slate-500">رقم العقد</span>
                       <span className="font-black text-[#00102e] font-mono">ZD-2024-0001258</span>
@@ -103,7 +103,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Floating Badges */}
-                <div className="absolute -left-2 sm:-left-12 top-6 z-20 flex items-center gap-2 sm:gap-3 rounded-2xl bg-white p-2.5 sm:p-3 shadow-xl border border-slate-100 animate-pulse">
+                <div className="absolute -left-2 sm:-left-8 lg:-left-10 top-6 z-20 flex items-center gap-2 sm:gap-3 rounded-2xl bg-white p-2.5 sm:p-3 shadow-xl border border-slate-100 animate-pulse">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-[#00102e]">أسرع</span>
                     <span className="hidden sm:block text-[8px] font-bold text-slate-500">في دقائق معدودة</span>
@@ -113,17 +113,17 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="absolute -left-4 sm:-left-16 top-32 z-20 flex items-center gap-2 sm:gap-3 rounded-2xl bg-white p-2.5 sm:p-3 shadow-xl border border-slate-100">
+                <div className="absolute -left-3 sm:-left-10 lg:-left-12 top-32 z-20 flex items-center gap-2 sm:gap-3 rounded-2xl bg-white p-2.5 sm:p-3 shadow-xl border border-slate-100">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-[#00102e]">آمن</span>
-                    <span className="hidden sm:block text-[8px] font-bold text-slate-500">موثق بتقنية Blockchain</span>
+                    <span className="hidden sm:block text-[8px] font-bold text-slate-500">متوافق مع قانون التوقيع الإلكتروني</span>
                   </div>
                   <div className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500">
                     <ShieldCheck className="h-4 w-4" />
                   </div>
                 </div>
 
-                <div className="absolute -left-2 sm:-left-12 top-56 z-20 flex items-center gap-2 sm:gap-3 rounded-2xl bg-white p-2.5 sm:p-3 shadow-xl border border-slate-100">
+                <div className="absolute -left-2 sm:-left-8 lg:-left-10 top-56 z-20 flex items-center gap-2 sm:gap-3 rounded-2xl bg-white p-2.5 sm:p-3 shadow-xl border border-slate-100">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-[#00102e]">احترافي</span>
                     <span className="hidden sm:block text-[8px] font-bold text-slate-500">معتمد وجاهز للاستخدام</span>
@@ -304,7 +304,7 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center justify-center gap-3 animate-fade-in-up delay-500">
               {[
                 { icon: Lock, label: "تشفير AES-256" },
-                { icon: Database, label: "توثيق Blockchain" },
+                { icon: ShieldCheck, label: "أرشيف قانوني مشفر وموثق" },
                 { icon: Shield, label: "سرية تامة" },
                 { icon: Zap, label: "نسخ احتياطية فورية" },
                 { icon: ShieldCheck, label: "متوافق مع أنظمة وزارة العدل" },
