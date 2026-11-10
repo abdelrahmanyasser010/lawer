@@ -92,7 +92,7 @@ const statusLabels: Record<string, string> = {
 };
 
 function formatNumber(value: number, digits = 0) {
-  return Number(value || 0).toLocaleString("ar-EG", {
+  return Number(value || 0).toLocaleString("en-US", {
     maximumFractionDigits: digits,
     minimumFractionDigits: digits,
   });

@@ -76,7 +76,7 @@ export default function AdminOverviewPage() {
     },
     {
       title: "تحصيل هذا الشهر",
-      value: `${Number(data.payments.approved_month).toLocaleString("ar-EG")} ج.م`,
+      value: `${Number(data.payments.approved_month).toLocaleString("en-US")} ج.م`,
       Icon: CreditCard,
       note: "سداد إلكتروني مؤتمت عبر Paymob",
       href: "/payments",

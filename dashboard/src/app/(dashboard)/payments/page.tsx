@@ -316,7 +316,7 @@ export default function PaymentsPage() {
             </div>
           </div>
           <div className="mt-2 text-2xl font-black text-[#00102e] tabular-nums">
-            {kpis.paidTotal.toLocaleString("ar-EG")} <span className="text-xs font-bold text-slate-500">ج.م</span>
+            {kpis.paidTotal.toLocaleString("en-US")} <span className="text-xs font-bold text-slate-500">ج.م</span>
           </div>
         </div>
 
@@ -491,7 +491,7 @@ export default function PaymentsPage() {
                   {/* Amount */}
                   <td className="p-4">
                     <div className="text-base font-black text-[#00102e] tabular-nums">
-                      {payment.amountEgp.toLocaleString("ar-EG")} <span className="text-xs font-bold text-slate-500">ج.م</span>
+                      {payment.amountEgp.toLocaleString("en-US")} <span className="text-xs font-bold text-slate-500">ج.م</span>
                     </div>
                   </td>
 
@@ -610,7 +610,7 @@ export default function PaymentsPage() {
               السابق
             </button>
             <span className="tabular-nums">
-              صفحة {pagination.page.toLocaleString("ar-EG")} من {pagination.pages.toLocaleString("ar-EG")}
+              صفحة {pagination.page.toLocaleString("en-US")} من {pagination.pages.toLocaleString("en-US")}
             </span>
             <button
               disabled={page >= pagination.pages}
